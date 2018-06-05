@@ -54,10 +54,10 @@ study <- "OptRepeats"
 sample_file <- "Sample list.csv"
 
 #define file name for sample file + additional metadata (character vector)
-meta_file <- "Sample metadata opts repeats.csv"
+meta_file <- "Sample metadata opt repeats.csv"
 
 #define file name for antigen list file with additional info about targets.
-target_file <- "Target metadata with Tags.csv" 
+target_file <- "Opto Target Metadata.csv" 
 
 #number of technical replicates for the study (usually 1 or 2)
 reps <- 2
