@@ -211,18 +211,20 @@ index_target <- as.numeric(length(annotation_targets.df$target_id_numeric))
 #Foreground
 fore.df <- annotation_targets.df
 for(i in 1:length(samples)){
-  ite_out<-slides_all.df[which(slides_all.df[,42]==samples_unique[i]),9]
+  ite_out<-slides_all.df[which(slides_all.df[,62]==samples_unique[i]),9]
   fore.df<-cbind(fore.df,ite_out)
   colnames(fore.df)[length(colnames(fore.df))]<-samples_unique[i]
 }
+remove(i)
 
 #Background
 back.df <- annotation_targets.df
 for(i in 1:length(samples)){
-  ite_out<-slides_all.df[which(slides_all.df[,42]==samples_unique[i]),14]
+  ite_out<-slides_all.df[which(slides_all.df[,62]==samples_unique[i]),14]
   back.df<-cbind(back.df,ite_out)
   colnames(back.df)[length(colnames(back.df))]<-samples_unique[i]
 }
+remove(i)
 
 #Generate matrices of the same data (that is, the same data with only a single data type)
 fore.matrix <- as.matrix(fore.df[,7:ncol(fore.df)])
