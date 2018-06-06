@@ -1,5 +1,5 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
-  #Last updated May 23, 2018, KG
+  #Last updated June 6, 2018, KG
 
 ###Create a folder, into which you should copy this script, your .gpr files (named 'Slide 1.gpr', 'Slide 2.gpr' etc.), 
 # and your sample list, sample metadata, and target (antigen) metadata csv files.
@@ -208,7 +208,7 @@ index_target <- as.numeric(length(annotation_targets.df$target_id_numeric))
 #Foreground
 fore.df <- annotation_targets.df
 for(i in 1:length(samples)){
-  ite_out<-slides_all.df[which(slides_all.df[,42]==samples_unique[i]),9]
+  ite_out<-slides_all.df$F635.Median[which(slides_all.df$Sample==samples_unique[i])]
   fore.df<-cbind(fore.df,ite_out)
   colnames(fore.df)[length(colnames(fore.df))]<-samples_unique[i]
 }
@@ -216,7 +216,7 @@ for(i in 1:length(samples)){
 #Background
 back.df <- annotation_targets.df
 for(i in 1:length(samples)){
-  ite_out<-slides_all.df[which(slides_all.df[,42]==samples_unique[i]),14]
+  ite_out<-slides_all.df$B635.Median[which(slides_all.df$Sample==samples_unique[i])]
   back.df<-cbind(back.df,ite_out)
   colnames(back.df)[length(colnames(back.df))]<-samples_unique[i]
 }
