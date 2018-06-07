@@ -1,6 +1,6 @@
 # Optimization Study Repeats - Processing script
 # Katie Glass
-# June 5, 2018
+# June 7, 2018
 
 ###Combined script for reading in and processing microarray data to prepare for analysis
 
@@ -57,7 +57,7 @@ sample_file <- "Sample list.csv"
 meta_file <- "Sample metadata opt repeats.csv"
 
 #define file name for antigen list file with additional info about targets.
-target_file <- "Opto Target Metadata.csv" 
+target_file <- "Opto Repeats Target Metadata.csv" 
 
 #number of technical replicates for the study (usually 1 or 2)
 reps <- 2
@@ -821,74 +821,117 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   #Merge with target metadata to filter based on expression tag etc.
   target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
   
-  #GST subtraction - only for data with negative values set to 0 (norm4.matrix)
-  ### Subtracting Protein Tag Signal from tagged antigens - only for norm4.matrix (no negative values)
-  #Prepare data frame with GST tagged proteins only for subtraction
-  GST_antigens.df <- filter(target.df, Expression_Tag == "GST" | Expression_Tag == "GST/His")
-  GST_antigens.df <- tibble::column_to_rownames(GST_antigens.df, var="Name")
-  GST_antigens.df <- GST_antigens.df[,sapply(GST_antigens.df, is.numeric)]
+  #Extract GST elements for all print buffers and concentrations
+  GST <- c(grep("GST", target.df$Name))
+  GST.df <- target.df[GST,]
   
-  GST <- c(grep("GST", rownames(norm_sub4.df), fixed = TRUE))
-  GST_val <- c(as.matrix(norm_sub4.df[GST,]))
+  #Plot all GST data
+  GSTval.df <- GST.df[,(ncol(GST.df) - ncol(norm_sub4.df)+1):ncol(GST.df)]
+  row.names(GSTval.df) <- GST.df$Name
   
-  #Plot GST values
-  png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
-  par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
-  plot(GST_val, pch='*', col = "blue", ylim=c(0,max(GST_val, na.rm = TRUE)*1.25), main = "GST",
-       ylab="Normalized log2(MFI)", xlab="Sample (Array)", cex.main=1, cex.lab=1, cex.axis=0.7)
+  GST_val <- c(as.matrix(GSTval.df))
+  
+  png(filename = paste0(study, "_GST_ALL.tif"), width = 4, height = 4, units = "in", res = 600)
+  par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+  plot(GST_val, pch='*', col = "blue", ylim=c(0,max(GST_val,  na.rm = TRUE)*1.25), main = "All GST",
+       ylab="Normalized log2(MFI)", xlab="GST averaged duplicates")
   
   #print text on the plots for number of samples where GST and CD4 are above buffer
-  mtext(paste("Total Samples with GST > 0:", round(sum(norm_sub4.df[GST,] > 0, na.rm = TRUE), digits=2), 
-              "(", round(sum(norm_sub4.df[GST,] > 0, na.rm = TRUE)/length(GST_val)*100, digits=2), "%)"), side=1, cex=0.8, line=0.5, outer=TRUE, xpd=NA, adj=0)
+  mtext(paste("Total Samples with GST > 0:", round(sum(GSTval.df > 0, na.rm = TRUE), digits=2), 
+              "(", round(sum(GSTval.df > 0, na.rm = TRUE)/length(GST_val)*100, digits=2), "%)"), side=1, cex=0.8, line=0.5, outer=TRUE, xpd=NA, adj=0)
   
   graphics.off()
   
-  #Subtract GST signal from GST tagged proteins
-  sub_GST_antigens.df <- data.frame(matrix(0, nrow = nrow(GST_antigens.df), ncol = ncol(GST_antigens.df)))
-  rownames(sub_GST_antigens.df) <- rownames(GST_antigens.df)
-  colnames(sub_GST_antigens.df) <- colnames(GST_antigens.df)
-  
-  #subtract GST! There might be NA values if reps = 2.
-  for(b in 1:ncol(GST_antigens.df)){
-    for(a in 1:nrow(GST_antigens.df)){
-      #if GST value is NA or main value is NA, then cannot do subtraction and cannot compare with other data
-      #so set those values to NA
-      if(is.na(norm_sub4.df[GST,b])|is.na(GST_antigens.df[a,b])){
-        sub_GST_antigens.df[a,b] <- NA
-        # when the GST value is positive only, subtract GST value, 
-        #otherwise want to leave as whatever the value was before (because GST was at or below buffer mean for that sample)
-      } else if (norm_sub4.df[GST,b] > 0){
-        #calculate difference in original MFI form (not log2)
-        sub_GST_antigens.df[a,b] <- 2^GST_antigens.df[a,b] - 2^norm_sub4.df[GST,b]
-        #can only do log2 if the difference is greater than 0, otherwise set to 0 (normalized log2 value is not above buffer)
-        if (sub_GST_antigens.df[a,b] > 0) {
-          sub_GST_antigens.df[a,b] <- log2(sub_GST_antigens.df[a,b])
-          #if the log2 tag-subtracted value is negative, means normalized value is below buffer mean,
-          #so also need to set those negatives to 0 again.
-          if(sub_GST_antigens.df[a,b] < 0){
-            sub_GST_antigens.df[a,b] <- 0
+  #function for subtracting GST from a concentration and print buffer
+  subtractGST <- function(concentration, print_buffer){
+    #isolate data for that concentration and print buffer
+    con.df <- filter(target.df, Concentration == concentration, Print_Buffer == print_buffer, Expression_Tag == "GST")
+    con.df <- tibble::column_to_rownames(con.df, var="Name")
+    con.df <- con.df[,(ncol(con.df) - ncol(norm_sub4.df)+1):ncol(con.df)]
+    
+    GSTsub.df <- filter(GST.df, Concentration == concentration, Print_Buffer == print_buffer)
+    GSTsub.df <- tibble::column_to_rownames(GSTsub.df, var="Name")
+    GSTsub.df <- GSTsub.df[,(ncol(GSTsub.df) - ncol(norm_sub4.df)+1):ncol(GSTsub.df)]
+    
+    con2.df <- data.frame(matrix(0, nrow = nrow(con.df), ncol = ncol(con.df)))
+    rownames(con2.df) <- rownames(con.df)
+    colnames(con2.df) <- colnames(con.df)
+    
+    #subtract GST!
+    for(b in 1:ncol(con2.df)){
+      for(a in 1:nrow(con2.df)){
+        #if GST value is NA or main value is NA, then cannot do subtraction and cannot compare with other data
+        #so set those values to NA
+        if(is.na(GSTsub.df[1,b])|is.na(con.df[a,b])){
+          con2.df[a,b] <- NA
+          # when the GST value is positive only, subtract GST value, 
+          #otherwise want to leave as whatever the value was before (because GST was at or below buffer mean for that sample)
+        } else if (GSTsub.df[1,b] > 0){
+          #calculate difference in original MFI form (not log2)
+          con2.df[a,b] <- 2^con.df[a,b] - 2^GSTsub.df[1,b]
+          #can only do log2 if the difference is greater than 0, otherwise set to 0 (normalized log2 value is not above buffer)
+          if (con2.df[a,b] > 0) {
+            con2.df[a,b] <- log2(con2.df[a,b])
+            #if the log2 tag-subtracted value is negative, means normalized value is below buffer mean,
+            #so also need to set those negatives to 0 again.
+            if(con2.df[a,b] < 0){
+              con2.df[a,b] <- 0
+            }
+          } else { 
+            con2.df[a,b] <- 0
           }
-        } else { 
-          sub_GST_antigens.df[a,b] <- 0
+        } else {
+          con2.df[a,b] <- con.df[a,b]
         }
-      } else {
-        sub_GST_antigens.df[a,b] <- GST_antigens.df[a,b]
       }
     }
+    remove(a,b)
+    
+    #return GST-subtracted data
+    return(con2.df)
+    
   }
-  remove(a,b)
   
-  #Make another data frame where the tagged protein values are replaced by their subtracted values
-  #filter out the GST tagged targets
-  no_tags.df <- filter(target.df, !(Expression_Tag == "GST" | Expression_Tag == "GST/His"))
+  #Subtract GST from each print buffer and concentration  
+  GST100B1.df <- subtractGST(100,1)
+  GST100B2.df <- subtractGST(100,2)
+  GST100B3.df <- subtractGST(100,3)
+  
+  GST25B1.df <- subtractGST(25,1)
+  GST25B2.df <- subtractGST(25,2)
+  GST25B3.df <- subtractGST(25,3)
+  
+  GST6.25B1.df <- subtractGST(6.25,1)
+  GST6.25B2.df <- subtractGST(6.25,2)
+  GST6.25B3.df <- subtractGST(6.25,3)
+  
+  GST1.56B1.df <- subtractGST(1.56,1)
+  GST1.56B2.df <- subtractGST(1.56,2)
+  GST1.56B3.df <- subtractGST(1.56,3)
+  
+  GST0.39B1.df <- subtractGST(0.39,1)
+  GST0.39B2.df <- subtractGST(0.39,2)
+  GST0.39B3.df <- subtractGST(0.39,3)
+  
+  GST0.10B1.df <- subtractGST(0.10, 1)
+  GST0.10B2.df <- subtractGST(0.10, 2)
+  GST0.10B3.df <- subtractGST(0.10, 3)
+  
+  #combine all data back together again
+  #filter out the GST tagged antigens
+  no_tags.df <- filter(target.df, !(Expression_Tag == "GST"))
   no_tags.df <- tibble::column_to_rownames(no_tags.df, var="Name")
-  no_tags.df <- no_tags.df[,sapply(no_tags.df, is.numeric)]
-  #then rbind the GST and the CD4 data frames to that one. The order of the targets
-  #shouldn't matter anymore
-  norm_sub5.df <- rbind(no_tags.df, sub_GST_antigens.df)
+  no_tags.df <- no_tags.df[,(ncol(no_tags.df) - ncol(norm_sub4.df)+1):ncol(no_tags.df)]
+  #then rbind the GST data frames to that one. The order of the targets shouldn't matter anymore
+  optimization.df <- rbind(no_tags.df, GST0.10B1.df, GST0.10B2.df, GST0.10B3.df,
+                           GST0.39B1.df, GST0.39B2.df, GST0.39B3.df, GST1.56B1.df, GST1.56B2.df, GST1.56B3.df, 
+                           GST100B1.df, GST100B2.df, GST100B3.df, GST25B1.df, GST25B2.df, GST25B3.df,
+                           GST6.25B1.df, GST6.25B2.df, GST6.25B3.df)
+  #Check that dimensions are the same as before
+  dim(optimization.df) == dim(norm_sub4.df)
   
   #save ALL GST subtracted data in another file
-  write.csv(norm_sub5.df, paste0(study, "_GST_subtracted_Final.csv"))
+  write.csv(optimization.df, paste0(study, "_GST_subtracted_Final.csv"))
   
 #Save R workspace so that can load prior to analysis 
   save.image(file= paste0(study,"_AfterProcessing.RData"))
