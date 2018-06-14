@@ -874,13 +874,13 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   target_meta.df$Concentration <- as.character(target_meta.df$Concentration)
   
   #Merge with target metadata to filter based on expression tag etc.
-  target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+  target.df <- merge(target_meta.df, norm_sub4.df, by.x = "name", by.y ="row.names", all.y = TRUE, sort = FALSE)
   
   #GST subtraction - only for data with negative values set to 0 (norm4.matrix)
   ### Subtracting Protein Tag Signal from tagged antigens - only for norm4.matrix (no negative values)
   #Prepare data frame with GST tagged proteins only for subtraction
   GST_antigens.df <- filter(target.df, Expression_Tag == "GST" | Expression_Tag == "GST/His")
-  GST_antigens.df <- tibble::column_to_rownames(GST_antigens.df, var="Name")
+  GST_antigens.df <- tibble::column_to_rownames(GST_antigens.df, var="name")
   GST_antigens.df <- GST_antigens.df[,sapply(GST_antigens.df, is.numeric)]
   
   GST <- c(grep("GST", rownames(norm_sub4.df), fixed = TRUE))
@@ -936,7 +936,7 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   #Make another data frame where the tagged protein values are replaced by their subtracted values
   #filter out the GST tagged targets
   no_tags.df <- filter(target.df, !(Expression_Tag == "GST" | Expression_Tag == "GST/His"))
-  no_tags.df <- tibble::column_to_rownames(no_tags.df, var="Name")
+  no_tags.df <- tibble::column_to_rownames(no_tags.df, var="name")
   no_tags.df <- no_tags.df[,sapply(no_tags.df, is.numeric)]
   #then rbind the GST and the CD4 data frames to that one. The order of the targets
   #shouldn't matter anymore
