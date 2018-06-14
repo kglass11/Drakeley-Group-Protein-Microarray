@@ -880,7 +880,7 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   ### Subtracting Protein Tag Signal from tagged antigens - only for norm4.matrix (no negative values)
   #Prepare data frame with GST tagged proteins only for subtraction
   GST_antigens.df <- filter(target.df, Expression_Tag == "GST" | Expression_Tag == "GST/His")
-  GST_antigens.df <- tibble::column_to_rownames(GST_antigens.df, var="Name")
+  GST_antigens.df <- tibble::column_to_rownames(GST_antigens.df, var="name")
   GST_antigens.df <- GST_antigens.df[,sapply(GST_antigens.df, is.numeric)]
   
   GST <- c(grep("GST", rownames(norm_sub4.df), fixed = TRUE))
