@@ -874,7 +874,7 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   target_meta.df$Concentration <- as.character(target_meta.df$Concentration)
   
   #Merge with target metadata to filter based on expression tag etc.
-  target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+  target.df <- merge(target_meta.df, norm_sub4.df, by.x = "name", by.y ="row.names", all.y = TRUE, sort = FALSE)
   
   #GST subtraction - only for data with negative values set to 0 (norm4.matrix)
   ### Subtracting Protein Tag Signal from tagged antigens - only for norm4.matrix (no negative values)
