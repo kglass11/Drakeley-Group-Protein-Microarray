@@ -8,24 +8,24 @@
 #If you haven't just continued from the processing script, run:
 #rm(list=ls())
 
-#setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed")
+#I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
+setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens")
+getwd()
 
-# require("gtools")
-# 
-# library(limma)
-# library(contrast)
-# library(beeswarm)
-# library(mixtools)
-# library(gplots)
-# library(ggplot2)
-# library(gcookbook)
-# library(dplyr)
-# 
-# #load(file="SangerAfterProcessing.RData")
-# 
-# #install.packages("reshape2")
-# 
-# library(reshape2)
+require("gtools")
+
+library(limma)
+library(contrast)
+library(beeswarm)
+library(mixtools)
+library(gplots)
+library(ggplot2)
+library(gcookbook)
+library(dplyr)
+library(reshape2)
+
+load(file="SangerAfterProcessing.RData")
+#updated to "SangerTagSubtracted.RData"
 
 #import an updated target metadata file
 target_file <- "sanger_target_metadata_KT_v2.csv" 
@@ -57,7 +57,6 @@ rmsamp_all <- unique(c(targets_blank, targets_buffer, targets_ref, targets_std, 
 norm_sub.matrix <- norm4.matrix[-rmsamp_all,(!colnames(norm4.matrix) %in% samples_exclude)]
             
 #Replace current target names with original target names now that control targets are removed
-#might be useful to merge this instead with the target dataframe?
 norm_sub3.df <- merge(norm_sub.matrix, annotation_targets.df, by ="row.names", sort = FALSE)
 norm_sub3.df <- tibble::column_to_rownames(norm_sub3.df, var="Row.names")
 row.names(norm_sub3.df) <- norm_sub3.df$Name
@@ -174,6 +173,10 @@ no_tags.df <- no_tags.df[,sapply(no_tags.df, is.numeric)]
 #then rbind the GST and the CD4 data frames to that one. The order of the targets
 #shouldn't matter anymore
 norm_sub5.df <- rbind(no_tags.df, sub_GST_antigens.df, sub_CD4_antigens.df)
+
+#Up to this point, everything has been the same for the malarial and non-malarial analysis.
+#Save another .RData file to start here in the future. 
+save.image("SangerTagSubtracted.RData")
 
 #At this point, Remove control samples for further analysis
 norm_sub6.df <- norm_sub5.df[,colnames(norm_sub5.df) %in% samples_test]
