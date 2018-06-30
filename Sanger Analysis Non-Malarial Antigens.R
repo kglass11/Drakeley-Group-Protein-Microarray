@@ -188,15 +188,19 @@ target2.df <- merge(target_meta.df, norm_sub6.df, by.x = "Name", by.y ="row.name
 
 #Also need negative control data, so make another target data frame with control samples
 targetcontrol.df <- merge(target_meta.df, norm_sub5.df[,colnames(norm_sub5.df) %in% samples_control], by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+#export this to use for CP3 CV analysis
+write.csv(targetcontrol.df, file = "SangerControlswithTargetinfo.csv")
 
-#For seropositivity calculations, do once for Pf and once Pv, all antigens, all dilutions
-Pf_antigens.df <- filter(target2.df, Plasmodium == "Pf")
-Pf_antigens.df <- tibble::column_to_rownames(Pf_antigens.df, var="Name")
-Pf_antigens.df <- Pf_antigens.df[,sapply(Pf_antigens.df, is.numeric)]
+#isolate non-malarial antigens for seropositivity calculations
+NM_target2.df <- filter(target2.df, Category == "non_malarial")
+NM_targetcontrol.df <- filter(targetcontrol.df, Category == "non_malarial")
 
-Pv_antigens.df <- filter(target2.df, Plasmodium == "Pv")
-Pv_antigens.df <- tibble::column_to_rownames(Pv_antigens.df, var="Name")
-Pv_antigens.df <- Pv_antigens.df[,sapply(Pv_antigens.df, is.numeric)]
+#For seropositivity calculations, do for all antigens, all dilutions
+NMtest.df <- tibble::column_to_rownames(NM_target2.df, var="Name")
+NMtest.df <- NMtest.df[,sapply(NMtest.df, is.numeric)]
+
+NMcontrol.df <- tibble::column_to_rownames(NM_targetcontrol.df, var="Name")
+NMcontrol.df <- NMcontrol.df[,sapply(NMcontrol.df, is.numeric)]
 
 #For the person_exposed calculation, only want the antigens at 1 dilution each.
 #For the Sanger antigens Dilution = 0.5 
