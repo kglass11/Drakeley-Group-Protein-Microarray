@@ -285,47 +285,52 @@ ggplot(SPpeople, aes(x = Target, y = V1)) + theme_bw() + geom_bar(stat="identity
 
 graphics.off()
 
+###2. Boxplot of seropositive data from highest to lowest median value
+#Add negative controls plotted separately as a point on the same plot? or a small red line?
+
+#isolate data for NM only (it's already test samples only)
+#This data frame only has 1182 out of 1325 test samples now, 
+#because the others were not seropositive to any antigens and were therefore NA, which is not numeric
+SP_NM_test2 <- filter(target_SP_data.df, Category == "non_malarial")
+SP_NM_test2 <- tibble::column_to_rownames(SP_NM_test2, var = "Name")
+SP_NM_test2 <- SP_NM_test2[,sapply(SP_NM_test2, is.numeric)]
+
+#melt the SP only data with Na.rm = TRUE to organize for ggplot2
+SPdatamelt <- melt(as.matrix(SP_NM_test2), na.rm = TRUE)
+colnames(SPdatamelt) <- c("Target", "Sample", "Normalized")
+
+#violin plot
+ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + geom_violin()
+
+png(filename = paste0(study, "_NM_All_SP_data_violin.tif"), width = 5, height = 8, units = "in", res = 1200)
+
+ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + theme_bw() +
+  geom_violin() + coord_flip() + xlab("Target") + ylab("Normalized Log2(MFI)") + 
+  theme(text = element_text(size=10)) + theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black"))
+
+graphics.off()
+
+#boxplot
+png(filename = paste0(study, "_NM_All_SP_data_box.tif"), width = 5, height = 8, units = "in", res = 1200)
+
+ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + theme_bw() +
+  geom_boxplot(outlier.size = 0.3) + coord_flip() + xlab("Target") + ylab("Normalized Log2(MFI)") + 
+  theme(text = element_text(size=10)) + theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black")) + ylim(0,8)
+
+graphics.off()
+
+
+
+
 #Pf plot of normalized data for each antigen organized by highest median
 #Only include the data if the person is seropositive and an exposed person
 exposed_SP_Pf.df <- SP_Pf.df[Pf_target_reactive==TRUE, Pf_person_exposed==TRUE]
 reactive_Pf.df <- Pf_antigens.df[Pf_target_reactive==TRUE,Pf_person_exposed==TRUE]
 
-#Export this matrix which only includes exposed individuals
-write.csv(reactive_Pf.df, paste0(study,"Pf_exposed_data_WG.csv"))
 
-#Plot the number of seropositive people by antigen, highest to lowest for Pf
-SPpeople <- as.matrix(sort(rowSums(exposed_SP_Pf.df), decreasing = TRUE))
-SPpeople <- as.data.frame(SPpeople)
-SPpeople <- cbind(Target = rownames(SPpeople), SPpeople)
-SPpeople$Target <- as.factor(SPpeople$Target)
-#explicitly set factor levels to the correct order
-SPpeople$Target <- factor(SPpeople$Target, levels = SPpeople$Target[order(-SPpeople$V1)])
-
-png(filename = paste0(study, "_Pf_num_people_WG.tif"), width = 8, height = 4.5, units = "in", res = 1200)
-par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
-
-ggplot(SPpeople, aes(x = Target, y = V1)) + theme_bw() + geom_bar(stat="identity") + ylab("Number of Seropositive Individuals") + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6))
-
-graphics.off()
    
-#Make a new data frame where seropositive values will be the number and otherwise it will be NA
-SP_Pf_data.df <- data.frame(matrix(NA, nrow = nrow(reactive_Pf.df), ncol = ncol(reactive_Pf.df)))
-rownames(SP_Pf_data.df) <- rownames(reactive_Pf.df)
-colnames(SP_Pf_data.df) <- colnames(reactive_Pf.df)
-
-for(b in 1:ncol(reactive_Pf.df)){
-  for(a in 1:nrow(reactive_Pf.df)){
-    if(exposed_SP_Pf.df[[a,b]]==1){
-    SP_Pf_data.df[[a,b]] <- reactive_Pf.df[[a,b]] 
-    }
-  }
-}
-remove(a,b)
-
-#then melt this data.frame with Na.rm = TRUE to organize for ggplot2
-melt.Pf <- melt(as.matrix(SP_Pf_data.df), na.rm = TRUE)
-colnames(melt.Pf) <- c("Target", "Sample", "Normalized")
-
 #negative control data for Pf reactive targets, tag-subtracted data
 neg_samples <-c(grep("Neg", colnames(norm4.matrix)))
 neg_data <- norm_sub5.df[-rmsamp_all, neg_samples]
