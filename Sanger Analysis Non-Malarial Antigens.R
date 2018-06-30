@@ -31,7 +31,7 @@ load(file="SangerAfterProcessing.RData")
 target_file <- "sanger_target_metadata_KT_v2.csv" 
 target_meta.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
 
-###Seropositivity and Reactivity Thresholds###
+###Sample Prep and GST, CD4 subtraction!!!###
 
 #For this section, using normalized data with negative values set to 0 (norm4.matrix)
 
@@ -178,11 +178,16 @@ norm_sub5.df <- rbind(no_tags.df, sub_GST_antigens.df, sub_CD4_antigens.df)
 #Save another .RData file to start here in the future. 
 save.image("SangerTagSubtracted.RData")
 
+###Seropositivity Thresholds!!!###
+
 #At this point, Remove control samples for further analysis
 norm_sub6.df <- norm_sub5.df[,colnames(norm_sub5.df) %in% samples_test]
 
 #Make another target.df merged data frame for further use with tag-subtracted values and test samples only
 target2.df <- merge(target_meta.df, norm_sub6.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+
+#Also need negative control data, so make another target data frame with control samples
+targetcontrol.df <- merge(target_meta.df, norm_sub5.df[,colnames(norm_sub5.df) %in% samples_control], by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
 
 #For seropositivity calculations, do once for Pf and once Pv, all antigens, all dilutions
 Pf_antigens.df <- filter(target2.df, Plasmodium == "Pf")
