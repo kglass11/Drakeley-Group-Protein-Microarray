@@ -180,6 +180,10 @@ save.image("SangerTagSubtracted.RData")
 
 ###Seropositivity Thresholds!!!###
 
+#Redo this part --> DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
+
+#Then can remove antigens, samples, etc from the seropositivity matrix and a final matrix?
+
 #At this point, Remove control samples for further analysis
 norm_sub6.df <- norm_sub5.df[,colnames(norm_sub5.df) %in% samples_test]
 
@@ -202,19 +206,6 @@ NMtest.df <- NMtest.df[,sapply(NMtest.df, is.numeric)]
 NMcontrol.df <- tibble::column_to_rownames(NM_targetcontrol.df, var="Name")
 NMcontrol.df <- NMcontrol.df[,sapply(NMcontrol.df, is.numeric)]
 
-#For the person_exposed calculation, only want the antigens at 1 dilution each.
-#For the Sanger antigens Dilution = 0.5 
-#For all other antigens, Dilution = 1
-sub_Pf_antigens.df <- filter(target2.df, (Plasmodium == "Pf" & Dilution == "1") 
-    | (Plasmodium == "Pf" & Source == "J. Rayner; WTSI" & Dilution == "0.5"))
-sub_Pf_antigens.df <- tibble::column_to_rownames(sub_Pf_antigens.df, var="Name")
-sub_Pf_antigens.df <- sub_Pf_antigens.df[,sapply(sub_Pf_antigens.df, is.numeric)]
-
-sub_Pv_antigens.df <- filter(target2.df, (Plasmodium == "Pv" & Dilution == "1") 
-    | (Plasmodium == "Pv" & Source == "J. Rayner; WTSI" & Dilution == "0.5"))
-sub_Pv_antigens.df <- tibble::column_to_rownames(sub_Pv_antigens.df, var="Name")
-sub_Pv_antigens.df <- sub_Pv_antigens.df[,sapply(sub_Pv_antigens.df, is.numeric)]
-
 ###Form a seropositivity matrix based on reactivity over a cutoff derived from sample buffer background.
 #The threshold is the sample buffer mean + 3SD. Then take Log2 and normalize. 
 sample_cutoff <- cor2_buffer_sample_mean + 3*cor2_buffer_sample_sd
@@ -235,8 +226,12 @@ plot(sub_cutoff, pch='*', col = "blue", ylim=c(0,max(sub_cutoff)*1.25),
 
 graphics.off()
 
-#Then can apply the norm_sample_cutoff to each data frame of interest
-#because the samples are not changing, only the antigens are changing. 
+#Then can apply the norm_sample_cutoff to non-malarial antigens
+#the samples are not changing, only the antigens are changing. 
+
+#need a separate vector of buffer cutoffs for control samples!! 
+
+
 
 #Make seropositivity matrices for Pf and Pv separately 
 SP_Pf.df <- t(apply(Pf_antigens.df, 1, function(x) ((x > sub_cutoff)+0)))
