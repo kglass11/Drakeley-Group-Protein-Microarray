@@ -214,21 +214,40 @@ sum(sub_cutoff<1)/length(sub_cutoff) *100
 
 #Apply the final cutoff to ALL antigens, ALL dilutions, for test and control samples
 SP_all.df <- t(apply(norm_sub5.df, 1, function(x) ((x > final_cutoff)+0)))
+colnames(SP_all.df) <- colnames(norm_sub5.df)
+
+#Make a new data frame where seropositive values will be the data and otherwise it will be NA
+SP_all_data.df <- data.frame(matrix(NA, nrow = nrow(norm_sub5.df), ncol = ncol(norm_sub5.df)))
+rownames(SP_all_data.df) <- rownames(norm_sub5.df)
+colnames(SP_all_data.df) <- colnames(norm_sub5.df)
+
+for(b in 1:ncol(norm_sub5.df)){
+  for(a in 1:nrow(norm_sub5.df)){
+    if(SP_all.df[[a,b]]==1){
+      SP_all_data.df[[a,b]] <- norm_sub5.df[[a,b]] 
+    }
+  }
+}
+remove(a,b)
 
 ### Now subset both the actual data and the seropositivity information!! 
 
 #At this point, Remove control samples for further analysis
 norm_sub6.df <- norm_sub5.df[,colnames(norm_sub5.df) %in% samples_test]
+SP_sub1.df <- SP_all.df[,colnames(SP_all.df) %in% samples_test]
+SP_sub_data.df <- SP_all_data.df[,colnames(SP_all_data.df) %in% samples_test]
 
-#Make another target.df merged data frame for further use with tag-subtracted values and test samples only
+#Make target.df merged data frames for further use with tag-subtracted values and test samples only
 target2.df <- merge(target_meta.df, norm_sub6.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+target_SP.df <- merge(target_meta.df, SP_sub1.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+target_SP_data.df <- merge(target_meta.df, SP_sub_data.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
 
 #Also need negative control data, so make another target data frame with control samples
 targetcontrol.df <- merge(target_meta.df, norm_sub5.df[,colnames(norm_sub5.df) %in% samples_control], by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
 #export this to use for CP3 CV analysis
 write.csv(targetcontrol.df, file = "SangerControlswithTargetinfo.csv")
 
-#isolate non-malarial antigens for seropositivity calculations
+#isolate non-malarial antigens
 NM_target2.df <- filter(target2.df, Category == "non_malarial")
 NM_targetcontrol.df <- filter(targetcontrol.df, Category == "non_malarial")
 
@@ -239,48 +258,32 @@ NMtest.df <- NMtest.df[,sapply(NMtest.df, is.numeric)]
 NMcontrol.df <- tibble::column_to_rownames(NM_targetcontrol.df, var="Name")
 NMcontrol.df <- NMcontrol.df[,sapply(NMcontrol.df, is.numeric)]
 
+########################################
+############### Plots!!! ###############
+########################################
 
+###1. Plot number of seropositive people for each NM antigen, not including negative controls
 
+#Isolate NM antigens and test samples only for seropositivity matrix
+SP_NM_test <- filter(target_SP.df, Category == "non_malarial")
+SP_NM_test <- tibble::column_to_rownames(SP_NM_test, var = "Name")
+SP_NM_test <- SP_NM_test[,sapply(SP_NM_test, is.numeric)]
 
+#data frame of sums of seropositives for each antigen, sorted highest to lowest
+SPpeople <- as.data.frame(as.matrix((sort(rowSums(SP_NM_test), decreasing = TRUE))))
+SPpeople <- cbind(Target = rownames(SPpeople), SPpeople)
+SPpeople$Target <- as.factor(SPpeople$Target)
+#explicitly set factor levels to the correct order
+SPpeople$Target <- factor(SPpeople$Target, levels = SPpeople$Target[order(-SPpeople$V1)])
 
+png(filename = paste0(study, "_NM_SPpeople.tif"), width = 8, height = 4.5, units = "in", res = 1200)
 
-  
-###Create a threshold for overall target reactivity
-#e.g. To be included in heatmaps and other analyses, perhaps targets should be reacted to by at least 5% of people?
+ggplot(SPpeople, aes(x = Target, y = V1)) + theme_bw() + geom_bar(stat="identity") + 
+  ylab("Number of Seropositive Individuals") + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black"))
 
-#All Pf antigens
-Pf_target_breadth <- rowSums(SP_Pf.df, na.rm=TRUE)
-Pf_target_reactive <- Pf_target_breadth > (ncol(SP_Pf.df)/100)*5
-cat(sum(Pf_target_reactive), "out of", nrow(SP_Pf.df), "Pf targets are reactive in at least 5% of people")
-
-#All Pv antigens
-Pv_target_breadth <- rowSums(SP_Pv.df, na.rm=TRUE)
-Pv_target_reactive <- Pv_target_breadth > (ncol(SP_Pv.df)/100)*5
-cat(sum(Pv_target_reactive), "out of", nrow(SP_Pv.df), "Pv targets are reactive in at least 5% of people")
-
-###Create a threshold for overall person reactivity
-#Similarly, perhaps unreactive individuals should be disincluded? Either way - this is informative.
-
-#For person reactivity, we do not want to count multiple dilutions for each antigen 
-
-#Sub Pf antigens
-Pf_person_breadth <- colSums(sub_SP_Pf.df, na.rm=TRUE)
-Pf_person_exposed <- Pf_person_breadth > (nrow(sub_SP_Pf.df)/100)*5
-cat(sum(Pf_person_exposed), "out of", ncol(sub_SP_Pf.df), "samples are reactive to at least 5% of Pf targets")
-
-#Sub Pv antigens
-Pv_person_breadth <- colSums(sub_SP_Pv.df, na.rm=TRUE)
-Pv_person_exposed <- Pv_person_breadth > (nrow(sub_SP_Pv.df)/100)*5
-cat(sum(Pv_person_exposed), "out of", ncol(sub_SP_Pv.df), "samples are reactive to at least 5% of Pv targets")
-
-### Export matrix of data for reactive protein targets only (cutoff mean+3SD method)
-
-# Includes control AND test samples
-Pf.reactive.targets.matrix <- as.matrix(norm_sub5.df[Pf_target_reactive==TRUE,])
-write.csv(Pf.reactive.targets.matrix, paste0(study,"Pf_reactive_targets_data_WG.csv")) 
-
-Pv.reactive.targets.matrix <- as.matrix(norm_sub5.df[Pv_target_reactive==TRUE])
-write.csv(Pv.reactive.targets.matrix, paste0(study,"Pv_reactive_targets_data_WG.csv")) 
+graphics.off()
 
 #Pf plot of normalized data for each antigen organized by highest median
 #Only include the data if the person is seropositive and an exposed person
