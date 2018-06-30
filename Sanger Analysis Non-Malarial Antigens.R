@@ -180,9 +180,42 @@ save.image("SangerTagSubtracted.RData")
 
 ###Seropositivity Thresholds!!!###
 
-#Redo this part --> DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
+#DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
+#Then can subset antigens, samples, etc from the seropositivity matrix and the final data frame.
 
-#Then can remove antigens, samples, etc from the seropositivity matrix and a final matrix?
+#Do seropositivity calculations on norm_sub5.df, which has excluded samples removed, but still includes controls.
+
+###Form a seropositivity matrix based on reactivity over a cutoff derived from sample buffer background.
+#The threshold is the sample buffer mean + 3SD. Then take Log2 and normalize. 
+sample_cutoff <- cor2_buffer_sample_mean + 3*cor2_buffer_sample_sd
+log_sample_cutoff <- log2(sample_cutoff)
+norm_sample_cutoff <- log_sample_cutoff - log_buffer_sample_mean
+
+#Tailor the norm_sample_cutoff to remove excluded samples ONLY
+buffer_cutoff.matrix <- as.matrix(norm_sample_cutoff)
+rownames(buffer_cutoff.matrix, colnames(norm4.matrix))
+sub_cutoff <- as.matrix(buffer_cutoff.matrix[(!rownames(sub_buf_cutoff.matrix) %in% samples_exclude),])
+
+#Plot the sample cutoffs for samples included in analysis
+png(filename = paste0(study, "_Buffer_Cutoffs.tif"), width = 5, height = 4, units = "in", res = 1200)
+par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+plot(sub_cutoff, pch='*', col = "blue", ylim=c(0,max(sub_cutoff)*1.25),
+     ylab="Seropositivity Cutoff", xlab="Sample (Array)")
+
+graphics.off()
+
+#make a new cutoff where if the norm_sample_cutoff is less than 1, the cutoff is replaced with a value of 1
+final_cutoff <- sub_cutoff
+final_cutoff[which(final_cutoff<1)] <- 1
+
+#How many samples have a cutoff below 1? --> 464/1361 = 34.1%
+sum(sub_cutoff<1)
+sum(sub_cutoff<1)/length(sub_cutoff) *100
+
+#Apply the final cutoff to ALL antigens, ALL dilutions, for test and control samples
+SP_all.df <- t(apply(norm_sub5.df, 1, function(x) ((x > final_cutoff)+0)))
+
+### Now subset both the actual data and the seropositivity information!! 
 
 #At this point, Remove control samples for further analysis
 norm_sub6.df <- norm_sub5.df[,colnames(norm_sub5.df) %in% samples_test]
@@ -206,39 +239,11 @@ NMtest.df <- NMtest.df[,sapply(NMtest.df, is.numeric)]
 NMcontrol.df <- tibble::column_to_rownames(NM_targetcontrol.df, var="Name")
 NMcontrol.df <- NMcontrol.df[,sapply(NMcontrol.df, is.numeric)]
 
-###Form a seropositivity matrix based on reactivity over a cutoff derived from sample buffer background.
-#The threshold is the sample buffer mean + 3SD. Then take Log2 and normalize. 
-sample_cutoff <- cor2_buffer_sample_mean + 3*cor2_buffer_sample_sd
-log_sample_cutoff <- log2(sample_cutoff)
-norm_sample_cutoff <- log_sample_cutoff - log_buffer_sample_mean
-
-#Tailor the norm_sample_cutoff to remove excluded samples and control samples
-buffer_cutoff.matrix <- as.matrix(norm_sample_cutoff)
-rownames(buffer_cutoff.matrix, colnames(norm4.matrix))
-sub_buf_cutoff.matrix <- as.matrix(buffer_cutoff.matrix[rownames(buffer_cutoff.matrix) %in% samples_test,])
-sub_cutoff <- sub_buf_cutoff.matrix[(!rownames(sub_buf_cutoff.matrix) %in% samples_exclude),]
-
-#Plot the sample cutoffs for samples included in analysis
-png(filename = paste0(study, "_Buffer_Cutoffs.tif"), width = 5, height = 4, units = "in", res = 1200)
-par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
-plot(sub_cutoff, pch='*', col = "blue", ylim=c(0,max(sub_cutoff)*1.25),
-     ylab="Seropositivity Cutoff", xlab="Sample (Array)")
-
-graphics.off()
-
-#Then can apply the norm_sample_cutoff to non-malarial antigens
-#the samples are not changing, only the antigens are changing. 
-
-#need a separate vector of buffer cutoffs for control samples!! 
 
 
 
-#Make seropositivity matrices for Pf and Pv separately 
-SP_Pf.df <- t(apply(Pf_antigens.df, 1, function(x) ((x > sub_cutoff)+0)))
-SP_Pv.df <- t(apply(Pv_antigens.df, 1, function(x) ((x > sub_cutoff)+0)))
 
-sub_SP_Pf.df <- t(apply(sub_Pf_antigens.df, 1, function(x) ((x > sub_cutoff)+0)))
-sub_SP_Pv.df <- t(apply(sub_Pv_antigens.df, 1, function(x) ((x > sub_cutoff)+0)))
+
   
 ###Create a threshold for overall target reactivity
 #e.g. To be included in heatmaps and other analyses, perhaps targets should be reacted to by at least 5% of people?
