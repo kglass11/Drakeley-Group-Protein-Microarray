@@ -9,7 +9,8 @@
 #rm(list=ls())
 
 #I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
-setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens")
+#"/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens"
+setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens")
 getwd()
 
 require("gtools")
@@ -24,8 +25,9 @@ library(gcookbook)
 library(dplyr)
 library(reshape2)
 
-load(file="SangerAfterProcessing.RData")
-#updated to "SangerTagSubtracted.RData"
+load(file="SangerTagSubtracted.RData")
+#updated to 
+#older version: "SangerAfterProcessing.RData"
 
 #import an updated target metadata file
 target_file <- "sanger_target_metadata_KT_v2.csv" 
@@ -194,7 +196,7 @@ norm_sample_cutoff <- log_sample_cutoff - log_buffer_sample_mean
 #Tailor the norm_sample_cutoff to remove excluded samples ONLY
 buffer_cutoff.matrix <- as.matrix(norm_sample_cutoff)
 rownames(buffer_cutoff.matrix, colnames(norm4.matrix))
-sub_cutoff <- as.matrix(buffer_cutoff.matrix[(!rownames(sub_buf_cutoff.matrix) %in% samples_exclude),])
+sub_cutoff <- as.matrix(buffer_cutoff.matrix[(!rownames(buffer_cutoff.matrix) %in% samples_exclude),])
 
 #Plot the sample cutoffs for samples included in analysis
 png(filename = paste0(study, "_Buffer_Cutoffs.tif"), width = 5, height = 4, units = "in", res = 1200)
