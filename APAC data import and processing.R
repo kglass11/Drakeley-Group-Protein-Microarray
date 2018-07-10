@@ -43,25 +43,25 @@ library(reshape2)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/GhanaProcessingMay21KG"
+workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Print Runs/Apac Microarray_2014_2015/SpotXel/ApacX1_X3_061115/ApacX1"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
-study <- "Ghana.v2"
+study <- "APACX1"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample list.csv"
+sample_file <- "Sample list APACX1 negs.csv"
 
 #define file name for sample file + additional metadata (character vector)
 meta_file <- "Sample metadata.csv"
 
 #define file name for antigen list file with additional info about targets.
-target_file <- "Target metadata with Tags.csv" 
+target_file <- "notdoneyet.csv" 
 
 #number of technical replicates for the study (usually 1 or 2)
 reps <- 2
 
 #define number of blocks per slide
-index_block <- 32
+index_block <- 20
 
 ### Set the working directory for the folder where .gpr files are. Can check working
 #directory after with getwd()
@@ -85,7 +85,7 @@ slide_ids <- list.files(pattern="*.gpr")
 slides_list <- list()
 for(i in 1:length(slide_ids)) { 
   
-  slides_list[[i]] <- read.table(slide_ids[i],skip=34,sep="\t",header=T)
+  slides_list[[i]] <- read.table(slide_ids[i],skip=11,sep="\t",header=T)
   slide_no_temp <- substr(slide_ids[[i]],7,nchar(slide_ids[[i]])-4)
   slides_list[[i]][,"slide_no"] <- slide_no_temp
 }
