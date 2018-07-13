@@ -43,7 +43,8 @@ library(reshape2)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Print Runs/Apac Microarray_2014_2015/SpotXel/ApacX1_X3_061115/ApacX1"
+workdir <- "/Users/Katie/Desktop/R files from work/ApacX1"
+  # "I:/Drakeley Group/PROTEIN MICROARRAYS/Print Runs/Apac Microarray_2014_2015/SpotXel/ApacX1_X3_061115/ApacX1"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 study <- "APACX1"
@@ -52,7 +53,7 @@ study <- "APACX1"
 sample_file <- "Sample list APACX1 negs.csv"
 
 #define file name for sample file + additional metadata (character vector)
-meta_file <- "Sample metadata.csv"
+meta_file <- "Apac Sample metadata.csv"
 
 #define file name for antigen list file with additional info about targets.
 target_file <- "notdoneyet.csv" 
@@ -86,7 +87,7 @@ slides_list <- list()
 for(i in 1:length(slide_ids)) { 
   
   slides_list[[i]] <- read.table(slide_ids[i],skip=11,sep="\t",header=T)
-  slide_no_temp <- substr(slide_ids[[i]],7,nchar(slide_ids[[i]])-4)
+  slide_no_temp <- substr(slide_ids[[i]],14,nchar(slide_ids[[i]])-4)
   slides_list[[i]][,"slide_no"] <- slide_no_temp
 }
 remove(i)
@@ -143,7 +144,6 @@ remove(i)
 
 ### Merge the sample list file and the sample metadata file to include the appropriate metadata
 #The duplicate metadata will now be listed as NA, with exclude = yes
-
 sample_meta.df <- merge(samples.df, sample_meta3.df, by = "sample_id", all.x = TRUE)
 
 ###Create vectors indicating the number of slides, blocks, and samples
@@ -161,12 +161,17 @@ for(i in 1:dim(slides_all.df)[1]){
   block_ite<-row_ite$Block
   slide_ite<-row_ite$slide_no
   sample_info_1<-samples.df[which(samples.df$slide_no==slide_ite),]
-  match<-block_ite%in%sample_info_1[,"block_rep_1"]
-  if(match==TRUE){
+  
+  if(block_ite%in%sample_info_1[,"block_rep_1"]==TRUE){
     value<-which(block_ite==sample_info_1[,"block_rep_1"])
-  }else{
+  }else if(block_ite%in%sample_info_1[,"block_rep_2"]==TRUE){
     value<-which(block_ite==sample_info_1[,"block_rep_2"])
+  }else if(block_ite%in%sample_info_1[,"block_rep_3"]==TRUE){
+    value<-which(block_ite==sample_info_1[,"block_rep_3"])
+  }else{
+    value<-which(block_ite==sample_info_1[,"block_rep_4"])
   }
+  
   sample_info_2<-sample_info_1[value,"sample_id_unique"]
   slides_all.df$Sample[i]<-as.character(sample_info_2)
 }
