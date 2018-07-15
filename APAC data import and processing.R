@@ -367,6 +367,9 @@ graphics.off()
 #***Samples which have deviant buffer means will be automatically excluded from further analysis
 #***Buffer targets which are deviant across all pads and slides will be automatically excluded from further analysis
 
+# For APAC, count the blanks and PBS spots ALL as buffer!! 
+targets_buffer <- c(targets_buffer,targets_blank)
+
 #Buffer assessment EXCLUDING "bad" spots: 
 #Mean median corrected MFI for all data points
 cor_buffer_mean <- mean(cor2.matrix[targets_buffer,], na.rm = TRUE)
@@ -428,7 +431,7 @@ abline(h = cor_all_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
 title(main = "Corrected Buffer MFI by SLIDE/SUBARRAY/SAMPLE\n", adj=0)
 title(ylab="Corrected MFI (log scale)", line=2.7)
 
-boxplot(t(cor.matrix[targets_buffer,]) ~ samples.df$block_rep_1, outcex=0.5, xlab="Subarrays (1/2, 3/4, etc.)", add=FALSE, las=1, log = "y")
+boxplot(t(cor.matrix[targets_buffer,]) ~ samples.df$block_rep_1, outcex=0.5, xlab="Subarrays (Blocks 1-4, etc.)", add=FALSE, las=1, log = "y")
 abline(h = cor_all_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
 title(ylab="Corrected MFI (log scale)", line=2.7)
 
@@ -457,18 +460,7 @@ cor_buffer_deviant.df <- annotation_targets.df[deviant_buffer_targets,]
 cor_buffer_deviant.df
 write.csv(cor_buffer_deviant.df, file = paste0(study,"_deviant_buffer_targets.csv"))
 
-#list of disincluded buffer targets ("bad" spots)
-removed_buffer_targets <- c()
-for (i in 1:length(targets_buffer)){
-  for(j in 1:length(high_targets_disinclude))
-    if (targets_buffer[i] == high_targets_disinclude[j]){
-      removed_buffer_targets[j] <- targets_buffer[i]
-    }
-}
-remove(i,j)
-removed_buffer_targets <- subset(removed_buffer_targets, !is.na(removed_buffer_targets))
-
-#All slides, INCLUDING "bad" spots (ALL buffer targets)
+#All slides, ALL buffer targets
 png(filename = paste0(study, "_buffer_targets.tif"), width = 5, height = 4, units = "in", res = 600)
 par(mar = c(5, 3, 2.25, 0.5), oma = c(0, 0, 0, 0), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.6, cex.lab = 1, xpd=NA, las=2)
@@ -477,19 +469,18 @@ boxplot(t(cor.matrix[targets_buffer,]),
         ylab="Corrected MFI (log scale)", log = "y")
 abline(h = cor_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
 
-mtext(paste("Excluded buffer targets:", paste(removed_buffer_targets, collapse = ",")), las = 1)
-
 graphics.off()
 
 #By slide for up to 6 slides (the last slides) - INCLUDING "bad" spots (ALL buffer targets)
 #mfrow is ordered by the number of rows, and columns of plots you want - so must be edited based on the number of slides
+
+#This isn't working well because there are slides missing - instead called out 6 slides spread across study
 png(filename = paste0(study, "_buffer_spots_slide.tif"), width = 5, height = 4, units = "in", res = 600)
 par(mfrow=c(2,3), mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=2)
-for (i in 1:index_slide){
+for (i in c(1,20,40,69,70,74)){
   boxplot(t(cor.matrix[targets_buffer,samples.df$slide_no==i]),
           ylab="Corrected MFI",
-          ylim=c(0,2000),
           add=FALSE, 
           cex=0.5,
           xpd=NA,
