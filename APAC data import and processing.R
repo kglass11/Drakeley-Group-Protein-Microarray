@@ -233,54 +233,14 @@ cor.matrix <- backgroundCorrect.matrix(fore.matrix, back.matrix, method = "norme
 write.csv(cor.matrix, file=paste0(study,"_background_corrected_MFI.csv"))
 
 ###Assign target names to groups of your array targets to identify their 'type'
-targets_blank = c(grep("BLANK", annotation_targets.df$Name))
-targets_buffer = c(grep("buffer", annotation_targets.df$Name))
-targets_ref = c(grep("REF", annotation_targets.df$Name))
-targets_std = c(grep("Std", annotation_targets.df$Name))
+targets_blank = c(grep("Blank", ignore.case = TRUE, annotation_targets.df$ID))
+targets_buffer = c(grep("PBS", ignore.case = TRUE, annotation_targets.df$ID))
+targets_ref = c(grep("REF", ignore.case = TRUE, annotation_targets.df$ID))
+targets_std = c(grep("Std", ignore.case = TRUE, annotation_targets.df$ID))
 targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
 
-###Remove "bad" spots from subsequent analysis
-
-#First, we need to tell R which spots are the highest spots on the plate
-#the spots printed immediately after these can be made to have null MFIs
-#This call will create a vector identifying all ref spots, plus all std spots called "Std 1"
-high_targets <- c(targets_ref, grep("Std 1", row.names(annotation_targets.df)))
-high_targets_disinclude <-c()
-
-#subset high_targets to exclude high targets in the bottom of block 1
-#these were printed last in both cases (reps = 1 or reps = 2)
-high_targets1 <- high_targets[!between(high_targets, (index_target/2 - 12), (index_target/2))]
-
-#To identify the spots to disinclude, we need to identify the position of the next spot in the print run.
-#This is different for reps=1 or reps=2.
-
-# For singlicate printing, the printer prints from top to bottom, right to left, with a new pickup for block 1 with different 
-#targets than were just printed in block 2. 
-
-if (reps==1){
-  # If the high target is in block 2, then exclude high_target - index_target/2 
-  # If the high target is in block 1, then exclude high_target + index_target/2 + 12
-  high_targets_disinclude <- ifelse(high_targets1>=index_target/2, high_targets1-(index_target/2), high_targets1+(index_target/2+12))
-}
-
-# For duplicate printing, the printer prints from top to bottom, right to left, with only one pickup for both duplicate rows
-
-if (reps==2){
-  
-  #subset high_targets1 to exclude high targets within (index target - 12) because these were printed last.
-  high_targets2 <- high_targets1[!between(high_targets1,(index_target - 12), index_target)]
-  
-  #for either block 1 or block 2, exclude high target + 12
-  for (i in 1:length(high_targets2)){
-  high_targets_disinclude[i] <- high_targets2[i] + 12
-  }
-  high_targets_disinclude <- subset(high_targets_disinclude, !is.na(high_targets_disinclude))
-}
-remove(i)
-
-###Convert the spots to be disincluded to NAs in background corrected data
+###NO removing data after high targets because this data was printed with a different printer
 cor2.matrix <- cor.matrix
-cor2.matrix[high_targets_disinclude, ] <- NA
 
 ###QUALITY CONTROL###
 
