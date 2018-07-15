@@ -50,7 +50,7 @@ workdir <- "/Users/Katie/Desktop/R files from work/ApacX1"
 study <- "APACX1"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample list APACX1 negs.csv"
+sample_file <- "Sample list APACX1 negs v2.csv"
 
 #define file name for sample file + additional metadata (character vector)
 meta_file <- "Apac Sample metadata.csv"
@@ -181,7 +181,7 @@ annotation_targets.df <- annotation_targets.df[,c(1,2,3,5)]
 
 annotation_targets.df <- cbind(row.names(annotation_targets.df), annotation_targets.df)
 colnames(annotation_targets.df)[1] <- "target_id_numeric"
-annotation_targets.df[6] <- c(paste(rownames(annotation_targets.df), annotation_targets.df$Name, annotation_targets.df$Block, sep = "_"))
+annotation_targets.df[6] <- c(paste(rownames(annotation_targets.df), annotation_targets.df$ID, annotation_targets.df$Block, sep = "_"))
 colnames(annotation_targets.df)[6] <- "target_id_unique"
 rownames(annotation_targets.df) <- c(annotation_targets.df$target_id_unique)
 
@@ -201,12 +201,15 @@ index_target <- as.numeric(length(annotation_targets.df$target_id_numeric))
 #The column identifying the median.df - the background in slides_all.df is 34 (here we ignore this column)
 
 #Foreground
+#this isn't working because there are slides missing and so some samples_unique don't have matching data
+#slides missing = 3, 13, 54
 fore.df <- annotation_targets.df
 for(i in 1:length(samples)){
   ite_out<-slides_all.df$F635.Median[which(slides_all.df$Sample==samples_unique[i])]
   fore.df<-cbind(fore.df,ite_out)
   colnames(fore.df)[length(colnames(fore.df))]<-samples_unique[i]
 }
+remove(i, ite_out)
 
 #Background
 back.df <- annotation_targets.df
@@ -215,6 +218,7 @@ for(i in 1:length(samples)){
   back.df<-cbind(back.df,ite_out)
   colnames(back.df)[length(colnames(back.df))]<-samples_unique[i]
 }
+remove(i, ite_out)
 
 #Generate matrices of the same data (that is, the same data with only a single data type)
 fore.matrix <- as.matrix(fore.df[,7:ncol(fore.df)])
