@@ -176,8 +176,8 @@ save(slides_all.df, file=paste0(study,"_slides_all.df"))
 #load(paste0(study,"_slides_all.df"))
 
 ### Make a spot annotations dataframe
-annotation_targets.df <- filter(slides_all.df, slide_no==1, Block == 1 | Block == 2)
-annotation_targets.df <- annotation_targets.df[,1:4]
+annotation_targets.df <- filter(slides_all.df, slide_no=="01", Block == 1 | Block == 2| Block == 3 | Block == 4)
+annotation_targets.df <- annotation_targets.df[,c(1,2,3,5)]
 
 annotation_targets.df <- cbind(row.names(annotation_targets.df), annotation_targets.df)
 colnames(annotation_targets.df)[1] <- "target_id_numeric"
