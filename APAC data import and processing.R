@@ -565,10 +565,10 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
     }
 
   if (reps == 2){
-    std_3_norm <- stds_norm[c(3,9),]
+    std_3_norm <- stds_norm[c(3,13),]
     std_3_norm <- log2(apply((2^std_3_norm), 2, mean))
   
-    std_3_pre <- stds_pre[c(3,9),]
+    std_3_pre <- stds_pre[c(3,13),]
     std_3_pre <- log2(apply((2^std_3_pre), 2, mean))
   }
 
