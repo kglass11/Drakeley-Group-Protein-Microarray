@@ -56,7 +56,7 @@ sample_file <- "Sample list APACX1 negs v2.csv"
 meta_file <- "Apac Sample metadata.csv"
 
 #define file name for antigen list file with additional info about targets.
-target_file <- "notdoneyet.csv" 
+target_file <- "Antigen list_Apac_v4.csv" 
 
 #number of technical replicates for the study (usually 1 or 2)
 reps <- 2
@@ -240,6 +240,34 @@ targets_std = c(grep("Std", ignore.case = TRUE, annotation_targets.df$ID))
 targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
 
 ###NO removing data after high targets because this data was printed with a different printer
+
+###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
+
+#Prepare target data frame for merging (get "unique" names from annotation targets) 
+target_meta2.df <- merge(target_meta.df[,1:6], annotation_targets.df, by.x = "Name", by.y = "ID")
+
+#merge target data frame with data
+bunny <- merge(target_meta2.df, cor.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
+
+#subset based on GST tag
+bun <- filter(bunny, Expression_Tag == "GST")
+
+#isolate GST values and plot GST - There are 8 GST spots!! duplicated on each block on all 4 blocks
+GST <- bunny[grep("GST", bunny$target_id_unique),]
+
+png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
+par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
+plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
+     ylab="Background Corrected MFI", xlab="GST spot", cex.main=1, cex.lab=1, cex.axis=0.7)
+
+graphics.off()
+
+#take mean of GST values to subtract for each sample
+
+#subtract GST directly for each sample from all tagged targets
+
+#bind GST-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
+
 cor2.matrix <- cor.matrix
 
 ###QUALITY CONTROL###
