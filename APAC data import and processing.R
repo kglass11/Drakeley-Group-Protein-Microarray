@@ -556,58 +556,58 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
   stds_norm <- norm.matrix[targets_std,]
   stds_pre <- log.cor.matrix[targets_std,]
 
-  #Plot Std 5 in Levey Jennings Style plot
+  #Plot Std 3 in Levey Jennings Style plot
   #KG - I don't know if these column numbers will hold up every time...switch to using grep?
   #average replicates for reps == 2, arithmetic mean!
   if (reps == 1){
-    std_5_norm <- stds_norm[c(5),]
-    std_5_pre <- stds_pre[c(5),]
+    std_3_norm <- stds_norm[c(3),]
+    std_3_pre <- stds_pre[c(3),]
     }
 
   if (reps == 2){
-    std_5_norm <- stds_norm[c(5,15),]
-    std_5_norm <- log2(apply((2^std_5_norm), 2, mean))
+    std_3_norm <- stds_norm[c(3,9),]
+    std_3_norm <- log2(apply((2^std_3_norm), 2, mean))
   
-    std_5_pre <- stds_pre[c(5,15),]
-    std_5_pre <- log2(apply((2^std_5_pre), 2, mean))
+    std_3_pre <- stds_pre[c(3,9),]
+    std_3_pre <- log2(apply((2^std_3_pre), 2, mean))
   }
 
   #calculate geometric (not arithmetic) mean, SD and CV
   #normalized:
-  std5mean <- mean(c(std_5_norm), na.rm = TRUE)
-  std5sd <- sd(c(std_5_norm), na.rm = TRUE)
-  e_std5sd <- std5sd*log(2)
-  std5cv <- sqrt(exp(e_std5sd^2)-1)*100
+  std3mean <- mean(c(std_3_norm), na.rm = TRUE)
+  std3sd <- sd(c(std_3_norm), na.rm = TRUE)
+  e_std3sd <- std3sd*log(2)
+  std3cv <- sqrt(exp(e_std3sd^2)-1)*100
 
   #pre-normalized:
-  std5mean1 <- mean(c(std_5_pre), na.rm = TRUE)
-  std5sd1 <-sd(c(std_5_pre), na.rm = TRUE)
-  e_std5sd1 <- std5sd1*log(2)
-  std5cv1 <- sqrt(exp(e_std5sd1^2)-1)*100
+  std3mean1 <- mean(c(std_3_pre), na.rm = TRUE)
+  std3sd1 <-sd(c(std_3_pre), na.rm = TRUE)
+  e_std3sd1 <- std3sd1*log(2)
+  std3cv1 <- sqrt(exp(e_std3sd1^2)-1)*100
 
-  #Plotting Std 5 Levey Jennings Style
-  png(filename = paste0(study, "_std_5_LJ.tif"), width = 5, height = 7.5, units = "in", res = 1200)
+  #Plotting Std 3 Levey Jennings Style
+  png(filename = paste0(study, "_std_3_LJ.tif"), width = 5, height = 7.5, units = "in", res = 1200)
   par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
-  plot(c(std_5_norm), pch='*', col = "blue", ylim=c(min(std_3_norm, na.rm = TRUE),max(std_3_norm, na.rm=TRUE)*1.25),
+  plot(c(std_3_norm), pch='*', col = "blue", ylim=c(min(std_3_norm, na.rm = TRUE),max(std_3_norm, na.rm=TRUE)*1.25),
      ylab="Normalized log2(MFI)", xlab="Sample (Array)")
 
-  abline(h=std5mean)
-  abline(h=std5mean+2*std5sd,lty=2)
-  abline(h=std5mean-2*std5sd,lty=2)
-  abline(h=std5mean+std5sd,lty=3)
-  abline(h=std5mean-std5sd,lty=3) 
+  abline(h=std3mean)
+  abline(h=std3mean+2*std3sd,lty=2)
+  abline(h=std3mean-2*std3sd,lty=2)
+  abline(h=std3mean+std3sd,lty=3)
+  abline(h=std3mean-std3sd,lty=3) 
 
-  plot(c(std_5_pre), pch='*', col = "darkblue", ylim=c(min(std_3_pre, na.rm = TRUE),max(std_3_pre, na.rm=TRUE)*1.25),
+  plot(c(std_3_pre), pch='*', col = "darkblue", ylim=c(min(std_3_pre, na.rm = TRUE),max(std_3_pre, na.rm=TRUE)*1.25),
      ylab="log2(MFI) (NOT normalized)", xlab="Sample (Array)")
 
-  abline(h=std5mean1)
-  abline(h=std5mean1+2*std5sd1,lty=2)
-  abline(h=std5mean1-2*std5sd1,lty=2)
-  abline(h=std5mean1+std5sd1,lty=3)
-  abline(h=std5mean1-std5sd1,lty=3)
+  abline(h=std3mean1)
+  abline(h=std3mean1+2*std3sd1,lty=2)
+  abline(h=std3mean1-2*std3sd1,lty=2)
+  abline(h=std3mean1+std3sd1,lty=3)
+  abline(h=std3mean1-std3sd1,lty=3)
 
-  mtext(paste("Geometric CV, Normalized:", round(std5cv, digits=2), "%" ), side=1, cex=0.8, line=0.5, outer=TRUE, xpd=NA, adj=0)
-  mtext(paste("Geometric CV, NOT Normalized:", round(std5cv1, digits=2), "%"), side=1, cex=0.8, line=1.5, outer=TRUE, xpd=NA, adj=0)
+  mtext(paste("Geometric CV, Normalized:", round(std3cv, digits=2), "%" ), side=1, cex=0.8, line=0.5, outer=TRUE, xpd=NA, adj=0)
+  mtext(paste("Geometric CV, NOT Normalized:", round(std3cv1, digits=2), "%"), side=1, cex=0.8, line=1.5, outer=TRUE, xpd=NA, adj=0)
 
   graphics.off()
 
