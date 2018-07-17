@@ -259,12 +259,13 @@ GST <- bunny[grep("GST", bunny$target_id_unique),]
 GSTmelt <- melt(GST)
 GSTmelt <- filter(GSTmelt,!(variable == "Block" | variable == "Column" | variable == "Row"))
 
-png(filename = paste0(study, "_GST_by_target.tif"), width = 7, height = 3.5, units = "in", res = 1200)
+png(filename = paste0(study, "_GST_by_target_log.tif"), width = 7, height = 3.5, units = "in", res = 1200)
 
 ggplot(GSTmelt, aes(x = variable, y=value, color = target_id_unique)) + geom_point() + theme_bw() +
   labs(x = "Sample", y = "Background Corrected MFI", title = "GST targets") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+  scale_y_continuous(breaks = 10**(1:10),trans = 'log10', labels = 10**(1:10))
 
 graphics.off()
 
