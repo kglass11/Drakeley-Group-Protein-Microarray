@@ -255,6 +255,29 @@ bun <- filter(bunny, Expression_Tag == "GST")
 #isolate GST values and plot GST - There are 8 GST spots!! duplicated on each block on all 4 blocks
 GST <- bunny[grep("GST", bunny$target_id_unique),]
 
+GSTmelt <- melt(GST)
+GSTmelt <- filter(GSTmelt,!(variable == "Block" | variable == "Column" | variable == "Row"))
+
+png(filename = paste0(study, "_GST_by_target.tif"), width = 7, height = 3.5, units = "in", res = 1200)
+
+ggplot(GSTmelt, aes(x = variable, y=value, color = target_id_unique)) + geom_point() + theme_bw() +
+  labs(x = "Sample", y = "Background Corrected MFI", title = "GST targets") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+
+graphics.off()
+
+GSTcontrols <- GSTmelt[(nrow(GSTmelt)-159):nrow(GSTmelt),]
+
+png(filename = paste0(study, "_GST_controls_only.tif"), width = 5, height = 3.5, units = "in", res = 1200)
+
+ggplot(GSTcontrols, aes(x = variable, y=value, color = target_id_unique)) + geom_point() + theme_bw() +
+  labs(x = "Sample", y = "Background Corrected MFI", title = "GST targets") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+
+graphics.off()
+
 png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
 par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
 plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
@@ -263,6 +286,7 @@ plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
 graphics.off()
 
 #take mean of GST values to subtract for each sample
+
 
 #subtract GST directly for each sample from all tagged targets
 
