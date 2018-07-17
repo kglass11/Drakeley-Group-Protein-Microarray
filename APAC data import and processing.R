@@ -251,6 +251,7 @@ bunny <- merge(target_meta2.df, cor.matrix, by.y = "row.names", by.x = "target_i
 
 #subset based on GST tag
 bun <- filter(bunny, Expression_Tag == "GST")
+bun <- tibble::column_to_rownames(bun, var = "target_id_unique")
 
 #isolate GST values and plot GST - There are 8 GST spots!! duplicated on each block on all 4 blocks
 GST <- bunny[grep("GST", bunny$target_id_unique),]
@@ -286,9 +287,21 @@ plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
 graphics.off()
 
 #take mean of GST values to subtract for each sample
+rownames(GST) <- GST$target_id_unique
+GST <- GST[,12:ncol(GST)]
 
+GSTmean <- colMeans(GST)
 
 #subtract GST directly for each sample from all tagged targets
+#set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
+bundata <- bun[11:ncol(bun)]
+
+subbedGST <- bundata
+for(i in 1:ncol(subbedGST))
+{
+  subbedGST[,i] <- bundata[,i]-GSTmean[i]
+  subbedGST[which(subbedGST[,i] <= 0),i] <- 50
+}
 
 #bind GST-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
 
