@@ -707,6 +707,64 @@ remove(i)
 
 write.csv(t(norm2.matrix), file = paste0(study,"_normalized_log_data_0s.csv"))
 
+### Average duplicates - APAC specific method - Including negative values
+
+#Because at least one of the malaria targets is NOT duplicated, cannot use row numbers or sorting to get duplicates 
+
+#identify list of duplicate 1 and duplicate 2, use that to separate the data for rep1 and rep2
+maltargets <- filter(target_meta2.df, Category == "malaria")
+
+rep1m <- maltargets[duplicated(maltargets$Name),]
+rep2m <- maltargets[duplicated(maltargets$Name, fromLast = TRUE),]
+
+rep1unique <- rep1m$target_id_unique
+rep2unique <- rep2m$target_id_unique
+
+rep1data <- norm.matrix[(rownames(norm.matrix) %in% rep1unique),]
+rep2data <- norm.matrix[(rownames(norm.matrix) %in% rep2unique),]
+
+#get these matrices in the order where can just average the same element on each matrix
+rep1d <- merge(annotation_targets.df, rep1data, by = "row.names",sort = FALSE)
+rep1d <- rep1d[order(rep1d$ID),]
+row.names(rep1d) <- rep1d$target_id_unique
+rep1d <- rep1d[,8:ncol(rep1d)]
+
+rep2d <- merge(annotation_targets.df, rep2data, by = "row.names",sort = FALSE)
+rep2d <- rep2d[order(rep2d$ID),]
+row.names(rep2d) <- rep2d$target_id_unique
+rep2d <- rep2d[,8:ncol(rep2d)]
+
+rep1 <- as.matrix(rep1d)
+rep2 <- as.matrix(rep2d)
+
+## Calculate correlation coefficient (default is pearson). Deviants are still included.
+repR <- cor(c(rep1), c(rep2), use = "complete.obs")
+print(repR)
+
+## Plot replicate 1 v. replicate 2 for each protein or each person and calculate correlation coefficient.
+png(filename = paste0(study, "_replicatescorrelation.tif"), width = 5, height = 4, units = "in", res = 600)
+par(mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
+    mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=1)
+
+plot(rep1, rep2, col="red", cex = 0.1)
+mtext(c(paste("Pearson correlation coefficient:", round(repR, digits=4))), side=3, adj=0)
+
+graphics.off()
+
+#isolate data that won't be going through the replicate averaging processing:
+norepdata <- norm.matrix[!(rownames(norm.matrix) %in% rep1unique) & !(rownames(norm.matrix) %in% rep2unique),]
+
+#Average rep1 and rep2
+normaverageI.matrix <- matrix(nrow = nrow(rep1), ncol = ncol(rep1))
+colnames(normaverageI.matrix) = colnames(rep1)
+rownames(normaverageI.matrix) = rownames(rep1)
+
+normaverageI.matrix <- log2((2^rep1 + 2^rep2)/2)
+
+#put average data back together with controls/norepdata
+normaverage.matrix <- rbind(normaverageI.matrix, norepdata)
+
+
 
 ### Average duplicates - INCLUDING negative values, if the data has technical replicates in the form of 2 blocks / subarray
 
@@ -747,22 +805,9 @@ if (reps == 2)
   
   write.csv(normaverage.matrix, paste0(study, "_average_norm_log_data.csv")) 
   
-  ## Calculate correlation coefficient (default is pearson). Deviants are still included.
-  repR <- cor(c(rep1), c(rep2), use = "complete.obs")
-  print(repR)
+ 
   
-  ## Plot replicate 1 v. replicate 2 for each protein or each person and calculate correlation coefficient.
-  png(filename = paste0(study, "_replicatescorrelation.tif"), width = 5, height = 4, units = "in", res = 600)
-  par(mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
-      mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=1)
   
-  plot(rep1, rep2, col="red", cex = 0.1)
-  mtext(c(paste("Pearson correlation coefficient:", round(repR, digits=4))), side=3, adj=0)
-  
-  graphics.off()
-  
-  }
-
 ### Average duplicates - Negative values set to 0s, if the data has technical replicates in the form of 2 blocks / subarray
 
 if (reps == 2)
