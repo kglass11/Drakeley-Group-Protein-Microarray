@@ -310,13 +310,16 @@ for(i in 1:ncol(subbedGST))
 no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
 row.names(no_tags.df) <- no_tags.df$target_id_unique
 no_tags.df <- no_tags.df[,12:ncol(no_tags.df)]
-#then rbind the GST and the CD4 data frames to that one. Note: The order of the targets
-#is now changed from what is was before!
-cor2.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
+#then rbind the GST and the CD4 data frames to that one. 
+cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
+
+#need to put the matrix back in the same order as before (by target_id_unique) because of calling out buffer etc.
+sortedcor <- merge(annotation_targets.df, cor1.matrix, by = "row.names", sort = FALSE)
+cor2.matrix <- as.matrix(sortedcor[,8:ncol(sortedcor)])
+row.names(cor2.matrix) <- row.names(annotation_targets.df)
 
 #save ALL GST subtracted data in another file
 write.csv(cor2.matrix, paste0(study, "_GST_subtracted_MFI.csv"))
-
 
 ###QUALITY CONTROL###
 
@@ -442,9 +445,6 @@ graphics.off()
 
 #***Samples which have deviant buffer means will be automatically excluded from further analysis
 #***Buffer targets which are deviant across all pads and slides will be automatically excluded from further analysis
-
-# For APAC, count the blanks and PBS spots ALL as buffer!! 
-targets_buffer <- c(targets_buffer,targets_blank)
 
 #Buffer assessment EXCLUDING "bad" spots: 
 #Mean median corrected MFI for all data points
