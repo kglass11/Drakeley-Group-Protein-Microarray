@@ -761,108 +761,98 @@ rownames(normaverageI.matrix) = rownames(rep1)
 
 normaverageI.matrix <- log2((2^rep1 + 2^rep2)/2)
 
+### Check for deviant technical replicates, automatically exclude (set to NA)
+# Use a modified Patrick's formula for ELISA called Katie's formula for microarray ;) to compare replicates within one array
+# if rep1 or rep2 is more than 2 times rep2 or rep1, respectively, exclude that pair
+# only apply the test if the values for both rep1 and rep2 are above 2 (on log2 scale)
+# Also, can redo this using the subsetted matrices (rep1 and rep2) and it should be shorter
+  for (k in 1:ncol(rep1))
+  {
+    for(j in 1:nrow(rep1)) 
+    {
+      if(is.na(rep1[j,k]) | is.na(rep2[j,k]) | (rep1[j,k]<2 & rep2[j,k]<2)){
+        j+1
+      } else if (rep1[j,k] > (log2(2) + rep2[j,k]) | (rep2[j,k] > (log2(2) + rep1[j,k])) == TRUE) 
+      {
+        normaverageI.matrix[j,k] <- NA
+      }
+    }
+  }
+  remove(j,k)
+
 #put average data back together with controls/norepdata
 normaverage.matrix <- rbind(normaverageI.matrix, norepdata)
 
-
-
-### Average duplicates - INCLUDING negative values, if the data has technical replicates in the form of 2 blocks / subarray
-
-if (reps == 2)
-{
-  n = nrow(norm.matrix)/2
-  rep1 <- norm.matrix[1:n,]
-  rep2 <- norm.matrix[(n+1):(n*2),]
+write.csv(normaverage.matrix, paste0(study, "_average_norm_log_data.csv")) 
   
-  normaverage.matrix <- matrix(nrow = n, ncol = ncol(norm.matrix))
-  colnames(normaverage.matrix) = colnames(norm.matrix)
-  rownames(normaverage.matrix) = rownames(norm.matrix[(1:n),])
-  
-  normaverage.matrix <- log2((2^rep1 + 2^rep2)/2)
-  
-}
+### Average duplicates - APAC specific method - Negative values set to 0!! 
+
+rep1data <- norm2.matrix[(rownames(norm2.matrix) %in% rep1unique),]
+rep2data <- norm2.matrix[(rownames(norm2.matrix) %in% rep2unique),]
+
+#get these matrices in the order where can just average the same element on each matrix
+rep1d <- merge(annotation_targets.df, rep1data, by = "row.names",sort = FALSE)
+rep1d <- rep1d[order(rep1d$ID),]
+row.names(rep1d) <- rep1d$target_id_unique
+rep1d <- rep1d[,8:ncol(rep1d)]
+
+rep2d <- merge(annotation_targets.df, rep2data, by = "row.names",sort = FALSE)
+rep2d <- rep2d[order(rep2d$ID),]
+row.names(rep2d) <- rep2d$target_id_unique
+rep2d <- rep2d[,8:ncol(rep2d)]
+
+rep1 <- as.matrix(rep1d)
+rep2 <- as.matrix(rep2d)
+
+## Calculate correlation coefficient (default is pearson). Deviants are still included.
+repR <- cor(c(rep1), c(rep2), use = "complete.obs")
+print(repR)
+
+## Plot replicate 1 v. replicate 2 for each protein or each person and calculate correlation coefficient.
+png(filename = paste0(study, "_replicatescorrelation_0s.tif"), width = 5, height = 4, units = "in", res = 600)
+par(mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
+    mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=1)
+
+plot(rep1, rep2, col="red", cex = 0.1)
+mtext(c(paste("Pearson correlation coefficient:", round(repR, digits=4))), side=3, adj=0)
+
+graphics.off()
+
+#isolate data that won't be going through the replicate averaging processing:
+norepdata <- norm2.matrix[!(rownames(norm2.matrix) %in% rep1unique) & !(rownames(norm2.matrix) %in% rep2unique),]
+
+#Average rep1 and rep2
+normaverageI.matrix <- matrix(nrow = nrow(rep1), ncol = ncol(rep1))
+colnames(normaverageI.matrix) = colnames(rep1)
+rownames(normaverageI.matrix) = rownames(rep1)
+
+normaverageI.matrix <- log2((2^rep1 + 2^rep2)/2)
 
 ### Check for deviant technical replicates, automatically exclude (set to NA)
 # Use a modified Patrick's formula for ELISA called Katie's formula for microarray ;) to compare replicates within one array
-  # if rep1 or rep2 is more than 2 times rep2 or rep1, respectively, exclude that pair
-  # only apply the test if the values for both rep1 and rep2 are above 2 (on log2 scale)
-  # Also, can redo this using the subsetted matrices (rep1 and rep2) and it should be shorter
-if (reps == 2)
-{ 
-  for (k in 1:ncol(rep1))
-  {
-    for(j in 1:nrow(rep1)) 
-    {
-      if(is.na(rep1[j,k]) | is.na(rep2[j,k]) | (rep1[j,k]<2 & rep2[j,k]<2)){
-        j+1
-      } else if (rep1[j,k] > (log2(2) + rep2[j,k]) | (rep2[j,k] > (log2(2) + rep1[j,k])) == TRUE) 
-      {
-        normaverage.matrix[j,k] <- NA
-      }
-    }
-  }
-  remove(j,k)
-  
-  write.csv(normaverage.matrix, paste0(study, "_average_norm_log_data.csv")) 
-  
- 
-  
-  
-### Average duplicates - Negative values set to 0s, if the data has technical replicates in the form of 2 blocks / subarray
-
-if (reps == 2)
-{
-  n = nrow(norm2.matrix)/2
-  rep1 <- norm2.matrix[1:n,]
-  rep2 <- norm2.matrix[(n+1):(n*2),]
-  
-  norm2average.matrix <- matrix(nrow = n, ncol = ncol(norm2.matrix))
-  colnames(norm2average.matrix) = colnames(norm2.matrix)
-  rownames(norm2average.matrix) = rownames(norm2.matrix[(1:n),])
-  
-  norm2average.matrix <- log2((2^rep1 + 2^rep2)/2)
-  
-}
-
-### Check for deviant technical replicates, automatically exclude (set to NA)
-# Use Patrick’s formula for ELISA to compare replicates within one array
-# if rep1 or rep2 is more than 1.5 times rep2 or rep1, respectively, exclude that pair
+# if rep1 or rep2 is more than 2 times rep2 or rep1, respectively, exclude that pair
+# only apply the test if the values for both rep1 and rep2 are above 2 (on log2 scale)
 # Also, can redo this using the subsetted matrices (rep1 and rep2) and it should be shorter
-if (reps == 2)
-{ 
-  for (k in 1:ncol(rep1))
+for (k in 1:ncol(rep1))
+{
+  for(j in 1:nrow(rep1)) 
   {
-    for(j in 1:nrow(rep1)) 
+    if(is.na(rep1[j,k]) | is.na(rep2[j,k]) | (rep1[j,k]<2 & rep2[j,k]<2)){
+      j+1
+    } else if (rep1[j,k] > (log2(2) + rep2[j,k]) | (rep2[j,k] > (log2(2) + rep1[j,k])) == TRUE) 
     {
-      if(is.na(rep1[j,k]) | is.na(rep2[j,k]) | (rep1[j,k]<2 & rep2[j,k]<2)){
-        j+1
-      } else if (rep1[j,k] > (log2(2) + rep2[j,k]) | (rep2[j,k] > (log2(2) + rep1[j,k])) == TRUE) 
-      {
-        norm2average.matrix[j,k] <- NA
-      }
+      normaverageI.matrix[j,k] <- NA
     }
   }
-  remove(j,k)
-  
-  write.csv(norm2average.matrix, paste0(study, "_average_norm_log_data_0s.csv")) 
-  
-  ## Calculate correlation coefficient (default is pearson). Deviants are still included.
-  repR <- cor(c(rep1), c(rep2), use = "complete.obs")
-  print(repR)
-  
-  ## Plot replicate 1 v. replicate 2 for each protein or each person and calculate correlation coefficient.
-  png(filename = paste0(study, "_replicatescorrelation_0s.tif"), width = 5, height = 4, units = "in", res = 600)
-  par(mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
-      mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=1)
-  
-  plot(rep1, rep2, col="red", cex = 0.1)
-  mtext(c(paste("Pearson correlation coefficient:", round(repR, digits=4))), side=3, adj=0)
-  
-  graphics.off()
-  
 }
+remove(j,k)
 
-#create matrix that is the same name whether or not we needed to average duplicates
+#put average data back together with controls/norepdata
+norm2average.matrix <- rbind(normaverageI.matrix, norepdata)
+
+write.csv(norm2average.matrix, paste0(study, "_average_norm_log_data.csv")) 
+
+###create matrix that is the same name whether or not we needed to average duplicates
 #Including negative values
 if (reps==2){norm3.matrix<-normaverage.matrix}
 if (reps==1){norm3.matrix<-norm.matrix}
