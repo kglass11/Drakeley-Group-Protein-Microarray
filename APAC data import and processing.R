@@ -305,8 +305,18 @@ for(i in 1:ncol(subbedGST))
 }
 
 #bind GST-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
+#Make another data frame where the tagged protein values are replaced by their subtracted values
+#filter out the GST tagged targets
+no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
+row.names(no_tags.df) <- no_tags.df$target_id_unique
+no_tags.df <- no_tags.df[,12:ncol(no_tags.df)]
+#then rbind the GST and the CD4 data frames to that one. Note: The order of the targets
+#is now changed from what is was before!
+cor2.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
 
-cor2.matrix <- cor.matrix
+#save ALL GST subtracted data in another file
+write.csv(cor2.matrix, paste0(study, "_GST_subtracted_MFI.csv"))
+
 
 ###QUALITY CONTROL###
 
