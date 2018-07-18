@@ -687,6 +687,61 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
 
   graphics.off()
 
+###Plot All standards together in ggplot2, but separately for rep1 and rep2
+  
+  #normalized
+  std_norm_1 <- stds_norm[1:10,]
+  std_norm_2 <- stds_norm[11:20,]
+  
+  std1melt <- melt(std_norm_1, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_norm_1.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std1melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep1 Normalized") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+    
+  graphics.off()
+  
+  std2melt <- melt(std_norm_2, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_norm_2.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std2melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep2 Normalized") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
+  #not normalized
+  std_pre_1 <- stds_pre[1:10,]
+  std_pre_2 <- stds_pre[11:20,]
+  
+  std1premelt <- melt(std_pre_1, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_pre_1.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep1 Pre-Normalization") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
+  std2premelt <- melt(std_pre_2, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_pre_2.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std2premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep2 Pre-Normalization") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
+
 # Set negative normalized log values to zero. This will be used for some analyses. 
 # For other analyses, including sending data to Nuno, the data will be input without setting values to 0. 
 # From now on, the norm.matrix has negative values, and norm2.matrix does not. 
