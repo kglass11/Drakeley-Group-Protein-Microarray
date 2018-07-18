@@ -877,10 +877,11 @@ dup_samp_data <- merge(dup_samples, for_dups.matrix, by = "sample_id_unique")
 #Export a table with all the info and data for the duplicates only
 write.csv(dup_samp_data, file = paste0(study, "_duplicate_assayed_samples.csv"))
 
-#Set exclude to "yes" for all samples assayed in duplicate.
-for(i in 1:nrow(dup_samples)){
-  sample_meta.df$exclude[which(sample_meta.df$sample_id == dup_samples$sample_id[i])] <- "yes"
-}
+# Don't do this for APAC1
+# #Set exclude to "yes" for all samples assayed in duplicate.
+# for(i in 1:nrow(dup_samples)){
+#   sample_meta.df$exclude[which(sample_meta.df$sample_id == dup_samples$sample_id[i])] <- "yes"
+# }
 
 ###Exporting processed data and metadata for further analysis (i.e. to give to Nuno)
 #This data includes negative normalized values.
@@ -907,11 +908,23 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   #Export file
   write.csv(trans.norm.df, file = paste0(study, "_final_processed_data.csv"))
 
-#Target metadata for every target - nothing has changed about this since the beginning
+#Target metadata for every target - with unique names
   #Export file
-  write.csv(target_meta.df, file = paste0(study, "_target_metadata.csv"))
+  write.csv(target_meta2.df, file = paste0(study, "_target_metadata.csv"))
 
-#Prepare final data with GST subtracted, control targets removed - For Negs set to 0 ONLY! (norm4.matrix)
+#Save R objects for what we need to give to Nuno
+  save(sample_meta_f.df, trans.norm.df, target_meta2.df, file = paste0(study, "_for_Nuno.RData"))
+
+#Save workspace for when you continue with analysis! 
+  save.image(paste0(study, "AfterProcessing.RData"))
+  
+##########################################
+  
+  
+  
+  
+  
+  #Prepare final data with GST subtracted, control targets removed - For Negs set to 0 ONLY! (norm4.matrix)
   #Assign sample type names, to identify control and test samples (logical)
   samples_test <- sample_meta.df$sample_id_unique[which(sample_meta.df$sample_type =="test")]
   samples_control <- sample_meta.df$sample_id_unique[which(sample_meta.df$sample_type =="control")]
