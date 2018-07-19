@@ -8,9 +8,8 @@
 #If you haven't just continued from the processing script, run:
 #rm(list=ls())
 
-#
-#/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens
-setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens")
+#I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
+setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens")
 getwd()
 
 require("gtools")
@@ -25,9 +24,8 @@ library(gcookbook)
 library(dplyr)
 library(reshape2)
 
-load(file="SangerTagSubtracted.RData")
+load(file="SangerAfterProcessing.RData")
 #updated to "SangerTagSubtracted.RData"
-#old file: SangerAfterProcessing.RData
 
 #import an updated target metadata file
 target_file <- "sanger_target_metadata_KT_v2.csv" 
@@ -179,31 +177,6 @@ norm_sub5.df <- rbind(no_tags.df, sub_GST_antigens.df, sub_CD4_antigens.df)
 #Up to this point, everything has been the same for the malarial and non-malarial analysis.
 #Save another .RData file to start here in the future. 
 save.image("SangerTagSubtracted.RData")
-
-###Additional Standard Curve Plots!! 
-
-stdmelt <- melt(stds_norm, varnames = c("Std", "Sample"))
-
-png(filename = paste0(study, "_stds_norm.tif"), width = 7, height = 5, units = "in", res = 1200)
-
-ggplot(stdmelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-  labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Normalized") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
-
-graphics.off()
-
-std1premelt <- melt(stds_pre, varnames = c("Std", "Sample"))
-
-png(filename = paste0(study, "_stds_pre.tif"), width = 7, height = 5, units = "in", res = 1200)
-
-ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-  labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Pre-Normalization") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
-
-graphics.off()
-
 
 ###Seropositivity Thresholds!!!###
 
