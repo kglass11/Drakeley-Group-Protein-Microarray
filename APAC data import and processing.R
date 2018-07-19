@@ -1,6 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #APAC Data Processing
-  #Last updated July 10, 2018, KG
+  #Last updated July 18, 2018, KG
 
 ###Create a folder, into which you should copy this script, your .gpr files (named 'Slide 1.gpr', 'Slide 2.gpr' etc.), 
 # and your sample list, sample metadata, and target (antigen) metadata csv files.
