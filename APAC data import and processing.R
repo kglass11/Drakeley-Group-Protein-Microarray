@@ -307,6 +307,30 @@ title(main="All GST, Log2(MFI)", adj=0)
 
 graphics.off()
 
+#calculate outliers for log2 transformed data, for all GST data considered as one population
+GSTlog <- log2(GST)
+GSToutliers <- scores(c(as.matrix(GSTlog)), type = "z", prob =0.995)
+
+#remove outliers (set to NA in original background corrected MFI data) 
+GSTrm995 <- as.matrix(GST)
+for(i in 1:length(GSTrm995)){
+  if(GSToutliers[[i]] == TRUE){
+    GSTrm995[[i]] <- NA
+  }
+}
+
+max(GSTrm995, na.rm = TRUE)
+min(GSTrm995, na.rm = TRUE)
+
+#plot histogram and other plots again with outliers either removed or shown in black
+png(filename = paste0(study, "_GST_hist_p.995.tif"), width = 5, height = 5, units = "in", res = 1200)
+par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+hist(log2(c(GSTrm995)), breaks = 25, col = "blue",
+     ylab="Frequency", xlab="Log2(MFI)", main = NULL)
+title(main="All GST, MFI", adj=0)
+
+graphics.off()
 
 #take mean of GST values to subtract for each sample
 rownames(GST) <- GST$target_id_unique
