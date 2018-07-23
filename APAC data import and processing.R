@@ -43,8 +43,9 @@ library(reshape2)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/ApacX1"
-  # "I:/Drakeley Group/PROTEIN MICROARRAYS/Print Runs/Apac Microarray_2014_2015/SpotXel/ApacX1_X3_061115/ApacX1"
+workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Print Runs/Apac Microarray_2014_2015/SpotXel/ApacX1_X3_061115/ApacX1"
+
+  # /Users/Katie/Desktop/R files from work/ApacX1
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 study <- "APACX1"
@@ -286,6 +287,23 @@ plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
      ylab="Background Corrected MFI", xlab="GST spot", cex.main=1, cex.lab=1, cex.axis=0.7)
 
 graphics.off()
+
+#plot GST as a histogram or qplot to check normality - only normal after log2 transformation, not MFI
+hist(log2(c(as.matrix(GST))), breaks = 30)
+
+png(filename = paste0(study, "_GST_hist.tif"), width = 5, height = 7.5, units = "in", res = 1200)
+par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+hist(c(as.matrix(GST)), breaks = 25, col = "blue", xlim=c(min(GST, na.rm = TRUE),max(GST, na.rm=TRUE)*1.25),
+     ylab="Frequency", xlab="Background corrected MFI", main = NULL)
+title(main="All GST, MFI", adj=0)
+
+hist(log2(c(as.matrix(GST))), col = "darkblue", breaks = 25,
+     ylab="Frequency", xlab="Log2(MFI)", main = NULL)
+title(main="All GST, Log2(MFI)", adj=0)
+
+graphics.off()
+
 
 #take mean of GST values to subtract for each sample
 rownames(GST) <- GST$target_id_unique
