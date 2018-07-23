@@ -23,6 +23,8 @@ rm(list=ls())
 #then install from CRAN repository or local file or run:
 #install.packages(c("dplyr","gtools","contrast", "beeswarm", "mixtools", "gplots", "ggplot2", "gcookbook", "reshape2"))
 
+#install.packages("outliers")
+
 ##Install limma if you haven't already
 ## try http:// if https:// URLs are not supported
 #source("https://bioconductor.org/biocLite.R")
@@ -40,6 +42,7 @@ library(ggplot2)
 library(gcookbook)
 library(dplyr)
 library(reshape2)
+library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
@@ -598,6 +601,24 @@ for(i in 1:nrow(cor_sample_deviant)){
 #KG - It would be good to test this on data that has deviant buffer targets, so far they are all 0.
 #KG - Actually this might be pointless as we have already calculated the values for normalization and that is the use of the buffers
 cor3.matrix[deviant_buffer_targets,] <- NA
+
+
+#plot all buffer values as a histogram or qplot to check normality - only normal after log2 transformation, not MFI
+
+png(filename = paste0(study, "_Buffer_hist.tif"), width = 5, height = 7.5, units = "in", res = 1200)
+par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+hist(c(cor3.matrix[targets_buffer,]), breaks = 25, col = "blue",
+     ylab="Frequency", xlab="Background corrected MFI", main = NULL)
+title(main="All Buffer, MFI", adj=0)
+
+hist(log2(c(cor3.matrix[targets_buffer,])), col = "darkblue", breaks = 25,
+     ylab="Frequency", xlab="Log2(MFI)", main = NULL)
+title(main="All Buffer, Log2(MFI)", adj=0)
+
+graphics.off()
+
+
 
 ### Mean values for each target ordered by position within the arrays (not log-transformed or normalized data)
 #KG - I think we might want this somehwere else in the script using a more processed matrix
