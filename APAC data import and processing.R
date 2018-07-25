@@ -354,21 +354,21 @@ title(main="All GST, MFI", adj=0)
 graphics.off()
 
 #take mean of GST values to subtract for each sample
-rownames(GST) <- GST$target_id_unique
-GST <- GST[,12:ncol(GST)]
+GSTmean <- colMeans(GSTrm995, na.rm=TRUE)
 
-GSTmean <- colMeans(GST)
+#prepare data without the excluded samples since they were removed from GST samples
+bundata <- bun[11:ncol(bun)]
+bundata <- bundata[,!(colnames(bundata) %in% samples_exclude1)]
 
 #subtract GST directly for each sample from all tagged targets
 #set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
-bundata <- bun[11:ncol(bun)]
-
 subbedGST <- bundata
 for(i in 1:ncol(subbedGST))
 {
   subbedGST[,i] <- bundata[,i]-GSTmean[i]
   subbedGST[which(subbedGST[,i] <= 0),i] <- 50
 }
+remove(i)
 
 #bind GST-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
 #Make another data frame where the tagged protein values are replaced by their subtracted values
@@ -376,6 +376,8 @@ for(i in 1:ncol(subbedGST))
 no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
 row.names(no_tags.df) <- no_tags.df$target_id_unique
 no_tags.df <- no_tags.df[,12:ncol(no_tags.df)]
+no_tags.df <- no_tags.df[,!(colnames(no_tags.df) %in% samples_exclude1)]
+
 #then rbind the GST and the CD4 data frames to that one. 
 cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
 
@@ -552,43 +554,33 @@ plot(cor_buffer_cov_sample, ylab="CoV corrected buffer MFI", xlab="Sample", ylim
 remove(temp)
 graphics.off()
 
-#Buffer assessment INCLUDING "bad" spots:
-cor_buffer_all_mean <- mean(cor.matrix[targets_buffer,])
-#SD median corrected MFI for all data points
-cor_buffer_all_sd <- sd(cor.matrix[targets_buffer,])
-#Cut-off for deviation from mean
-cor_all_cutoff <- cor_buffer_all_mean+(3*cor_buffer_all_sd)
+samplessub <- filter(samples.df, !(exclude == "yes"))
 
-#Coefficient of variation for all buffer datapoints (INCLUDING "bad" spots), and all exlcuding deviant samples
-cor_buffer_cov_all <- cor_buffer_all_sd/cor_buffer_all_mean
-cor_buffer_cov_all_normal <- sd(cor.matrix[targets_buffer, cor_normal])/mean(cor.matrix[targets_buffer, cor_normal])
-
-#Plots by slide/pad/sample INCLUDING "bad" spots (all buffer data)
+#Plots by slide/pad/sample EXCLUDING "bad" spots 
 png(filename = paste0(study,"_buffer_mfi_QCplots.tif"), width = 5.5, height = 10, units = "in", res = 600)
 par(mfrow=c(3,1), mar = c(2, 4, 2.25, 0.5), oma = c(11.5, 0, 1, 0), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1.5, cex.axis = 1, cex.lab = 1.25, xpd=NA, las=1)
 
-boxplot(t(cor.matrix[targets_buffer,]) ~ samples.df$slide_no, outcex=0.5, xlab="Slide", add=FALSE, log = "y")
-abline(h = cor_all_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
+boxplot(t(cor2.matrix[targets_buffer,]) ~ samplessub$slide_no, outcex=0.5, xlab="Slide", add=FALSE, log = "y")
+abline(h = cor_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
 title(main = "Corrected Buffer MFI by SLIDE/SUBARRAY/SAMPLE\n", adj=0)
 title(ylab="Corrected MFI (log scale)", line=2.7)
 
-boxplot(t(cor.matrix[targets_buffer,]) ~ samples.df$block_rep_1, outcex=0.5, xlab="Subarrays (Blocks 1-4, etc.)", add=FALSE, las=1, log = "y")
-abline(h = cor_all_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
+boxplot(t(cor2.matrix[targets_buffer,]) ~ samplessub$block_rep_1, outcex=0.5, xlab="Subarrays (Blocks 1-4, etc.)", add=FALSE, las=1, log = "y")
+abline(h = cor_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
 title(ylab="Corrected MFI (log scale)", line=2.7)
 
-boxplot(t(cor.matrix[targets_buffer,]) ~ samples.df$sample_id_unique, outcex=0.5, xlab="Sample", add=FALSE, las=2, cex.axis = 0.4, yaxt="n", log = "y")
+boxplot(t(cor2.matrix[targets_buffer,]) ~ samplessub$sample_id_unique, outcex=0.5, xlab="Sample", add=FALSE, las=2, cex.axis = 0.4, yaxt="n", log = "y")
 axis(2, cex.axis=1)
-abline(h = cor_all_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
-abline(h = cor_buffer_all_mean, col = "red", lwd = 0.7, xpd=FALSE)
+abline(h = cor_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
+abline(h = cor_buffer_mean, col = "red", lwd = 0.7, xpd=FALSE)
 title(ylab="Corrected MFI (log scale)", line=2.7)
 
-mtext(c(paste("INCLUDING Bad Buffer Spots / EXCLUDING Bad Buffer Spots:")), side=1, cex=0.8, line=2, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("Mean overall corrected buffer MFI:", round(cor_buffer_all_mean, digits=3), "/", round(cor_buffer_mean, digits=3))), side=1, cex=0.8, line=3.5, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("SD overall corrected buffer MFI:", round(cor_buffer_all_sd, digits=3), "/", round(cor_buffer_sd, digits=3))), side=1, cex=0.8, line=5, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("Cut-off overall corrected buffer MFI:", round(cor_all_cutoff, digits=3), "/", round(cor_cutoff, digits=3))), side=1, cex=0.8, line=6.5, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("CoV overall corrected buffer MFI:", round(cor_buffer_cov_all, digits=3), "/", round(cor_buffer_cov, digits=3))), side=1, cex=0.8, line=8, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("CoV overall corrected buffer MFI (excl. deviant samples):", round(cor_buffer_cov_all_normal, digits=3), "/", round(cor_buffer_cov_normal, digits=3))), side=1, cex=0.8, line=9.5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("Mean overall corrected buffer MFI:", round(cor_buffer_mean, digits=3))), side=1, cex=0.8, line=3.5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("SD overall corrected buffer MFI:", round(cor_buffer_sd, digits=3))), side=1, cex=0.8, line=5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("Cut-off overall corrected buffer MFI:", round(cor_cutoff, digits=3))), side=1, cex=0.8, line=6.5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("CoV overall corrected buffer MFI:", round(cor_buffer_cov, digits=3))), side=1, cex=0.8, line=8, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("CoV overall corrected buffer MFI (excl. deviant samples):", round(cor_buffer_cov_normal, digits=3))), side=1, cex=0.8, line=9.5, outer=TRUE, xpd=NA, adj=0)
 
 graphics.off()
 
@@ -620,7 +612,7 @@ graphics.off()
 png(filename = paste0(study, "_buffer_spots_slide.tif"), width = 5, height = 4, units = "in", res = 600)
 par(mfrow=c(2,3), mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=2)
-for (i in c(1,20,40,69,70,74)){
+for (i in c(1,12,24,36,48,64)){
   boxplot(t(cor.matrix[targets_buffer,samples.df$slide_no==i]),
           ylab="Corrected MFI",
           add=FALSE, 
