@@ -250,12 +250,11 @@ targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
   #Character vector of samples to be removed
   samples_exclude1 <- samples.df$sample_id_unique[which(samples.df$exclude =="yes")]
 
-  #how many samples excluded so far? 32 for APACX1
+  #how many samples excluded so far? 32 for APACX1, + 9 more for controls 
   length(samples_exclude1)
   
   #set all values to NA for excluded samples
   cor.matrix[,colnames(cor.matrix) %in% samples_exclude1] <- NA
-
 
 ###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
 
@@ -304,35 +303,45 @@ plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
 graphics.off()
 
 #plot GST as a histogram or qplot to check normality - only normal after log2 transformation, not MFI
-hist(log2(c(as.matrix(GST))), breaks = 30)
+
+#remove extraneous columns from GST
+row.names(GST) <- GST$target_id_unique
+GST <- GST[,12:ncol(GST)]
+
+GSTvect <- c(as.matrix(GST))
+
+hist(log2(GSTvect), breaks = 30)
 
 png(filename = paste0(study, "_GST_hist.tif"), width = 5, height = 7.5, units = "in", res = 1200)
 par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
 
-hist(c(as.matrix(GST)), breaks = 25, col = "blue", xlim=c(min(GST, na.rm = TRUE),max(GST, na.rm=TRUE)*1.25),
+hist(GSTvect, breaks = 30, col = "blue",
      ylab="Frequency", xlab="Background corrected MFI", main = NULL)
 title(main="All GST, MFI", adj=0)
 
-hist(log2(c(as.matrix(GST))), col = "darkblue", breaks = 25,
+hist(log2(GSTvect), col = "darkblue", breaks = 30,
      ylab="Frequency", xlab="Log2(MFI)", main = NULL)
 title(main="All GST, Log2(MFI)", adj=0)
 
 graphics.off()
 
+#remove NA values from GST data frame for outlier calculation
+GST2 <- GST[,!(colnames(GST) %in% samples_exclude1)]
+GSTlog <- log2(GST2)
+
 #calculate outliers for log2 transformed data, for all GST data considered as one population
-GSTlog <- log2(GST)
 GSToutliers <- scores(c(as.matrix(GSTlog)), type = "z", prob =0.995)
 
 #remove outliers (set to NA in original background corrected MFI data) 
-GSTrm995 <- as.matrix(GST)
+GSTrm995 <- as.matrix(GST2)
 for(i in 1:length(GSTrm995)){
   if(GSToutliers[[i]] == TRUE){
     GSTrm995[[i]] <- NA
   }
 }
 
-max(GSTrm995, na.rm = TRUE)
-min(GSTrm995, na.rm = TRUE)
+max(GSTrm995, na.rm = TRUE) #9134 for APACX1
+min(GSTrm995, na.rm = TRUE) #77 for APACX1
 
 #plot histogram and other plots again with outliers either removed or shown in black
 png(filename = paste0(study, "_GST_hist_p.995.tif"), width = 5, height = 5, units = "in", res = 1200)
