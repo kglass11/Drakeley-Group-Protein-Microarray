@@ -1,6 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #APAC Data Processing
-  #Last updated July 18, 2018, KG
+  #Last updated July 25, 2018, KG
 
 ###Create a folder, into which you should copy this script, your .gpr files (named 'Slide 1.gpr', 'Slide 2.gpr' etc.), 
 # and your sample list, sample metadata, and target (antigen) metadata csv files.
@@ -46,15 +46,15 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Print Runs/Apac Microarray_2014_2015/SpotXel/ApacX1_X3_061115/ApacX1"
+workdir <- "/Users/Katie/Desktop/R files from work/ApacX1"
 
-  # /Users/Katie/Desktop/R files from work/ApacX1
+  # I:/Drakeley Group/PROTEIN MICROARRAYS/Print Runs/Apac Microarray_2014_2015/SpotXel/ApacX1_X3_061115/ApacX1
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
-study <- "APACX1"
+study <- "APACX1v2"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample list APACX1 negs v2.csv"
+sample_file <- "Sample list APACX1 negs v3.csv"
 
 #define file name for sample file + additional metadata (character vector)
 meta_file <- "Apac Sample metadata.csv"
@@ -244,6 +244,18 @@ targets_std = c(grep("Std", ignore.case = TRUE, annotation_targets.df$ID))
 targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
 
 ###NO removing data after high targets because this data was printed with a different printer
+###BUT, DO REMOVE data from samples where exclude == yes because these have technical errors. 
+#removing them now will make sure that they do not bias the data for determining outliers and buffer exclusion cutoffs, etc.
+
+  #Character vector of samples to be removed
+  samples_exclude1 <- samples.df$sample_id_unique[which(samples.df$exclude =="yes")]
+
+  #how many samples excluded so far? 32 for APACX1
+  length(samples_exclude1)
+  
+  #set all values to NA for excluded samples
+  cor.matrix[,colnames(cor.matrix) %in% samples_exclude1] <- NA
+
 
 ###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
 
