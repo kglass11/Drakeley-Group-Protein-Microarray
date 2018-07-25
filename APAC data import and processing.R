@@ -894,13 +894,12 @@ normaverageI.matrix <- log2((2^rep1 + 2^rep2)/2)
 ### Check for deviant technical replicates, automatically exclude (set to NA)
 # Use a modified Patrick's formula for ELISA called Katie's formula for microarray ;) to compare replicates within one array
 # if rep1 or rep2 is more than 2 times rep2 or rep1, respectively, exclude that pair
-# only apply the test if the values for both rep1 and rep2 are above 2 (on log2 scale)
-# Also, can redo this using the subsetted matrices (rep1 and rep2) and it should be shorter
+# APPLY THE TEST FOR ALL VALUES, NO MINIMUM
   for (k in 1:ncol(rep1))
   {
     for(j in 1:nrow(rep1)) 
     {
-      if(is.na(rep1[j,k]) | is.na(rep2[j,k]) | (rep1[j,k]<2 & rep2[j,k]<2)){
+      if(is.na(rep1[j,k]) | is.na(rep2[j,k])){
         j+1
       } else if (rep1[j,k] > (log2(2) + rep2[j,k]) | (rep2[j,k] > (log2(2) + rep1[j,k])) == TRUE) 
       {
@@ -961,13 +960,12 @@ normaverageI.matrix <- log2((2^rep1 + 2^rep2)/2)
 ### Check for deviant technical replicates, automatically exclude (set to NA)
 # Use a modified Patrick's formula for ELISA called Katie's formula for microarray ;) to compare replicates within one array
 # if rep1 or rep2 is more than 2 times rep2 or rep1, respectively, exclude that pair
-# only apply the test if the values for both rep1 and rep2 are above 2 (on log2 scale)
-# Also, can redo this using the subsetted matrices (rep1 and rep2) and it should be shorter
+# APPLY THE TEST FOR ALL VALUES, NO MINIMUM
 for (k in 1:ncol(rep1))
 {
   for(j in 1:nrow(rep1)) 
   {
-    if(is.na(rep1[j,k]) | is.na(rep2[j,k]) | (rep1[j,k]<2 & rep2[j,k]<2)){
+    if(is.na(rep1[j,k]) | is.na(rep2[j,k])){
       j+1
     } else if (rep1[j,k] > (log2(2) + rep2[j,k]) | (rep2[j,k] > (log2(2) + rep1[j,k])) == TRUE) 
     {
