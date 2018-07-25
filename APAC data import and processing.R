@@ -711,19 +711,15 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
   stds_norm <- norm.matrix[targets_std,]
   stds_pre <- log.cor.matrix[targets_std,]
 
-  #Plot Std 3 in Levey Jennings Style plot
+  #Plot Std 5 in Levey Jennings Style plot!!! (not std 3! only switched column numbers so I don't have to relabel everything)
   #KG - I don't know if these column numbers will hold up every time...switch to using grep?
   #average replicates for reps == 2, arithmetic mean!
-  if (reps == 1){
-    std_3_norm <- stds_norm[c(3),]
-    std_3_pre <- stds_pre[c(3),]
-    }
-
+  
   if (reps == 2){
-    std_3_norm <- stds_norm[c(3,13),]
+    std_3_norm <- stds_norm[c(5,15),]
     std_3_norm <- log2(apply((2^std_3_norm), 2, mean))
   
-    std_3_pre <- stds_pre[c(3,13),]
+    std_3_pre <- stds_pre[c(5,15),]
     std_3_pre <- log2(apply((2^std_3_pre), 2, mean))
   }
 
@@ -740,8 +736,8 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
   e_std3sd1 <- std3sd1*log(2)
   std3cv1 <- sqrt(exp(e_std3sd1^2)-1)*100
 
-  #Plotting Std 3 Levey Jennings Style
-  png(filename = paste0(study, "_std_3_LJ.tif"), width = 5, height = 7.5, units = "in", res = 1200)
+  #Plotting Std 5 Levey Jennings Style
+  png(filename = paste0(study, "_std_5_LJ.tif"), width = 5, height = 7.5, units = "in", res = 1200)
   par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
   plot(c(std_3_norm), pch='*', col = "blue", ylim=c(min(std_3_norm, na.rm = TRUE),max(std_3_norm, na.rm=TRUE)*1.25),
      ylab="Normalized log2(MFI)", xlab="Sample (Array)")
