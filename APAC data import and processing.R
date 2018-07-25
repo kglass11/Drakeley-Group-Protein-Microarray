@@ -250,7 +250,7 @@ targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
   #Character vector of samples to be removed
   samples_exclude1 <- samples.df$sample_id_unique[which(samples.df$exclude =="yes")]
 
-  #how many samples excluded so far? 32 for APACX1, + 9 more for controls 
+  #how many samples excluded so far? 32 for APACX1, + 10 more for controls 
   length(samples_exclude1)
   
   #set all values to NA for excluded samples
@@ -513,6 +513,7 @@ graphics.off()
 
 #***Samples which have deviant buffer means will be automatically excluded from further analysis
 #***Buffer targets which are deviant across all pads and slides will be automatically excluded from further analysis
+samplessub <- filter(samples.df, !(exclude == "yes"))
 
 #Buffer assessment EXCLUDING "bad" spots: 
 #Mean median corrected MFI for all data points
@@ -530,7 +531,7 @@ cor_buffer_sample_mean <- colMeans(cor2.matrix[targets_buffer,], na.rm = TRUE)
 cor_normal <- which(cor_buffer_sample_mean<=cor_cutoff)
 cor_deviant <- which(cor_buffer_sample_mean>cor_cutoff)
 #Generate a table showing which slides, pads, samples have deviant corrected buffer values
-cor_sample_deviant <- samples.df[cor_deviant,]
+cor_sample_deviant <- samplessub[cor_deviant,]
 cor_sample_deviant
 write.csv(cor_sample_deviant, file = paste0(study,"_deviant_sample_buffer.csv"))
 
@@ -553,8 +554,6 @@ for(i in 1:ncol(cor2.matrix))
 plot(cor_buffer_cov_sample, ylab="CoV corrected buffer MFI", xlab="Sample", ylim=c(0,max(cor_buffer_cov_sample)))
 remove(temp)
 graphics.off()
-
-samplessub <- filter(samples.df, !(exclude == "yes"))
 
 #Plots by slide/pad/sample EXCLUDING "bad" spots 
 png(filename = paste0(study,"_buffer_mfi_QCplots.tif"), width = 5.5, height = 10, units = "in", res = 600)
@@ -598,7 +597,7 @@ write.csv(cor_buffer_deviant.df, file = paste0(study,"_deviant_buffer_targets.cs
 png(filename = paste0(study, "_buffer_targets.tif"), width = 5, height = 4, units = "in", res = 600)
 par(mar = c(5, 3, 2.25, 0.5), oma = c(0, 0, 0, 0), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.6, cex.lab = 1, xpd=NA, las=2)
-boxplot(t(cor.matrix[targets_buffer,]),
+boxplot(t(cor2.matrix[targets_buffer,]),
         cex=0.5,
         ylab="Corrected MFI (log scale)", log = "y")
 abline(h = cor_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
@@ -613,7 +612,7 @@ png(filename = paste0(study, "_buffer_spots_slide.tif"), width = 5, height = 4, 
 par(mfrow=c(2,3), mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=2)
 for (i in c(1,12,24,36,48,64)){
-  boxplot(t(cor.matrix[targets_buffer,samples.df$slide_no==i]),
+  boxplot(t(cor2.matrix[targets_buffer,samplessub$slide_no==i]),
           ylab="Corrected MFI",
           add=FALSE, 
           cex=0.5,
@@ -625,9 +624,8 @@ for (i in c(1,12,24,36,48,64)){
 
 graphics.off()
 
-#Automatically set to NA the samples with deviant buffer values in a new matrix
-cor3.matrix <- cor2.matrix
-cor3.matrix[,cor_deviant] <- NA
+#Instead of setting to NA, REMOVE THE COLUMNS for deviant buffer samples
+cor3.matrix <- cor2.matrix[,!(colnames(cor2.matrix) %in% names(cor_deviant))]
 
 #Add setting exclude = yes for these samples in the sample meta data frame
 for(i in 1:nrow(cor_sample_deviant)){
@@ -639,9 +637,7 @@ for(i in 1:nrow(cor_sample_deviant)){
 #KG - Actually this might be pointless as we have already calculated the values for normalization and that is the use of the buffers
 cor3.matrix[deviant_buffer_targets,] <- NA
 
-
 #plot all buffer values as a histogram or qplot to check normality - only normal after log2 transformation, not MFI
-
 png(filename = paste0(study, "_Buffer_hist.tif"), width = 5, height = 7.5, units = "in", res = 1200)
 par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
 
@@ -655,26 +651,33 @@ title(main="All Buffer, Log2(MFI)", adj=0)
 
 graphics.off()
 
+#Remove buffer outliers, the same way as removed GST outliers!! 
+Buffer <- cor3.matrix[targets_buffer,]
+Buflog <- log2(Buffer)
 
+#calculate outliers for log2 transformed data, for all buffer data considered as one population
+BUFoutliers <- scores(c(as.matrix(Buflog)), type = "z", prob =0.995)
 
-### Mean values for each target ordered by position within the arrays (not log-transformed or normalized data)
-#KG - I think we might want this somehwere else in the script using a more processed matrix
+#remove outliers (set to NA in original background corrected MFI data) 
+BUFrm995 <- as.matrix(Buffer)
+for(i in 1:length(BUFrm995)){
+  if(BUFoutliers[[i]] == TRUE){
+    BUFrm995[[i]] <- NA
+  }
+}
 
-#Check average corrected values for each target for all individuals
-cor_target_mean <- rowMeans(cor3.matrix, na.rm = TRUE)
-#Mean background target magnitude for block 1, arranged in the order they are printed
-cor_target_mean_b1 = t(matrix(round(cor_target_mean[annotation_targets.df$Block==1], digits=2), nrow=max(annotation_targets.df$Column), ncol=max(annotation_targets.df$Row)))
-#Mean background target magnitude for block 2, arranged in the order they are printed
-cor_target_mean_b2 = t(matrix(round(cor_target_mean[annotation_targets.df$Block==2], digits=2), nrow=max(annotation_targets.df$Column), ncol=max(annotation_targets.df$Row)))
-cor_target_mean_b1b2 <- rbind(cor_target_mean_b1, cor_target_mean_b2)
-#Annotation plate maps
-annotation_target_b1 <- t(matrix(annotation_targets.df$target_id_unique [annotation_targets.df$Block==1], nrow = max(annotation_targets.df$Column), ncol=max(annotation_targets.df$Row)))
-annotation_target_b2 <- t(matrix(annotation_targets.df$target_id_unique [annotation_targets.df$Block==2], nrow = max(annotation_targets.df$Column), ncol=max(annotation_targets.df$Row)))
-annotation_target_b1b2 <- rbind(annotation_target_b1, annotation_target_b2)
-#Write csv, which can be presented as a heatmap
-write.csv(cbind(cor_target_mean_b1b2, annotation_target_b1b2), file=paste0(study,"_target_mean_as_array.csv"))
-remove(cor_target_mean, cor_target_mean_b1, cor_target_mean_b2,cor_target_mean_b1b2, annotation_target_b1, annotation_target_b2, annotation_target_b1b2)
+max(BUFrm995, na.rm = TRUE) #10758.88 for APACX1
+min(BUFrm995, na.rm = TRUE) #58 for APACX1
 
+#plot histogram again with outliers removed 
+png(filename = paste0(study, "_Buffer_hist_p.995.tif"), width = 5, height = 5, units = "in", res = 1200)
+par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+hist(log2(c(BUFrm995)), breaks = 25, col = "blue",
+     ylab="Frequency", xlab="Log2(MFI)", main = NULL)
+title(main="Buffer without outliers, MFI", adj=0)
+
+graphics.off()
 
 #### LOG TRANSFORMATION AND NORMALIZATION ###
 
@@ -686,9 +689,9 @@ write.csv(t(log.cor.matrix), file = paste0(study,"_log_data.csv"))
 
 ### Normalization
 
-###Create sample specific buffer means for normalisation
-cor2_buffer_sample_mean <- colMeans(cor3.matrix[targets_buffer,], na.rm = TRUE)
-cor2_buffer_sample_sd <- apply(cor3.matrix[targets_buffer,], 2, sd, na.rm = TRUE)
+###Create sample specific buffer means for normalisation, using outlier removed buffer data
+cor2_buffer_sample_mean <- colMeans(BUFrm995, na.rm = TRUE)
+cor2_buffer_sample_sd <- apply(BUFrm995, 2, sd, na.rm = TRUE)
 #log2 transform sample buffer mean
 log_buffer_sample_mean <- log2(cor2_buffer_sample_mean)
 
