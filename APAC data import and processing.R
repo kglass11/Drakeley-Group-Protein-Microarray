@@ -1,6 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #APAC Data Processing
-  #Last updated July 25, 2018, KG
+  #Last updated July 26, 2018, KG
 
 ###Create a folder, into which you should copy this script, your .gpr files (named 'Slide 1.gpr', 'Slide 2.gpr' etc.), 
 # and your sample list, sample metadata, and target (antigen) metadata csv files.
@@ -46,15 +46,15 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/ApacX1"
+workdir <- "/Users/Katie/Desktop/R files from work/ApacX3"
 
   # I:/Drakeley Group/PROTEIN MICROARRAYS/Print Runs/Apac Microarray_2014_2015/SpotXel/ApacX1_X3_061115/ApacX1
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
-study <- "APACX1v2"
+study <- "APACX3"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample list APACX1 negs v3.csv"
+sample_file <- "Sample list APACX3.csv"
 
 #define file name for sample file + additional metadata (character vector)
 meta_file <- "Apac Sample metadata.csv"
@@ -179,7 +179,7 @@ save(slides_all.df, file=paste0(study,"_slides_all.df"))
 #If you are going to load slides_all.df to save time, run in the command line:
 #load(paste0(study,"_slides_all.df"))
 
-### Make a spot annotations dataframe
+### Make a spot annotations dataframe - had to change to 02 for APACX2 because slide 1 missing from APACX2
 annotation_targets.df <- filter(slides_all.df, slide_no=="01", Block == 1 | Block == 2| Block == 3 | Block == 4)
 annotation_targets.df <- annotation_targets.df[,c(1,2,3,5)]
 
@@ -250,7 +250,7 @@ targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
   #Character vector of samples to be removed
   samples_exclude1 <- samples.df$sample_id_unique[which(samples.df$exclude =="yes")]
 
-  #how many samples excluded so far? 32 for APACX1, + 10 more for controls 
+  #how many samples excluded so far? 32 for APACX1, + 10 more for controls, 76 for APACX2, 56 for APACX3
   length(samples_exclude1)
   
   #set all values to NA for excluded samples
@@ -284,16 +284,16 @@ ggplot(GSTmelt, aes(x = variable, y=value, color = target_id_unique)) + geom_poi
 
 graphics.off()
 
-GSTcontrols <- GSTmelt[(nrow(GSTmelt)-159):nrow(GSTmelt),]
-
-png(filename = paste0(study, "_GST_controls_only.tif"), width = 5, height = 3.5, units = "in", res = 1200)
-
-ggplot(GSTcontrols, aes(x = variable, y=value, color = target_id_unique)) + geom_point() + theme_bw() +
-  labs(x = "Sample", y = "Background Corrected MFI", title = "GST targets") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
-
-graphics.off()
+# GSTcontrols <- GSTmelt[(nrow(GSTmelt)-159):nrow(GSTmelt),]
+# 
+# png(filename = paste0(study, "_GST_controls_only.tif"), width = 5, height = 3.5, units = "in", res = 1200)
+# 
+# ggplot(GSTcontrols, aes(x = variable, y=value, color = target_id_unique)) + geom_point() + theme_bw() +
+#   labs(x = "Sample", y = "Background Corrected MFI", title = "GST targets") +
+#   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+#   theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+# 
+# graphics.off()
 
 png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
 par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
@@ -340,8 +340,8 @@ for(i in 1:length(GSTrm995)){
   }
 }
 
-max(GSTrm995, na.rm = TRUE) #9134 for APACX1
-min(GSTrm995, na.rm = TRUE) #77 for APACX1
+max(GSTrm995, na.rm = TRUE) #9134 for APACX1, 7534 for APACX2, 7458 for APACX3
+min(GSTrm995, na.rm = TRUE) #77 for APACX1, 72 for APACX2, 101 for APACX3
 
 #plot histogram and other plots again with outliers either removed or shown in black
 png(filename = paste0(study, "_GST_hist_p.995.tif"), width = 5, height = 5, units = "in", res = 1200)
@@ -611,7 +611,7 @@ graphics.off()
 png(filename = paste0(study, "_buffer_spots_slide.tif"), width = 5, height = 4, units = "in", res = 600)
 par(mfrow=c(2,3), mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=2)
-for (i in c(1,12,24,36,48,64)){
+for (i in c(2,17,26,38,50,67)){
   boxplot(t(cor2.matrix[targets_buffer,samplessub$slide_no==i]),
           ylab="Corrected MFI",
           add=FALSE, 
@@ -666,8 +666,8 @@ for(i in 1:length(BUFrm995)){
   }
 }
 
-max(BUFrm995, na.rm = TRUE) #10758.88 for APACX1
-min(BUFrm995, na.rm = TRUE) #58 for APACX1
+max(BUFrm995, na.rm = TRUE) #10758.88 for APACX1, 12731 for APACX2, 16803.42 for APACX3
+min(BUFrm995, na.rm = TRUE) #58 for APACX1, 64 for APACX2, 55 for APACX3
 
 #plot histogram again with outliers removed 
 png(filename = paste0(study, "_Buffer_hist_p.995.tif"), width = 5, height = 5, units = "in", res = 1200)
