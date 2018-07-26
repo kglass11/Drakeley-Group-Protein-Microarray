@@ -1047,10 +1047,44 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   save.image(paste0(study, "AfterProcessing.RData"))
   
 ##########################################
+ 
+  #Load data from APACX1 and 2
   
+  setwd("/Users/Katie/Desktop/R files from work/APACforNuno")
+  load("APACX1v2_for_Nuno.RData")
   
+  sample_meta1 <- sample_meta_f.df
+  trans.norm1 <- trans.norm.df
+  target_meta1 <- target_meta2.df
   
+  load("APACX2_for_Nuno.RData")
   
+  sample_meta2 <- sample_meta_f.df
+  trans.norm2 <- trans.norm.df
+  target_meta2 <- target_meta2.df
+  
+  load("APACX3_for_Nuno.RData")
+  
+  sample_meta3 <- sample_meta_f.df
+  trans.norm3 <- trans.norm.df
+  target_meta3 <- target_meta2.df
+  
+  sample_meta1$Study <- "X1"
+  sample_meta2$Study <- "X2"
+  sample_meta3$Study <- "X3"
+  
+  X1data <- merge(sample_meta1, trans.norm1)
+  X2data <- merge(sample_meta2, trans.norm2)
+  X3data <- merge(sample_meta3, trans.norm3)
+  
+  Alldata <- rbind(X1data, X2data, X3data)
+  
+  write.csv(Alldata, "APAC_final_data.csv")
+  write.csv(target_meta1, "APAC_target_metadata.csv")
+  
+  save(Alldata, X1data, X2data, X3data, sample_meta1, sample_meta2, sample_meta3, target_meta1, file = "APAC_for_Nuno.RData")
+  
+########################################## 
   
   #Prepare final data with GST subtracted, control targets removed - For Negs set to 0 ONLY! (norm4.matrix)
   #Assign sample type names, to identify control and test samples (logical)
