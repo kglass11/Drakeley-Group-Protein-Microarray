@@ -256,10 +256,10 @@ cor.matrix <- backgroundCorrect.matrix(fore.matrix, back.matrix, method = "norme
 write.csv(cor.matrix, file=paste0(study,"_background_corrected_MFI.csv"))
 
 ###Assign target names to groups of your array targets to identify their 'type'
-targets_blank = c(grep("BLANK", annotation_targets.df$Name))
-targets_buffer = c(grep("buffer", annotation_targets.df$Name))
-targets_ref = c(grep("REF", annotation_targets.df$Name))
-targets_std = c(grep("Std", annotation_targets.df$Name))
+targets_blank = c(grep("BLANK", annotation_targets.df$Name, ignore.case = TRUE))
+targets_buffer = c(grep("buffer", annotation_targets.df$Name, ignore.case = TRUE))
+targets_ref = c(grep("REF", annotation_targets.df$Name, ignore.case = TRUE))
+targets_std = c(grep("Std", annotation_targets.df$Name, ignore.case = TRUE))
 targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
 
 ###Remove "bad" spots from subsequent analysis
@@ -304,6 +304,77 @@ remove(i)
 ###Convert the spots to be disincluded to NAs in background corrected data
 cor2.matrix <- cor.matrix
 cor2.matrix[high_targets_disinclude, ] <- NA
+
+###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
+
+#Prepare target data frame for merging (get "unique" names from annotation targets) 
+target_meta2.df <- merge(target_meta.df[,1:6], annotation_targets.df, by.x = "Name", by.y = "ID")
+
+#merge target data frame with data
+bunny <- merge(target_meta2.df, cor.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
+
+#subset based on GST tag
+bun <- filter(bunny, Expression_Tag == "GST")
+bun <- tibble::column_to_rownames(bun, var = "target_id_unique")
+
+#isolate GST values and plot GST - There are 8 GST spots!! duplicated on each block on all 4 blocks
+GST <- bunny[grep("GST", bunny$target_id_unique),]
+
+GSTmelt <- melt(GST)
+GSTmelt <- filter(GSTmelt,!(variable == "Block" | variable == "Column" | variable == "Row"))
+
+png(filename = paste0(study, "_GST_by_target_log.tif"), width = 7, height = 3.5, units = "in", res = 1200)
+
+ggplot(GSTmelt, aes(x = variable, y=value, color = target_id_unique)) + geom_point() + theme_bw() +
+  labs(x = "Sample", y = "Background Corrected MFI", title = "GST targets") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+  scale_y_continuous(breaks = 10**(1:10),trans = 'log10', labels = 10**(1:10))
+
+graphics.off()
+
+png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
+par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
+plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
+     ylab="Background Corrected MFI", xlab="GST spot", cex.main=1, cex.lab=1, cex.axis=0.7)
+
+graphics.off()
+
+#subtract GST directly for each sample from all tagged targets
+#set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
+
+#might have to change column number here, might need to adjust below for NAs, or remove high targets disinclude?
+bundata <- bun[11:ncol(bun)]
+#bundata <- bundata[,!(colnames(bundata) %in% samples_exclude1)]
+
+subbedGST <- bundata
+for(i in 1:ncol(subbedGST))
+{
+  subbedGST[,i] <- bundata[,i]-GSTmean[i]
+  subbedGST[which(subbedGST[,i] <= 0),i] <- 50
+}
+remove(i)
+
+#bind GST-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
+#Make another data frame where the tagged protein values are replaced by their subtracted values
+#filter out the GST tagged targets
+no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
+row.names(no_tags.df) <- no_tags.df$target_id_unique
+no_tags.df <- no_tags.df[,12:ncol(no_tags.df)]
+no_tags.df <- no_tags.df[,!(colnames(no_tags.df) %in% samples_exclude1)]
+
+#then rbind the GST and the CD4 data frames to that one. 
+cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
+
+#need to put the matrix back in the same order as before (by target_id_unique) because of calling out buffer etc.
+sortedcor <- merge(annotation_targets.df, cor1.matrix, by = "row.names", sort = FALSE)
+cor2.matrix <- as.matrix(sortedcor[,8:ncol(sortedcor)])
+row.names(cor2.matrix) <- row.names(annotation_targets.df)
+
+#save ALL GST subtracted data in another file
+write.csv(cor2.matrix, paste0(study, "_GST_subtracted_MFI.csv"))
+
+
 
 ###QUALITY CONTROL###
 
