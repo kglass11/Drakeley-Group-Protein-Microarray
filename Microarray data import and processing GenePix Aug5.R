@@ -159,24 +159,39 @@ index_sample <- as.numeric(length(samples))
 
 ###Assign your sample_ids to each row of the combined slide data (slides_all.df)
 #The order of data in your samples.df file is irrelevant, as long as each sample ID is correctly matched to its slide and block numbers
+slides_all.df$Sample <- NA
 
-for(i in 1:dim(slides_all.df)[1]){
-  
+for(i in 1:nrow(slides_all.df)){
   print(i)
-  row_ite<-slides_all.df[i,]
-  block_ite<-row_ite$Block
-  slide_ite<-row_ite$slide_no
-  sample_info_1<-samples.df[which(samples.df$slide_no==slide_ite),]
-  match<-block_ite%in%sample_info_1[,"block_rep_1"]
-  if(match==TRUE){
-    value<-which(block_ite==sample_info_1[,"block_rep_1"])
-  }else{
-    value<-which(block_ite==sample_info_1[,"block_rep_2"])
-  }
-  sample_info_2<-sample_info_1[value,"sample_id_unique"]
-  slides_all.df$Sample[i]<-as.character(sample_info_2)
+  block <- slides_all.df$Block[[i]]
+  slide <- as.numeric(slides_all.df$slide_no[[i]])
+  temp <- which(samples.df$slide_no == slide & (samples.df$block_rep_1 == block | samples.df$block_rep_2 == block))
+  name <- samples.df$sample_id_unique[temp]
+  slides_all.df$Sample[[i]] <- name
 }
-remove(i, sample_info_1, sample_info_2, match, row_ite, block_ite, slide_ite)
+remove(i,block,slide,temp,name)
+
+#*** Old code for the same thing:
+###Assign your sample_ids to each row of the combined slide data (slides_all.df)
+#The order of data in your samples.df file is irrelevant, as long as each sample ID is correctly matched to its slide and block numbers
+
+# for(i in 1:dim(slides_all.df)[1]){
+#   
+#   print(i)
+#   row_ite<-slides_all.df[i,]
+#   block_ite<-row_ite$Block
+#   slide_ite<-row_ite$slide_no
+#   sample_info_1<-samples.df[which(samples.df$slide_no==slide_ite),]
+#   match<-block_ite%in%sample_info_1[,"block_rep_1"]
+#   if(match==TRUE){
+#     value<-which(block_ite==sample_info_1[,"block_rep_1"])
+#   }else{
+#     value<-which(block_ite==sample_info_1[,"block_rep_2"])
+#   }
+#   sample_info_2<-sample_info_1[value,"sample_id_unique"]
+#   slides_all.df$Sample[i]<-as.character(sample_info_2)
+# }
+# remove(i, sample_info_1, sample_info_2, match, row_ite, block_ite, slide_ite)
 
 ###Write slides_all.df to a file to keep as a csv in your directory
 write.csv(slides_all.df,file=paste0(study,"_slidesall_combinedGPR.csv"), row.names=T)
