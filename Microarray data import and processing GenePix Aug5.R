@@ -374,8 +374,6 @@ row.names(cor2.matrix) <- row.names(annotation_targets.df)
 #save ALL GST subtracted data in another file
 write.csv(cor2.matrix, paste0(study, "_GST_subtracted_MFI.csv"))
 
-
-
 ###QUALITY CONTROL###
 
 ### 1. Background
@@ -692,12 +690,17 @@ for(i in 1:ncol(norm.matrix))
 
 write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
 
+### PLOTTING STANDARDS ###
+
 ### Plot standard values for each sample and assess variation - with negative normalized values
 ### Update this section once we have settled on names for IgG, IgA, and IgM standard curves to use in the protein key 
 
   #isolate data for standards, normalized and not normalized
   stds_norm <- norm.matrix[targets_std,]
   stds_pre <- log.cor.matrix[targets_std,]
+  
+  #check if this works to isolate the particular standard of interest - need to see names from key
+  isostd_norm <- norm.matrix[c(targets_std, grep(iso, row.names(annotation_targets.df))),]
 
   #Plot Std 3 in Levey Jennings Style plot
   #KG - I don't know if these column numbers will hold up every time...switch to using grep?
@@ -753,6 +756,61 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
   mtext(paste("Geometric CV, NOT Normalized:", round(std3cv1, digits=2), "%"), side=1, cex=0.8, line=1.5, outer=TRUE, xpd=NA, adj=0)
 
   graphics.off()
+
+###Plot All standards together in ggplot2, but separately for rep1 and rep2
+  
+  #normalized
+  std_norm_1 <- stds_norm[1:6,]
+  std_norm_2 <- stds_norm[7:12,]
+  
+  std1melt <- melt(std_norm_1, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_norm_1.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std1melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep1 Normalized") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
+  std2melt <- melt(std_norm_2, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_norm_2.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std2melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep2 Normalized") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
+  #not normalized
+  std_pre_1 <- stds_pre[1:6,]
+  std_pre_2 <- stds_pre[7:12,]
+  
+  std1premelt <- melt(std_pre_1, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_pre_1.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep1 Pre-Normalization") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
+  std2premelt <- melt(std_pre_2, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_pre_2.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std2premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep2 Pre-Normalization") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
 
 # Set negative normalized log values to zero. This will be used for some analyses. 
 # For other analyses, including sending data to Nuno, the data will be input without setting values to 0. 
