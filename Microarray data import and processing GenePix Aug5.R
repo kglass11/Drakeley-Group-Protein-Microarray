@@ -46,16 +46,16 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/250718 MSc studies/Steven/IgG"
+workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/Elin MSC Project"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
-study <- "Steven IgG"
+study <- "CHMI IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample list.csv"
+sample_file <- "CHMI_microarray_samples.csv"
 
 #define file name for sample file + additional metadata (character vector)
-meta_file <- "Sample metadata.csv"
+meta_file <- "Sample_metadata.csv"
 
 #define file name for antigen list file with additional info about targets.
 target_file <- "Target metadata.csv" 
@@ -227,7 +227,9 @@ index_target <- as.numeric(length(annotation_targets.df$target_id_numeric))
 #The column identifying the background median in slides_all.df is 14
 #The column identifying the median.df - the background in slides_all.df is 34 (here we ignore this column)
 
-#Foreground
+#Foreground 
+if(iso == "IgG"){
+
 fore.df <- annotation_targets.df
 for(i in 1:length(samples)){
   ite_out<-slides_all.df$F488.Median[which(slides_all.df$Sample==samples_unique[i])]
@@ -242,6 +244,27 @@ for(i in 1:length(samples)){
   back.df<-cbind(back.df,ite_out)
   colnames(back.df)[length(colnames(back.df))]<-samples_unique[i]
 }
+
+}
+
+if(iso == "IgM"){
+  
+  fore.df <- annotation_targets.df
+  for(i in 1:length(samples)){
+    ite_out<-slides_all.df$F635.Median[which(slides_all.df$Sample==samples_unique[i])]
+    fore.df<-cbind(fore.df,ite_out)
+    colnames(fore.df)[length(colnames(fore.df))]<-samples_unique[i]
+  }
+  
+  #Background
+  back.df <- annotation_targets.df
+  for(i in 1:length(samples)){
+    ite_out<-slides_all.df$B635.Median[which(slides_all.df$Sample==samples_unique[i])]
+    back.df<-cbind(back.df,ite_out)
+    colnames(back.df)[length(colnames(back.df))]<-samples_unique[i]
+  }
+}
+
 
 #Generate matrices of the same data (that is, the same data with only a single data type)
 fore.matrix <- as.matrix(fore.df[,7:ncol(fore.df)])
