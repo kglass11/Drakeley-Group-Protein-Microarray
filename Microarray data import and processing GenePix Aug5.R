@@ -325,23 +325,25 @@ if (reps==2){
 remove(i)
 
 ###Convert the spots to be disincluded to NAs in background corrected data
-cor2.matrix <- cor.matrix
-cor2.matrix[high_targets_disinclude, ] <- NA
+cor.5.matrix <- cor.matrix
+cor.5.matrix[high_targets_disinclude, ] <- NA
 
 ###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
 
 #Prepare target data frame for merging (get "unique" names from annotation targets) 
-target_meta2.df <- merge(target_meta.df[,1:6], annotation_targets.df, by.x = "Name", by.y = "ID")
+target_meta2.df <- merge(target_meta.df[,1:6], annotation_targets.df, by = "Name")
 
 #merge target data frame with data
-bunny <- merge(target_meta2.df, cor.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
-
+bunny <- merge(target_meta2.df, cor.5.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
 #subset based on GST tag
-bun <- filter(bunny, Expression_Tag == "GST")
+
+#depending on column name with tag upper or lowercase, use either of the next two lines
+bun <- filter(bunny, Expression_tag == "GST")
+#bun <- filter(bunny, Expression_Tag == "GST")
 bun <- tibble::column_to_rownames(bun, var = "target_id_unique")
 
-#isolate GST values and plot GST - There are 8 GST spots!! duplicated on each block on all 4 blocks
-GST <- bunny[grep("GST", bunny$target_id_unique),]
+#isolate GST values and plot GST - 
+GST <- bunny[grep("_GST_", bunny$target_id_unique),]
 
 GSTmelt <- melt(GST)
 GSTmelt <- filter(GSTmelt,!(variable == "Block" | variable == "Column" | variable == "Row"))
@@ -363,6 +365,14 @@ plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
 
 graphics.off()
 
+if (reps == 1){
+  GSTmean <- GST[,12:ncol(GST)]
+}
+
+if (reps == 2){
+  GSTmean <- colMeans(GST[,12:ncol(GST)])
+}
+
 #subtract GST directly for each sample from all tagged targets
 #set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
 
@@ -381,10 +391,10 @@ remove(i)
 #bind GST-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
 #Make another data frame where the tagged protein values are replaced by their subtracted values
 #filter out the GST tagged targets
-no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
+no_tags.df <- filter(bunny, is.na(Expression_tag) | !(Expression_tag == "GST"))
+#no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
 row.names(no_tags.df) <- no_tags.df$target_id_unique
 no_tags.df <- no_tags.df[,12:ncol(no_tags.df)]
-no_tags.df <- no_tags.df[,!(colnames(no_tags.df) %in% samples_exclude1)]
 
 #then rbind the GST and the CD4 data frames to that one. 
 cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
