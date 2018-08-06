@@ -49,6 +49,7 @@ library(outliers)
 workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/Elin MSC Project"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
+#include isotype in the study name!
 study <- "CHMI IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
@@ -726,28 +727,28 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
 ### PLOTTING STANDARDS ###
 
 ### Plot standard values for each sample and assess variation - with negative normalized values
-### Update this section once we have settled on names for IgG, IgA, and IgM standard curves to use in the protein key 
 
   #isolate data for standards, normalized and not normalized
   stds_norm <- norm.matrix[targets_std,]
   stds_pre <- log.cor.matrix[targets_std,]
   
-  #check if this works to isolate the particular standard of interest - need to see names from key
-  isostd_norm <- norm.matrix[c(targets_std, grep(iso, row.names(annotation_targets.df))),]
+  #isolate data from isotype probed
+  isostd_norm <- stds_norm[grep(iso, row.names(stds_norm)),]
+  isostd_pre <- stds_pre[grep(iso, row.names(stds_pre)),]
 
   #Plot Std 3 in Levey Jennings Style plot
   #KG - I don't know if these column numbers will hold up every time...switch to using grep?
   #average replicates for reps == 2, arithmetic mean!
   if (reps == 1){
-    std_3_norm <- stds_norm[c(3),]
-    std_3_pre <- stds_pre[c(3),]
+    std_3_norm <- isostd_norm[c(3),]
+    std_3_pre <- isostd_pre[c(3),]
     }
 
   if (reps == 2){
-    std_3_norm <- stds_norm[c(3,9),]
+    std_3_norm <- isostd_norm[c(3,9),]
     std_3_norm <- log2(apply((2^std_3_norm), 2, mean))
   
-    std_3_pre <- stds_pre[c(3,9),]
+    std_3_pre <- isostd_pre[c(3,9),]
     std_3_pre <- log2(apply((2^std_3_pre), 2, mean))
   }
 
@@ -767,7 +768,7 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
   #Plotting Std 3 Levey Jennings Style
   png(filename = paste0(study, "_std_3_LJ.tif"), width = 5, height = 7.5, units = "in", res = 1200)
   par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
-  plot(c(std_3_norm), pch='*', col = "blue", ylim=c(min(std_3_norm, na.rm = TRUE),max(std_3_norm, na.rm=TRUE)*1.25),
+  plot(c(std_3_norm), pch='*', col = "blue", ylim=c(min(std_3_norm, na.rm = TRUE),max(std_3_norm, na.rm=TRUE)),
      ylab="Normalized log2(MFI)", xlab="Sample (Array)")
 
   abline(h=std3mean)
@@ -776,7 +777,7 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
   abline(h=std3mean+std3sd,lty=3)
   abline(h=std3mean-std3sd,lty=3) 
 
-  plot(c(std_3_pre), pch='*', col = "darkblue", ylim=c(min(std_3_pre, na.rm = TRUE),max(std_3_pre, na.rm=TRUE)*1.25),
+  plot(c(std_3_pre), pch='*', col = "darkblue", ylim=c(min(std_3_pre, na.rm = TRUE),max(std_3_pre, na.rm=TRUE)),
      ylab="log2(MFI) (NOT normalized)", xlab="Sample (Array)")
 
   abline(h=std3mean1)
@@ -790,59 +791,70 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
 
   graphics.off()
 
-###Plot All standards together in ggplot2, but separately for rep1 and rep2
+###Plot All standards together in ggplot2, but separately for rep1 and rep2 - for ALL THREE ISOTYPES
+  
+  Ig <- c("IgA", "IgG", "IgM")
+  
+for(i in 1:length(Ig)){
+    
+  type = Ig[i]
+  
+  norm <- stds_norm[grep(type, row.names(stds_norm)),]
+  pre <- stds_pre[grep(type, row.names(stds_pre)),]
   
   #normalized
-  std_norm_1 <- stds_norm[1:6,]
-  std_norm_2 <- stds_norm[7:12,]
+  std_norm_1 <- norm[1:6,]
+  std_norm_2 <- norm[7:12,]
   
   std1melt <- melt(std_norm_1, varnames = c("Std", "Sample"))
   
-  png(filename = paste0(study, "_stds_norm_1.tif"), width = 7, height = 5, units = "in", res = 1200)
+  png(filename = paste0(study, "_stds_norm_1_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
-  ggplot(std1melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+  print(ggplot(std1melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
     labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep1 Normalized") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
   
   graphics.off()
   
   std2melt <- melt(std_norm_2, varnames = c("Std", "Sample"))
   
-  png(filename = paste0(study, "_stds_norm_2.tif"), width = 7, height = 5, units = "in", res = 1200)
+  png(filename = paste0(study, "_stds_norm_2_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
-  ggplot(std2melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+  print(ggplot(std2melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
     labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep2 Normalized") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
   
   graphics.off()
   
   #not normalized
-  std_pre_1 <- stds_pre[1:6,]
-  std_pre_2 <- stds_pre[7:12,]
+  std_pre_1 <- pre[1:6,]
+  std_pre_2 <- pre[7:12,]
   
   std1premelt <- melt(std_pre_1, varnames = c("Std", "Sample"))
   
-  png(filename = paste0(study, "_stds_pre_1.tif"), width = 7, height = 5, units = "in", res = 1200)
+  png(filename = paste0(study, "_stds_pre_1_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
-  ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+  print(ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
     labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep1 Pre-Normalization") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
   
   graphics.off()
   
   std2premelt <- melt(std_pre_2, varnames = c("Std", "Sample"))
   
-  png(filename = paste0(study, "_stds_pre_2.tif"), width = 7, height = 5, units = "in", res = 1200)
+  png(filename = paste0(study, "_stds_pre_2_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
-  ggplot(std2premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+  print(ggplot(std2premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
     labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep2 Pre-Normalization") +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
   
   graphics.off()
+  
+  }
   
 ### Set negative normalized log values to zero. This will be used for some analyses. 
 # For other analyses, including sending data to Nuno, the data will be input without setting values to 0. 
@@ -1061,77 +1073,6 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   
   #Save final data frame to csv file
   write.csv(norm_sub4.df, paste0(study, "_finalafterprocessing.csv"))
-  
-  
-#Old GST subtraction code:
-  # #GST subtraction - only for data with negative values set to 0 (norm4.matrix)
-  # ### Subtracting Protein Tag Signal from tagged antigens - only for norm4.matrix (no negative values)
-  # #Prepare data frame with GST tagged proteins only for subtraction
-  # GST_antigens.df <- filter(target.df, Expression_Tag == "GST" | Expression_Tag == "GST/His")
-  # GST_antigens.df <- tibble::column_to_rownames(GST_antigens.df, var="Name")
-  # GST_antigens.df <- GST_antigens.df[,sapply(GST_antigens.df, is.numeric)]
-  # 
-  # GST <- c(grep("GST", rownames(norm_sub4.df), fixed = TRUE))
-  # GST_val <- c(as.matrix(norm_sub4.df[GST,]))
-  # 
-  # #Plot GST values
-  # png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
-  # par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
-  # plot(GST_val, pch='*', col = "blue", ylim=c(0,max(GST_val, na.rm = TRUE)*1.25), main = "GST",
-  #      ylab="Normalized log2(MFI)", xlab="Sample (Array)", cex.main=1, cex.lab=1, cex.axis=0.7)
-  # 
-  # #print text on the plots for number of samples where GST and CD4 are above buffer
-  # mtext(paste("Total Samples with GST > 0:", round(sum(norm_sub4.df[GST,] > 0, na.rm = TRUE), digits=2), 
-  #             "(", round(sum(norm_sub4.df[GST,] > 0, na.rm = TRUE)/length(GST_val)*100, digits=2), "%)"), side=1, cex=0.8, line=0.5, outer=TRUE, xpd=NA, adj=0)
-  # 
-  # graphics.off()
-  # 
-  # #Subtract GST signal from GST tagged proteins
-  # sub_GST_antigens.df <- data.frame(matrix(0, nrow = nrow(GST_antigens.df), ncol = ncol(GST_antigens.df)))
-  # rownames(sub_GST_antigens.df) <- rownames(GST_antigens.df)
-  # colnames(sub_GST_antigens.df) <- colnames(GST_antigens.df)
-  # 
-  # #subtract GST! There might be NA values if reps = 2.
-  # for(b in 1:ncol(GST_antigens.df)){
-  #   for(a in 1:nrow(GST_antigens.df)){
-  #     #if GST value is NA or main value is NA, then cannot do subtraction and cannot compare with other data
-  #     #so set those values to NA
-  #     if(is.na(norm_sub4.df[GST,b])|is.na(GST_antigens.df[a,b])){
-  #       sub_GST_antigens.df[a,b] <- NA
-  #       # when the GST value is positive only, subtract GST value, 
-  #       #otherwise want to leave as whatever the value was before (because GST was at or below buffer mean for that sample)
-  #     } else if (norm_sub4.df[GST,b] > 0){
-  #       #calculate difference in original MFI form (not log2)
-  #       sub_GST_antigens.df[a,b] <- 2^GST_antigens.df[a,b] - 2^norm_sub4.df[GST,b]
-  #       #can only do log2 if the difference is greater than 0, otherwise set to 0 (normalized log2 value is not above buffer)
-  #       if (sub_GST_antigens.df[a,b] > 0) {
-  #         sub_GST_antigens.df[a,b] <- log2(sub_GST_antigens.df[a,b])
-  #         #if the log2 tag-subtracted value is negative, means normalized value is below buffer mean,
-  #         #so also need to set those negatives to 0 again.
-  #         if(sub_GST_antigens.df[a,b] < 0){
-  #           sub_GST_antigens.df[a,b] <- 0
-  #         }
-  #       } else { 
-  #         sub_GST_antigens.df[a,b] <- 0
-  #       }
-  #     } else {
-  #       sub_GST_antigens.df[a,b] <- GST_antigens.df[a,b]
-  #     }
-  #   }
-  # }
-  # remove(a,b)
-  # 
-  # #Make another data frame where the tagged protein values are replaced by their subtracted values
-  # #filter out the GST tagged targets
-  # no_tags.df <- filter(target.df, !(Expression_Tag == "GST" | Expression_Tag == "GST/His"))
-  # no_tags.df <- tibble::column_to_rownames(no_tags.df, var="Name")
-  # no_tags.df <- no_tags.df[,sapply(no_tags.df, is.numeric)]
-  # #then rbind the GST and the CD4 data frames to that one. The order of the targets
-  # #shouldn't matter anymore
-  # norm_sub5.df <- rbind(no_tags.df, sub_GST_antigens.df)
-  # 
-  # #save ALL GST subtracted data in another file
-  # write.csv(norm_sub5.df, paste0(study, "_GST_subtracted_Final.csv"))
   
 #Save R workspace so that can load prior to analysis 
   save.image(file= paste0(study,"_AfterProcessing.RData"))
