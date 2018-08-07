@@ -46,17 +46,17 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/Elin MSC Project"
+workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/250718 MSc Studies/Steven/IgG"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "CHMI IgG"
+study <- "Ste_IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "CHMI_microarray_samples.csv"
+sample_file <- "Sample list v2.csv"
 
 #define file name for sample file + additional metadata (character vector)
-meta_file <- "Sample_metadata.csv"
+meta_file <- "Sample metadata v2.csv"
 
 #define file name for antigen list file with additional info about targets.
 target_file <- "Target metadata.csv" 
@@ -171,28 +171,6 @@ for(i in 1:nrow(slides_all.df)){
   slides_all.df$Sample[[i]] <- name
 }
 remove(i,block,slide,temp,name)
-
-#*** Old code for the same thing:
-###Assign your sample_ids to each row of the combined slide data (slides_all.df)
-#The order of data in your samples.df file is irrelevant, as long as each sample ID is correctly matched to its slide and block numbers
-
-# for(i in 1:dim(slides_all.df)[1]){
-#   
-#   print(i)
-#   row_ite<-slides_all.df[i,]
-#   block_ite<-row_ite$Block
-#   slide_ite<-row_ite$slide_no
-#   sample_info_1<-samples.df[which(samples.df$slide_no==slide_ite),]
-#   match<-block_ite%in%sample_info_1[,"block_rep_1"]
-#   if(match==TRUE){
-#     value<-which(block_ite==sample_info_1[,"block_rep_1"])
-#   }else{
-#     value<-which(block_ite==sample_info_1[,"block_rep_2"])
-#   }
-#   sample_info_2<-sample_info_1[value,"sample_id_unique"]
-#   slides_all.df$Sample[i]<-as.character(sample_info_2)
-# }
-# remove(i, sample_info_1, sample_info_2, match, row_ite, block_ite, slide_ite)
 
 ###Write slides_all.df to a file to keep as a csv in your directory
 write.csv(slides_all.df,file=paste0(study,"_slidesall_combinedGPR.csv"), row.names=T)
@@ -768,7 +746,7 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
   #Plotting Std 3 Levey Jennings Style
   png(filename = paste0(study, "_std_3_LJ.tif"), width = 5, height = 7.5, units = "in", res = 1200)
   par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
-  plot(c(std_3_norm), pch='*', col = "blue", ylim=c(min(std_3_norm, na.rm = TRUE),max(std_3_norm, na.rm=TRUE)),
+  plot(c(std_3_norm), pch='*', col = "blue", ylim=c(min(std_3_norm, na.rm = TRUE),max(std_3_norm, na.rm=TRUE)*1.2),
      ylab="Normalized log2(MFI)", xlab="Sample (Array)")
 
   abline(h=std3mean)
@@ -777,7 +755,7 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
   abline(h=std3mean+std3sd,lty=3)
   abline(h=std3mean-std3sd,lty=3) 
 
-  plot(c(std_3_pre), pch='*', col = "darkblue", ylim=c(min(std_3_pre, na.rm = TRUE),max(std_3_pre, na.rm=TRUE)),
+  plot(c(std_3_pre), pch='*', col = "darkblue", ylim=c(min(std_3_pre, na.rm = TRUE),max(std_3_pre, na.rm=TRUE)*1.2),
      ylab="log2(MFI) (NOT normalized)", xlab="Sample (Array)")
 
   abline(h=std3mean1)
@@ -1064,9 +1042,6 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   norm_sub3.df <- tibble::column_to_rownames(norm_sub3.df, var="Row.names")
   row.names(norm_sub3.df) <- norm_sub3.df$Name
   norm_sub4.df <- norm_sub3.df[,1:ncol(norm_sub.matrix)]
-  
-  #Make the dilution column of target_meta.df a character type
-  target_meta.df$Concentration <- as.character(target_meta.df$Concentration)
   
   #Merge with target metadata to filter based on expression tag etc.
   target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
