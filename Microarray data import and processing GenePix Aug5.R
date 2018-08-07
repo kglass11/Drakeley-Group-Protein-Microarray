@@ -252,7 +252,7 @@ if(iso == "IgM"){
   
   fore.df <- annotation_targets.df
   for(i in 1:length(samples)){
-    ite_out<-slides_all.df$F635.Median[which(slides_all.df$Sample==samples_unique[i])]
+    ite_out<-slides_all.df$F594.Median[which(slides_all.df$Sample==samples_unique[i])]
     fore.df<-cbind(fore.df,ite_out)
     colnames(fore.df)[length(colnames(fore.df))]<-samples_unique[i]
   }
@@ -260,7 +260,7 @@ if(iso == "IgM"){
   #Background
   back.df <- annotation_targets.df
   for(i in 1:length(samples)){
-    ite_out<-slides_all.df$B635.Median[which(slides_all.df$Sample==samples_unique[i])]
+    ite_out<-slides_all.df$B594.Median[which(slides_all.df$Sample==samples_unique[i])]
     back.df<-cbind(back.df,ite_out)
     colnames(back.df)[length(colnames(back.df))]<-samples_unique[i]
   }
