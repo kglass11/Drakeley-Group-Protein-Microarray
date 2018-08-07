@@ -46,17 +46,17 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/250718 MSc Studies/Steven/IgG"
+workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/250718 MSc Studies/Steven/IgM"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "Ste_IgG"
+study <- "Ste_IgM"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample list v2.csv"
+sample_file <- "Sample list v3.csv"
 
 #define file name for sample file + additional metadata (character vector)
-meta_file <- "Sample metadata v2.csv"
+meta_file <- "Sample metadata v3.csv"
 
 #define file name for antigen list file with additional info about targets.
 target_file <- "Target metadata.csv" 
@@ -68,7 +68,7 @@ reps <- 2
 index_block <- 32
 
 #define isotype
-iso <- "IgG"
+iso <- "IgM"
 
 ### Set the working directory for the folder where .gpr files are. Can check working
 #directory after with getwd()
@@ -230,7 +230,7 @@ if(iso == "IgM"){
   
   fore.df <- annotation_targets.df
   for(i in 1:length(samples)){
-    ite_out<-slides_all.df$F635.Median[which(slides_all.df$Sample==samples_unique[i])]
+    ite_out<-slides_all.df$F594.Median[which(slides_all.df$Sample==samples_unique[i])]
     fore.df<-cbind(fore.df,ite_out)
     colnames(fore.df)[length(colnames(fore.df))]<-samples_unique[i]
   }
@@ -238,7 +238,7 @@ if(iso == "IgM"){
   #Background
   back.df <- annotation_targets.df
   for(i in 1:length(samples)){
-    ite_out<-slides_all.df$B635.Median[which(slides_all.df$Sample==samples_unique[i])]
+    ite_out<-slides_all.df$B594.Median[which(slides_all.df$Sample==samples_unique[i])]
     back.df<-cbind(back.df,ite_out)
     colnames(back.df)[length(colnames(back.df))]<-samples_unique[i]
   }
