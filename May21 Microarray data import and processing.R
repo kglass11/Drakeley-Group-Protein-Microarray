@@ -1,5 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
-  #Last updated June 6, 2018, KG
+  #FOR SINGLE CHANNEL 635 GenePix Data!!!
+  #Last updated August 8, 2018, KG
 
 ###Create a folder, into which you should copy this script, your .gpr files (named 'Slide 1.gpr', 'Slide 2.gpr' etc.), 
 # and your sample list, sample metadata, and target (antigen) metadata csv files.
