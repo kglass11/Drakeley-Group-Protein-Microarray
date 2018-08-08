@@ -43,22 +43,22 @@ library(reshape2)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/GhanaProcessingMay21KG"
+workdir <- "/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Data Processing KG"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
-study <- "Ghana.v2"
+study <- "Sanger.2"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample list.csv"
+sample_file <- "Sample list Sanger for merge v2.csv"
 
 #define file name for sample file + additional metadata (character vector)
-meta_file <- "Sample metadata.csv"
+meta_file <- "Sanger metadata corrected for merge Feb8.csv"
 
 #define file name for antigen list file with additional info about targets.
-target_file <- "Target metadata with Tags.csv" 
+target_file <- "sanger_target_metadata_KT_v2.csv" 
 
 #number of technical replicates for the study (usually 1 or 2)
-reps <- 2
+reps <- 1
 
 #define number of blocks per slide
 index_block <- 32
@@ -153,24 +153,17 @@ index_sample <- as.numeric(length(samples))
 
 ###Assign your sample_ids to each row of the combined slide data (slides_all.df)
 #The order of data in your samples.df file is irrelevant, as long as each sample ID is correctly matched to its slide and block numbers
+slides_all.df$Sample <- NA
 
-for(i in 1:dim(slides_all.df)[1]){
-  
+for(i in 1:nrow(slides_all.df)){
   print(i)
-  row_ite<-slides_all.df[i,]
-  block_ite<-row_ite$Block
-  slide_ite<-row_ite$slide_no
-  sample_info_1<-samples.df[which(samples.df$slide_no==slide_ite),]
-  match<-block_ite%in%sample_info_1[,"block_rep_1"]
-  if(match==TRUE){
-    value<-which(block_ite==sample_info_1[,"block_rep_1"])
-  }else{
-    value<-which(block_ite==sample_info_1[,"block_rep_2"])
-  }
-  sample_info_2<-sample_info_1[value,"sample_id_unique"]
-  slides_all.df$Sample[i]<-as.character(sample_info_2)
+  block <- slides_all.df$Block[[i]]
+  slide <- as.numeric(slides_all.df$slide_no[[i]])
+  temp <- which(samples.df$slide_no == slide & (samples.df$block_rep_1 == block | samples.df$block_rep_2 == block))
+  name <- samples.df$sample_id_unique[temp]
+  slides_all.df$Sample[[i]] <- name
 }
-remove(i, sample_info_1, sample_info_2, match, row_ite, block_ite, slide_ite)
+remove(i,block,slide,temp,name)
 
 ###Write slides_all.df to a file to keep as a csv in your directory
 write.csv(slides_all.df,file=paste0(study,"_slidesall_combinedGPR.csv"), row.names=T)
@@ -235,10 +228,10 @@ cor.matrix <- backgroundCorrect.matrix(fore.matrix, back.matrix, method = "norme
 write.csv(cor.matrix, file=paste0(study,"_background_corrected_MFI.csv"))
 
 ###Assign target names to groups of your array targets to identify their 'type'
-targets_blank = c(grep("BLANK", annotation_targets.df$Name))
-targets_buffer = c(grep("buffer", annotation_targets.df$Name))
-targets_ref = c(grep("REF", annotation_targets.df$Name))
-targets_std = c(grep("Std", annotation_targets.df$Name))
+targets_blank = c(grep("BLANK", annotation_targets.df$Name, ignore.case = TRUE))
+targets_buffer = c(grep("buffer", annotation_targets.df$Name, ignore.case = TRUE))
+targets_ref = c(grep("REF", annotation_targets.df$Name, ignore.case = TRUE))
+targets_std = c(grep("Std", annotation_targets.df$Name, ignore.case = TRUE))
 targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
 
 ###Remove "bad" spots from subsequent analysis
@@ -281,8 +274,87 @@ if (reps==2){
 remove(i)
 
 ###Convert the spots to be disincluded to NAs in background corrected data
-cor2.matrix <- cor.matrix
-cor2.matrix[high_targets_disinclude, ] <- NA
+cor.5.matrix <- cor.matrix
+cor.5.matrix[high_targets_disinclude, ] <- NA
+
+###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
+
+#Prepare target data frame for merging (get "unique" names from annotation targets) 
+target_meta2.df <- merge(target_meta.df[,1:6], annotation_targets.df, by = "Name")
+
+#merge target data frame with data
+bunny <- merge(target_meta2.df, cor.5.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
+#subset based on GST tag
+
+#depending on column name with tag upper or lowercase, use either of the next two lines
+#bun <- filter(bunny, Expression_tag == "GST")
+bun <- filter(bunny, Expression_Tag == "GST")
+bun <- tibble::column_to_rownames(bun, var = "target_id_unique")
+
+#isolate GST values and plot GST - 
+GST <- bunny[grep("_GST_", bunny$target_id_unique),]
+
+GSTmelt <- melt(GST)
+GSTmelt <- filter(GSTmelt,!(variable == "Block" | variable == "Column" | variable == "Row"))
+
+png(filename = paste0(study, "_GST_by_target_log.tif"), width = 7, height = 3.5, units = "in", res = 1200)
+
+ggplot(GSTmelt, aes(x = variable, y=value, color = target_id_unique)) + geom_point() + theme_bw() +
+  labs(x = "Sample", y = "Background Corrected MFI", title = "GST targets") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+  scale_y_continuous(breaks = 10**(1:10),trans = 'log10', labels = 10**(1:10))
+
+graphics.off()
+
+png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
+par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
+plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
+     ylab="Background Corrected MFI", xlab="GST spot", cex.main=1, cex.lab=1, cex.axis=0.7)
+
+graphics.off()
+
+if (reps == 1){
+  GSTmean <- GST[,12:ncol(GST)]
+}
+
+if (reps == 2){
+  GSTmean <- colMeans(GST[,12:ncol(GST)])
+}
+
+#subtract GST directly for each sample from all tagged targets
+#set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
+
+#might have to change column number here, might need to adjust below for NAs, or remove high targets disinclude?
+bundata <- bun[11:ncol(bun)]
+#bundata <- bundata[,!(colnames(bundata) %in% samples_exclude1)]
+
+subbedGST <- bundata
+for(i in 1:ncol(subbedGST))
+{
+  subbedGST[,i] <- bundata[,i]-GSTmean[i]
+  subbedGST[which(subbedGST[,i] <= 0),i] <- 50
+}
+remove(i)
+
+#bind GST-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
+#Make another data frame where the tagged protein values are replaced by their subtracted values
+#filter out the GST tagged targets
+no_tags.df <- filter(bunny, is.na(Expression_tag) | !(Expression_tag == "GST"))
+#no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
+row.names(no_tags.df) <- no_tags.df$target_id_unique
+no_tags.df <- no_tags.df[,12:ncol(no_tags.df)]
+
+#then rbind the GST and the CD4 data frames to that one. 
+cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
+
+#need to put the matrix back in the same order as before (by target_id_unique) because of calling out buffer etc.
+sortedcor <- merge(annotation_targets.df, cor1.matrix, by = "row.names", sort = FALSE)
+cor2.matrix <- as.matrix(sortedcor[,8:ncol(sortedcor)])
+row.names(cor2.matrix) <- row.names(annotation_targets.df)
+
+#save ALL GST subtracted data in another file
+write.csv(cor2.matrix, paste0(study, "_GST_subtracted_MFI.csv"))
 
 ###QUALITY CONTROL###
 
