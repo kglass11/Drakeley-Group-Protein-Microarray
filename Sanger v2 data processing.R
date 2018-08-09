@@ -288,7 +288,7 @@ bunny <- merge(target_meta2.df, cor.5.matrix, by.y = "row.names", by.x = "target
 
 #depending on column name with tag upper or lowercase, use either of the next two lines
 #bun <- filter(bunny, Expression_tag == "GST")
-bun <- filter(bunny, Expression_Tag == "GST")
+bun <- filter(bunny, Expression_Tag == "GST" | Expression_Tag == "GST/His")
 bun <- tibble::column_to_rownames(bun, var = "target_id_unique")
 
 #isolate GST values and plot GST - 
@@ -309,14 +309,14 @@ graphics.off()
 
 png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
 par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
-plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
+plot(c(as.matrix(GST[,17:ncol(GST)])), pch='*', col = "blue", main = "GST",
      ylab="Background Corrected MFI", xlab="GST spot", cex.main=1, cex.lab=1, cex.axis=0.7)
 
 graphics.off()
 
 #change column numbers to match target data
 if (reps == 1){
-  GSTmean <- GST[,17:ncol(GST)]
+  GSTmean <- as.matrix(GST[,17:ncol(GST)])
 }
 
 if (reps == 2){
@@ -339,24 +339,64 @@ for(i in 1:ncol(subbedGST))
 }
 remove(i)
 
-#bind GST-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
+### CD4 Subtraction from Sanger antigens
+CD4it <- filter(bunny, Expression_Tag == "CD4")
+CD4it <- tibble::column_to_rownames(CD4it, var = "target_id_unique")
+
+#isolate CD4 values and plot CD4 - 
+CD4 <- bunny[grep("_CD4_", bunny$target_id_unique),17:ncol(bunny)]
+
+png(filename = paste0(study, "_CD4.tif"), width = 5, height = 3.5, units = "in", res = 1200)
+par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
+plot(c(as.matrix(CD4)), pch='*', col = "blue", main = "CD4",
+     ylab="Background Corrected MFI", xlab="CD4 spot", cex.main=1, cex.lab=1, cex.axis=0.7)
+
+graphics.off()
+
+#change column numbers to match target data
+if (reps == 1){
+  CD4mean <- as.matrix(CD4)
+}
+
+if (reps == 2){
+  CD4mean <- colMeans(CD4)
+}
+
+#subtract CD4 directly for each sample from all tagged targets
+#set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
+
+#might have to change column number here - check every time
+CD4data <- CD4it[16:ncol(CD4it)]
+#bundata <- bundata[,!(colnames(bundata) %in% samples_exclude1)]
+
+subbedCD4 <- CD4data
+for(i in 1:ncol(subbedCD4))
+{
+  subbedCD4[,i] <- CD4data[,i]-CD4mean[i]
+  subbedCD4[which(subbedCD4[,i] <= 0),i] <- 50
+  print(i)
+}
+remove(i)
+
+#EDIT THIS SECTION TO INCLUDE CD4 AT THE SAME TIME
+#bind GST-subtracted and CD4-subtracted data with data from non-tagged antigens, label final matrix as cor2.matrix.
 #Make another data frame where the tagged protein values are replaced by their subtracted values
 #filter out the GST tagged targets
 #no_tags.df <- filter(bunny, is.na(Expression_tag) | !(Expression_tag == "GST"))
-no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
+no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "CD4" | Expression_Tag == "GST" | Expression_Tag == "GST/His"))
 row.names(no_tags.df) <- no_tags.df$target_id_unique
 no_tags.df <- no_tags.df[,17:ncol(no_tags.df)]
 
 #then rbind the GST and the CD4 data frames to that one. 
-cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
+cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST, subbedCD4))
 
 #need to put the matrix back in the same order as before (by target_id_unique) because of calling out buffer etc.
 sortedcor <- merge(annotation_targets.df, cor1.matrix, by = "row.names", sort = FALSE)
 cor2.matrix <- as.matrix(sortedcor[,8:ncol(sortedcor)])
 row.names(cor2.matrix) <- row.names(annotation_targets.df)
 
-#save ALL GST subtracted data in another file
-write.csv(cor2.matrix, paste0(study, "_GST_subtracted_MFI.csv"))
+#save ALL GST and CD4 subtracted data in another file
+write.csv(cor2.matrix, paste0(study, "_Tag_subtracted_MFI.csv"))
 
 ###QUALITY CONTROL###
 
