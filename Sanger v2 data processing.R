@@ -1121,7 +1121,7 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   norm_sub4.df <- norm_sub3.df[,1:ncol(norm_sub.matrix)]
   
   #Make the dilution column of target_meta.df a character type
-  target_meta.df$Concentration <- as.character(target_meta.df$Concentration)
+  target_meta.df$Dilution <- as.character(target_meta.df$Dilution)
   
   #Merge with target metadata to filter based on expression tag etc.
   target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
