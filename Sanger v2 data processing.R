@@ -768,7 +768,9 @@ outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 6.38 on t
   }
 
 #calculate outliers for log2 transformed data, for all buffer data considered as one population
-BUFoutliers <- scores(Buflog, type = "z", prob =0.995)
+#decided to go with prob = 0.95. I do not feel comfortable going lower, 
+#although this is a conservative cutoff based on the QC plots
+BUFoutliers <- scores(Buflog, type = "z", prob =0.95)
 
 #remove outliers (set to NA in original background corrected MFI data) 
 BUFrm995 <- as.matrix(Buffer)
@@ -780,13 +782,13 @@ for(i in 1:length(BUFrm995)){
   }
 }
 
-max(BUFrm995, na.rm = TRUE) #24855 for 0.995
-min(BUFrm995, na.rm = TRUE) #50 for 0.995 
+max(BUFrm995, na.rm = TRUE) #24855 for 0.995, 3899 for 0.95
+min(BUFrm995, na.rm = TRUE) #50 for 0.995, 50 for 0.95
 
-length(which(BUFoutliers == TRUE))/length(BUFoutliers)*100 # 4.6% for 0.995
+length(which(BUFoutliers == TRUE))/length(BUFoutliers)*100 # 4.6% for 0.995, 8.9% for 0.95
 
 #plot histogram again with outliers removed 
-png(filename = paste0(study, "_Buffer_hist_p.995.tif"), width = 5, height = 5, units = "in", res = 1200)
+png(filename = paste0(study, "_Buffer_hist_p.95.tif"), width = 5, height = 5, units = "in", res = 1200)
 par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
 
 hist(log2(c(BUFrm995)), breaks = 25, col = "blue",
@@ -794,7 +796,6 @@ hist(log2(c(BUFrm995)), breaks = 25, col = "blue",
 title(main="Buffer without outliers, MFI", adj=0)
 
 graphics.off()
-
 
 #### LOG TRANSFORMATION AND NORMALIZATION ###
 
