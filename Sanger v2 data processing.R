@@ -811,9 +811,6 @@ write.csv(t(log.cor.matrix), file = paste0(study,"_log_data.csv"))
 cor2_buffer_sample_mean <- colMeans(BUFrm995, na.rm = TRUE)
 cor2_buffer_sample_sd <- apply(BUFrm995, 2, sd, na.rm = TRUE)
 
-###Create sample specific buffer means for normalisation
-cor2_buffer_sample_mean <- colMeans(cor3.matrix[targets_buffer,], na.rm = TRUE)
-cor2_buffer_sample_sd <- apply(cor3.matrix[targets_buffer,], 2, sd, na.rm = TRUE)
 #log2 transform sample buffer mean
 log_buffer_sample_mean <- log2(cor2_buffer_sample_mean)
 
@@ -888,6 +885,32 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
 
   graphics.off()
 
+###Plot All standards together in ggplot2
+  
+  #normalized
+  std1melt <- melt(stds_norm, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_norm_1.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std1melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Normalized") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
+  #not normalized
+  std1premelt <- melt(stds_pre, varnames = c("Std", "Sample"))
+  
+  png(filename = paste0(study, "_stds_pre_1.tif"), width = 7, height = 5, units = "in", res = 1200)
+  
+  ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Pre-Normalization") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  
+  graphics.off()
+  
 # Set negative normalized log values to zero. This will be used for some analyses. 
 # For other analyses, including sending data to Nuno, the data will be input without setting values to 0. 
 # From now on, the norm.matrix has negative values, and norm2.matrix does not. 
@@ -1103,74 +1126,10 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   #Merge with target metadata to filter based on expression tag etc.
   target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
   
-  #GST subtraction - only for data with negative values set to 0 (norm4.matrix)
-  ### Subtracting Protein Tag Signal from tagged antigens - only for norm4.matrix (no negative values)
-  #Prepare data frame with GST tagged proteins only for subtraction
-  GST_antigens.df <- filter(target.df, Expression_Tag == "GST" | Expression_Tag == "GST/His")
-  GST_antigens.df <- tibble::column_to_rownames(GST_antigens.df, var="Name")
-  GST_antigens.df <- GST_antigens.df[,sapply(GST_antigens.df, is.numeric)]
+  #Save final data frame to csv file
+  write.csv(norm_sub4.df, paste0(study, "_finalafterprocessing.csv"))
   
-  GST <- c(grep("GST", rownames(norm_sub4.df), fixed = TRUE))
-  GST_val <- c(as.matrix(norm_sub4.df[GST,]))
-  
-  #Plot GST values
-  png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
-  par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
-  plot(GST_val, pch='*', col = "blue", ylim=c(0,max(GST_val, na.rm = TRUE)*1.25), main = "GST",
-       ylab="Normalized log2(MFI)", xlab="Sample (Array)", cex.main=1, cex.lab=1, cex.axis=0.7)
-  
-  #print text on the plots for number of samples where GST and CD4 are above buffer
-  mtext(paste("Total Samples with GST > 0:", round(sum(norm_sub4.df[GST,] > 0, na.rm = TRUE), digits=2), 
-              "(", round(sum(norm_sub4.df[GST,] > 0, na.rm = TRUE)/length(GST_val)*100, digits=2), "%)"), side=1, cex=0.8, line=0.5, outer=TRUE, xpd=NA, adj=0)
-  
-  graphics.off()
-  
-  #Subtract GST signal from GST tagged proteins
-  sub_GST_antigens.df <- data.frame(matrix(0, nrow = nrow(GST_antigens.df), ncol = ncol(GST_antigens.df)))
-  rownames(sub_GST_antigens.df) <- rownames(GST_antigens.df)
-  colnames(sub_GST_antigens.df) <- colnames(GST_antigens.df)
-  
-  #subtract GST! There might be NA values if reps = 2.
-  for(b in 1:ncol(GST_antigens.df)){
-    for(a in 1:nrow(GST_antigens.df)){
-      #if GST value is NA or main value is NA, then cannot do subtraction and cannot compare with other data
-      #so set those values to NA
-      if(is.na(norm_sub4.df[GST,b])|is.na(GST_antigens.df[a,b])){
-        sub_GST_antigens.df[a,b] <- NA
-        # when the GST value is positive only, subtract GST value, 
-        #otherwise want to leave as whatever the value was before (because GST was at or below buffer mean for that sample)
-      } else if (norm_sub4.df[GST,b] > 0){
-        #calculate difference in original MFI form (not log2)
-        sub_GST_antigens.df[a,b] <- 2^GST_antigens.df[a,b] - 2^norm_sub4.df[GST,b]
-        #can only do log2 if the difference is greater than 0, otherwise set to 0 (normalized log2 value is not above buffer)
-        if (sub_GST_antigens.df[a,b] > 0) {
-          sub_GST_antigens.df[a,b] <- log2(sub_GST_antigens.df[a,b])
-          #if the log2 tag-subtracted value is negative, means normalized value is below buffer mean,
-          #so also need to set those negatives to 0 again.
-          if(sub_GST_antigens.df[a,b] < 0){
-            sub_GST_antigens.df[a,b] <- 0
-          }
-        } else { 
-          sub_GST_antigens.df[a,b] <- 0
-        }
-      } else {
-        sub_GST_antigens.df[a,b] <- GST_antigens.df[a,b]
-      }
-    }
-  }
-  remove(a,b)
-  
-  #Make another data frame where the tagged protein values are replaced by their subtracted values
-  #filter out the GST tagged targets
-  no_tags.df <- filter(target.df, !(Expression_Tag == "GST" | Expression_Tag == "GST/His"))
-  no_tags.df <- tibble::column_to_rownames(no_tags.df, var="Name")
-  no_tags.df <- no_tags.df[,sapply(no_tags.df, is.numeric)]
-  #then rbind the GST and the CD4 data frames to that one. The order of the targets
-  #shouldn't matter anymore
-  norm_sub5.df <- rbind(no_tags.df, sub_GST_antigens.df)
-  
-  #save ALL GST subtracted data in another file
-  write.csv(norm_sub5.df, paste0(study, "_GST_subtracted_Final.csv"))
-  
-#Save R workspace so that can load prior to analysis 
+  #Save R workspace so that can load prior to analysis 
   save.image(file= paste0(study,"_AfterProcessing.RData"))
+  
+
