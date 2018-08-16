@@ -184,5 +184,23 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   remove(i)
   
   AntB <- AntB[2:nrow(AntB),]
+  
+  #Plot by day
+  
+  #set factor order for day
+  AntB$day <- factor(AntB$day, levels = as.character(c("D0", "D7", "D28")))
+  
+  png(filename = paste0(study, "_antigen_breadth.tif"), width = 3, height = 3, units = "in", res = 1200)
+  
+  ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black") + 
+    geom_jitter(width = 0.27, height = 0) + 
+    theme_bw() + labs(x = "Day", y = "Antigen Breadth", title = iso) +  
+    theme(text = element_text(size=11)) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+    scale_y_continuous(breaks=c(0,2,4,6,8,10)) +
+    theme(legend.position="none") +
+    scale_x_discrete(labels=c("0", "7", "28"))
+    
+  graphics.off()
 
 
