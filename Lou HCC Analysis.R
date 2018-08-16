@@ -154,8 +154,6 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   colnames(SPpeople) <- c("Name", "Total SP")
   
 #Add columns for the totals for each day for the antigens in that order
-  
-  #filter by time point
   day <- c("D0","D7","D28")
   
   for(i in 1:3){
@@ -167,15 +165,24 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   }
   remove(i)
   
-  #calculate for each time point, rbind to original SP people data frame
-
+  #Export this matrix for plotting in PRISM
+  write.csv(SPpeople, paste0(study, "_SPpeople4histogram.csv"))
   
-  
-
-
-
 ############ Calculations and plot for antigen breadth #############
 
-
+  AntB <- matrix(ncol = 2)
+  colnames(AntB) <- c("V1", "day")
+  
+  #calculate sums for sample for each day and bind together
+  for(i in 1:3){
+    d <- day[i]
+    SPday <- SP.Pk.Lou[,grep(d, colnames(SP.Pk.Lou))]
+    AntBday <- as.data.frame(as.matrix(colSums(SPday)))
+    AntBday$day <- d
+    AntB <- rbind(AntB, AntBday)
+  }
+  remove(i)
+  
+  AntB <- AntB[2:nrow(AntB),]
 
 
