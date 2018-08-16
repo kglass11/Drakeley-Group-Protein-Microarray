@@ -13,6 +13,17 @@ getwd()
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
 load(file = "Pk_HCC_analysis_IgG.RData")
 
+#Add time point to the sample metadata
+sample_meta_f.df$day <- 0
+sample_meta_f.df$day[grep("D7", sample_meta_f.df$sample_id)] <- 7
+sample_meta_f.df$day[grep("D28", sample_meta_f.df$sample_id)] <- 28
+
+#make some columns of sample_meta_f character instead of numerc
+sample_meta_f.df$day <- as.character(sample_meta_f.df$day)
+sample_meta_f.df$slide_no <- as.character(sample_meta_f.df$slide_no)
+sample_meta_f.df$block_rep_1 <- as.character(sample_meta_f.df$block_rep_1)
+sample_meta_f.df$block_rep_2 <- as.character(sample_meta_f.df$block_rep_2)
+
 ########## Additional Standard Plots ##########
 
 ###Plot All standards together in ggplot2 - for ALL THREE ISOTYPES 
@@ -118,6 +129,50 @@ rownames(tacos.Pk) <- tacos.Pk$sample_id_unique
 tacos.Pk.data <- tacos.Pk[,(ncol(sample_meta_f.df)+1):ncol(tacos.Pk)]
 
 ############ Calculations for total number of people reactive to each Pk antigen ##########
+
+#Select Pk PCR+ samples from SEROPOSITIVITY MATRIX
+seroposT <- t(seropos.matrix)
+
+SP.meta <- merge(sample_meta_f.df, seroposT, by.y = "row.names", by.x = "sample_id_unique", sort = FALSE)
+SP.Pk <- filter(SP.meta, pcr == "Pk")
+rownames(SP.Pk) <- SP.Pk$sample_id_unique
+
+SP.Pk.data <- SP.Pk[,(ncol(sample_meta_f.df)+1):ncol(SP.Pk)]
+
+#Select Lou antigens 
+SP.Pk.meta <- merge(target_meta.df, t(SP.Pk.data), by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+SP.Pk.Lou.meta <- filter(SP.Pk.meta, Source == "Lou")
+SP.Pk.Lou <- tibble::column_to_rownames(SP.Pk.Lou.meta, var="Name")
+SP.Pk.Lou <- SP.Pk.Lou[,ncol(target_meta.df):ncol(SP.Pk.Lou)]
+
+####calculate number of seropositive people at each time point (Pk samples only, Lou antigens only)
+
+#total for all time points --> this is the correct factor order for the plot.   
+SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
+  SPpeople <- as.data.frame(SPpeople)
+  SPpeople <- tibble::rownames_to_column(SPpeople)
+  colnames(SPpeople) <- c("Name", "Total SP")
+  
+#Add columns for the totals for each day for the antigens in that order
+  
+  #filter by time point
+  day <- c("D0","D7","D28")
+  
+  for(i in 1:3){
+  d <- day[i]
+  SPday <- SP.Pk.Lou[,grep(d, colnames(SP.Pk.Lou))]
+  SPdaysum <- as.matrix(rowSums(SPday))
+  colnames(SPdaysum) <- d
+  SPpeople <- merge(SPpeople, SPdaysum, by.x = "Name", by.y = "row.names", sort = FALSE)
+  }
+  remove(i)
+  
+  #calculate for each time point, rbind to original SP people data frame
+
+  
+  
+
+
 
 ############ Calculations and plot for antigen breadth #############
 
