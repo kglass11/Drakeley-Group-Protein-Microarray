@@ -210,7 +210,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
 
 ########### Correlation Between Antigens, Plot and Stats ############
   
-  #set up data frame for correlation between antigens for the same points
+#set up data frame for correlation between antigens for the same points
   #isolate data from lou antigens only and Pk PCR+ samples only!!  
   
   #Make another target.df merged data frame for further use with tag-subtracted values and test samples only
@@ -231,7 +231,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   
   PkLouT <- PkLouness[,(ncol(sample_meta_f.df)+1):ncol(PkLouness)]
   
-  #plot with corrplot package - ALL TIME POINTS COMBINED!
+#plot with corrplot package - ALL TIME POINTS COMBINED!
   
   #order FPC means first principle component. I found this order looked the best.I do not know how it was calculated.
   png(filename = paste0(study, "_Pk_antigen_Correlogram.tif"), width = 7, height = 6.5, units = "in", res = 1200)
@@ -239,5 +239,71 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   corrplot.mixed(cor(PkLouT, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt")
   
   graphics.off()
+  
+#Combining plot with significance test for correlation coefficients
+  #alternative = greater means alternative hypothesis is positive association
+  #Right now we are using the default, which is either positive or negative association.
+  #default method is pearson, may want to use Kendall or Spearman for our data because better for nonparametric data
+  #I tried pearson and spearman and I liked pearson better because we have continuous data 
+  #and the spearman (which is rank based) made a lot more things significant.
+  res1 <- cor.mtest(PkLouT, conf.level = .95, na.rm = TRUE)
+  res2 <- cor.mtest(PkLouT, conf.level = .99, na.rm = TRUE)
+  
+  #Plots with an X over the correlations which are NOT significant
+  png(filename = paste0(study, "_Pk_Correlogram_Sig1.tif"), width = 7, height = 6.5, units = "in", res = 1200)
+  
+  corrplot.mixed(cor(PkLouT, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt",
+      p.mat = res1$p, sig.level = .05)
+  
+  graphics.off()
+  
+  #Plots with a star over the ones that are significant. this looks terrible and I don't know how to make it 
+  #only do the star on one half
+  png(filename = paste0(study, "_Pk_Correlogram_Sig2.tif"), width = 7, height = 6.5, units = "in", res = 1200)
+  
+  corrplot.mixed(cor(PkLouT, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt",
+                 p.mat = res1$p, insig = "label_sig", pch.col = "black")
+  
+  graphics.off()
+  
+  #Plots with a blank for correlations which are not significant
+  png(filename = paste0(study, "_Pk_Correlogram_Sig3.tif"), width = 7, height = 6.5, units = "in", res = 1200)
+  
+  corrplot.mixed(cor(PkLouT, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt",
+                 p.mat = res1$p, sig.level = .05, insig = "")
+  
+  graphics.off()
+  
+###Plot the correlogram separated 1 for each time point!!! 
+  cday <- c(0,7,28)
+  
+  for(i in 1:length(cday)){
+    
+    #isolate relevant data for each time point
+    k = cday[i]
+    PkTimeK <- filter(PkLouness, day == k)
+    rownames(PkTimeK) <- PkTimeK$sample_id_unique
+    PkTimeK <- PkTimeK[,(ncol(sample_meta_f.df)+1):ncol(PkTimeK)]
+    
+    #run correlation significance test with pearson's method
+    restime <- cor.mtest(PkTimeK, conf.level = .95, na.rm = TRUE)
+    
+    #Plot with significance showing - x over NOT significant
+    png(filename = paste0(study,"_", k, "Sig_Pk_Correlogram.tif"), width = 7, height = 6.5, units = "in", res = 1200)
+    
+    print(corrplot.mixed(cor(PkTimeK, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt",
+                   p.mat = restime$p, sig.level = .05))
+    
+    graphics.off()
+    
+    #Plot without significance showing - can add stars when making figure in powerpoint?!?
+    png(filename = paste0(study,"_", k, "_Pk_Correlogram.tif"), width = 7, height = 6.5, units = "in", res = 1200)
+    
+    print(corrplot.mixed(cor(PkTimeK, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt"))
+    
+    graphics.off()
+    
+  }
+  remove(i)
   
   
