@@ -6,6 +6,11 @@
 ###Clear the environnment - OR go to Session > Clear Workspace
 rm(list=ls())
 
+# install.packages("corrgram")
+# install.packages("corrplot")
+library(corrgram)
+library(corrplot)
+
 #set working directory
 setwd("/Users/Katie/Desktop/R files from work/Lou HCC/IgG")
 getwd()
@@ -203,4 +208,36 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
     
   graphics.off()
 
-
+########### Correlation Between Antigens, Plot and Stats ############
+  
+  #set up data frame for correlation between antigens for the same points
+  #isolate data from lou antigens only and Pk PCR+ samples only!!  
+  
+  #Make another target.df merged data frame for further use with tag-subtracted values and test samples only
+  target2.df <- merge(target_meta.df, norm_sub5.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+  
+  #Isolate Lou antigens
+  Lou.df <- filter(target2.df, Source == "Lou")
+  subLou.df <- tibble::column_to_rownames(Lou.df, var="Name")
+  subLou.df <- subLou.df[,sapply(subLou.df, is.numeric)]
+  
+  #transpose Lou antigens
+  subLouT.df <- as.data.frame(t(subLou.df))
+  subLouT2.df <- tibble::rownames_to_column(subLouT.df, var = "sample_id_unique")
+  Louness.df <- merge(sample_meta_f.df,subLouT2.df, sort = FALSE)
+  
+  PkLouness <- filter(Louness.df, pcr == "Pk")
+  rownames(PkLouness) <- PkLouness$sample_id_unique
+  
+  PkLouT <- PkLouness[,(ncol(sample_meta_f.df)+1):ncol(PkLouness)]
+  
+  #plot with corrplot package - ALL TIME POINTS COMBINED!
+  
+  #order FPC means first principle component. I found this order looked the best.I do not know how it was calculated.
+  png(filename = paste0(study, "_Pk_antigen_Correlogram.tif"), width = 7, height = 6.5, units = "in", res = 1200)
+  
+  corrplot.mixed(cor(PkLouT, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt")
+  
+  graphics.off()
+  
+  
