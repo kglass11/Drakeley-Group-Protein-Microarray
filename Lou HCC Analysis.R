@@ -6,8 +6,10 @@
 ###Clear the environnment - OR go to Session > Clear Workspace
 rm(list=ls())
 
+#install relevant packages if you haven't used them before
 # install.packages("corrgram")
 # install.packages("corrplot")
+# install.packages("ggbeeswarm")
 
 ###Load packages needed for this script
 require("gtools")
@@ -23,6 +25,7 @@ library(reshape2)
 library(dplyr)
 library(corrgram)
 library(corrplot)
+library(ggbeeswarm)
 
 #set working directory
 setwd("/Users/Katie/Desktop/R files from work/Lou HCC/IgG")
@@ -208,10 +211,10 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   #set factor order for day
   AntB$day <- factor(AntB$day, levels = as.character(c("D0", "D7", "D28")))
   
-  png(filename = paste0(study, "_antigen_breadth.tif"), width = 3, height = 3, units = "in", res = 1200)
+  png(filename = paste0(study, "_antigen_breadth_V2.tif"), width = 3, height = 3, units = "in", res = 1200)
   
   ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black") + 
-    geom_beeswarm(width = 0.27, height = 0) + 
+    geom_beeswarm(cex = 3.5) + 
     theme_bw() + labs(x = "Day", y = "Antigen Breadth", title = iso) +  
     theme(text = element_text(size=11)) +
     theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
@@ -220,6 +223,20 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
     scale_x_discrete(labels=c("0", "7", "28"))
     
   graphics.off()
+  
+########### Antigen Specific, Correlation between Antibody Response and Age #########
+
+#using seropositive data only, plot data for each time point as a different color
+  tacos.Pk.data
+  
+#need to melt the data for ggplot2
+  
+  
+
+
+###########
+  
+  #parasite count is only taken from day 0, but look at it vs reactivity at all time points. 
 
 ########### Correlation Between Antigens, Plot and Stats ############
   
