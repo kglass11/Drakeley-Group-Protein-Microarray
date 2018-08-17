@@ -8,6 +8,19 @@ rm(list=ls())
 
 # install.packages("corrgram")
 # install.packages("corrplot")
+
+###Load packages needed for this script
+require("gtools")
+
+library(limma)
+library(contrast)
+library(beeswarm)
+library(mixtools)
+library(gplots)
+library(ggplot2)
+library(gcookbook)
+library(reshape2)
+library(dplyr)
 library(corrgram)
 library(corrplot)
 
@@ -198,7 +211,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   png(filename = paste0(study, "_antigen_breadth.tif"), width = 3, height = 3, units = "in", res = 1200)
   
   ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black") + 
-    geom_jitter(width = 0.27, height = 0) + 
+    geom_beeswarm(width = 0.27, height = 0) + 
     theme_bw() + labs(x = "Day", y = "Antigen Breadth", title = iso) +  
     theme(text = element_text(size=11)) +
     theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
