@@ -117,7 +117,10 @@ samples.df <- read.csv(sample_file, header=T, na.strings = " ", check.names = FA
 sample_meta1.df <- read.csv(meta_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
 
 ###Read in target metadata file
-target_meta.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
+target_meta1.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
+
+#remove duplicates from target metadata
+target_meta.df <- distinct(target_meta.df)
 
 ###Processing sample list:
 ###Create a vector listing all of your samples, in the order they appear in your samples_list file
