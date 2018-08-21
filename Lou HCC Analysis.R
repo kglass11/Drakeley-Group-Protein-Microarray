@@ -63,7 +63,7 @@ for(i in 1:length(Ig)){
   png(filename = paste0(study, "_stds_norm_1_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
   print(ggplot(std1melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-          labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Normalized") +
+          labs(x = "Sample", y = "Log2(MFI Ratio)", title = "Stds Normalized") +
           theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
           theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
   
@@ -75,7 +75,7 @@ for(i in 1:length(Ig)){
   png(filename = paste0(study, "_stds_pre_1_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
   print(ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-          labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Pre-Normalization") +
+          labs(x = "Sample", y = "Log2(MFI)", title = "Stds Pre-Normalization") +
           theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
           theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
   
@@ -117,8 +117,8 @@ SP.Pk.data <- SP.Pk[,(ncol(sample_meta_f.df)+1):ncol(SP.Pk)]
 
 #Select Lou antigens 
 SP.Pk.meta <- merge(target_meta.df, t(SP.Pk.data), by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
-SP.Pk.Lou.meta <- filter(onlySPmeta.df, Source == "Lou")
-SP.Pk.Lou <- tibble::column_to_rownames(SP.Pk.Lou, var="Name")
+SP.Pk.Lou.meta <- filter(SP.Pk.meta, Source == "Lou")
+SP.Pk.Lou <- tibble::column_to_rownames(SP.Pk.Lou.meta, var="Name")
 SP.Pk.Lou <- SP.Pk.Lou[,ncol(target_meta.df):ncol(SP.Pk.Lou)]
 
 #Make a data frame with only seropositive data, NA for everything else
@@ -150,21 +150,6 @@ rownames(tacos.Pk) <- tacos.Pk$sample_id_unique
 tacos.Pk.data <- tacos.Pk[,(ncol(sample_meta_f.df)+1):ncol(tacos.Pk)]
 
 ############ Calculations for total number of people reactive to each Pk antigen ##########
-
-#Select Pk PCR+ samples from SEROPOSITIVITY MATRIX
-seroposT <- t(seropos.matrix)
-
-SP.meta <- merge(sample_meta_f.df, seroposT, by.y = "row.names", by.x = "sample_id_unique", sort = FALSE)
-SP.Pk <- filter(SP.meta, pcr == "Pk")
-rownames(SP.Pk) <- SP.Pk$sample_id_unique
-
-SP.Pk.data <- SP.Pk[,(ncol(sample_meta_f.df)+1):ncol(SP.Pk)]
-
-#Select Lou antigens 
-SP.Pk.meta <- merge(target_meta.df, t(SP.Pk.data), by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
-SP.Pk.Lou.meta <- filter(SP.Pk.meta, Source == "Lou")
-SP.Pk.Lou <- tibble::column_to_rownames(SP.Pk.Lou.meta, var="Name")
-SP.Pk.Lou <- SP.Pk.Lou[,ncol(target_meta.df):ncol(SP.Pk.Lou)]
 
 ####calculate number of seropositive people at each time point (Pk samples only, Lou antigens only)
 
