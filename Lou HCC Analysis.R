@@ -196,9 +196,9 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   #set factor order for day
   AntB$day <- factor(AntB$day, levels = as.character(c("D0", "D7", "D28")))
   
-  png(filename = paste0(study, "_antigen_breadth_V2.tif"), width = 3, height = 3, units = "in", res = 1200)
+  png(filename = paste0(study, "_antigen_breadth.tif"), width = 3, height = 3, units = "in", res = 1200)
   
-  ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black") + 
+  ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black", scale = "width") + 
     geom_beeswarm(cex = 3.5) + 
     theme_bw() + labs(x = "Day", y = "Antigen Breadth", title = iso) +  
     theme(text = element_text(size=11)) +
