@@ -209,19 +209,48 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
     
   graphics.off()
   
-########### Antigen Specific, Correlation between Antibody Response and Age #########
+########### Antigen Specific, Correlation between Antibody Response and Parasite Count #########
+  
+  #parasite count is only taken from day 0, but look at it vs reactivity at all time points. 
 
 #using seropositive data only, plot data for each time point as a different color
   tacos.Pk.data
   
+  subtacos <- merge(sample_meta_f.df, tacos.Pk.data, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
+  
+  antnames <- colnames(tacos.Pk.data)
+  
+  subtacos$day <- factor(subtacos$day, levels = as.character(c("0", "7", "28")))
+  
 #need to melt the data for ggplot2
   
+  subtacosm <- melt(subtacos, measure.vars = antnames, na.rm = TRUE)
   
+  subtacosm$age <- as.numeric(subtacosm$age)
 
+#plot parasite count vs antibody response
+  
+  for(i in 1:length(antnames)){
+  
+  antigen = antnames[i]
+  
+  ant1 <- filter(subtacosm, variable == antigen)
+  
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.PC.tif"), width = 3.5, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1, aes(x = parasitecount, y = value, color = day)) + geom_point() +
+  theme_bw() + labs(x = "Parasite Count at Day 0", y = "Log2(MFI Ratio)", title = antigen) + 
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+  theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+  theme(legend.title = element_text(size = 12))+ xlim(0,7000) + ylim(0,7))
+  
+  graphics.off()
+  
+  }
 
 ###########
   
-  #parasite count is only taken from day 0, but look at it vs reactivity at all time points. 
+ #maybe look at age in bins vs antibody response
 
 ########### Correlation Between Antigens, Plot and Stats ############
   
@@ -272,22 +301,6 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   
   graphics.off()
   
-  #Plots with a star over the ones that are significant. this looks terrible and I don't know how to make it 
-  #only do the star on one half
-  png(filename = paste0(study, "_Pk_Correlogram_Sig2.tif"), width = 7, height = 6.5, units = "in", res = 1200)
-  
-  corrplot.mixed(cor(PkLouT, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt",
-                 p.mat = res1$p, insig = "label_sig", pch.col = "black")
-  
-  graphics.off()
-  
-  #Plots with a blank for correlations which are not significant
-  png(filename = paste0(study, "_Pk_Correlogram_Sig3.tif"), width = 7, height = 6.5, units = "in", res = 1200)
-  
-  corrplot.mixed(cor(PkLouT, use = "complete.obs"), tl.col="black", order = "FPC", tl.pos = "lt",
-                 p.mat = res1$p, sig.level = .05, insig = "")
-  
-  graphics.off()
   
 ###Plot the correlogram separated 1 for each time point!!! 
   cday <- c(0,7,28)
