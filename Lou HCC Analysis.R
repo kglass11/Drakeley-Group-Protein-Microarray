@@ -28,18 +28,18 @@ library(corrplot)
 library(ggbeeswarm)
 
 #set working directory
-setwd("/Users/Katie/Desktop/R files from work/Lou HCC/IgG")
+setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgM")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
-load(file = "Pk_HCC_analysis_IgG.RData")
+load(file = "Pk_HCC_analysis_IgM.RData")
 
 #Add time point to the sample metadata
 sample_meta_f.df$day <- 0
 sample_meta_f.df$day[grep("D7", sample_meta_f.df$sample_id)] <- 7
 sample_meta_f.df$day[grep("D28", sample_meta_f.df$sample_id)] <- 28
 
-#make some columns of sample_meta_f character instead of numerc
+#make some columns of sample_meta_f character instead of numeric
 sample_meta_f.df$day <- as.character(sample_meta_f.df$day)
 sample_meta_f.df$slide_no <- as.character(sample_meta_f.df$slide_no)
 sample_meta_f.df$block_rep_1 <- as.character(sample_meta_f.df$block_rep_1)
