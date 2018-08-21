@@ -209,7 +209,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
     
   graphics.off()
   
-########### Antigen Specific, Correlation between Antibody Response and Parasite Count #########
+########### Antigen Specific, Correlation between Antibody Response and Parasite Count or Age #########
   
   #parasite count is only taken from day 0, but look at it vs reactivity at all time points. 
 
@@ -246,11 +246,18 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   
   graphics.off()
   
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.age.tif"), width = 3.5, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1, aes(x = age, y = value, color = day)) + geom_point() +
+          theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + 
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12))+ xlim(0,60) + ylim(0,7))
+  
+  graphics.off()
+  
   }
 
-###########
-  
- #maybe look at age in bins vs antibody response
 
 ########### Correlation Between Antigens, Plot and Stats ############
   
