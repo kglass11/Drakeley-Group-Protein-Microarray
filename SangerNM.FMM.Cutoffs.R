@@ -89,14 +89,15 @@ title('B',adj=0,cex.main=1.5)
 
 graphics.off()
 
-fit.ab2<-normalmixEM(antibody1, lambda=c(0.5,0.5),mu=c(4.0,6.0),k=2)
+#Remember to change mu based on the density plot
+fit.ab2<-normalmixEM(antibody1, lambda=c(0.5,0.5),mu=c(0,5),k=2)
 
 #5 Plot Cut off Value
 summary(fit.ab2)
 
 cutoff<-uniroot(f,c(0,15),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
 
-cutoff2<-uniroot(f2,c(0,15),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+cutoff2<-uniroot(f2,c(0,15),prob=0.90, extendInt = "yes", lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
 sum(antibody1>cutoff2)/length(antibody1)
 
