@@ -28,11 +28,12 @@ library(corrplot)
 library(ggbeeswarm)
 
 #set working directory
-setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgM")
+#"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgM"
+setwd("/Users/Katie/Desktop/R files from work/Lou HCC/IgG")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
-load(file = "Pk_HCC_analysis_IgM.RData")
+load(file = "Pk_HCC_analysis_IgG.RData")
 
 #Add time point to the sample metadata
 sample_meta_f.df$day <- 0
@@ -162,7 +163,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
 #Add columns for the totals for each day for the antigens in that order
   day <- c("D0","D7","D28")
   
-  for(i in 1:3){
+  for(i in 1:length(day)){
   d <- day[i]
   SPday <- SP.Pk.Lou[,grep(d, colnames(SP.Pk.Lou))]
   SPdaysum <- as.matrix(rowSums(SPday))
@@ -180,7 +181,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   colnames(AntB) <- c("V1", "day")
   
   #calculate sums for sample for each day and bind together
-  for(i in 1:3){
+  for(i in 1:length(day)){
     d <- day[i]
     SPday <- SP.Pk.Lou[,grep(d, colnames(SP.Pk.Lou))]
     AntBday <- as.data.frame(as.matrix(colSums(SPday)))
@@ -191,7 +192,29 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   
   AntB <- AntB[2:nrow(AntB),]
   
-  #Plot by day
+  #create another formatted data frame with Study ID and antigen breadth for each day 
+  #this is to use in PRISM for friedman test
+  AntBexp <- merge(sample_meta_f.df, AntB, by.x = "sample_id_unique", by.y = "row.names")
+  
+  AntBexp0 <- filter(AntBexp, day.x == 0)
+  AntBexp7 <- filter(AntBexp, day.x == 7)
+  AntBexp28 <- filter(AntBexp, day.x == 28)
+  
+  AntBexp0 <- AntBexp0[,c("StudyID", "V1")]
+  colnames(AntBexp0) <- c("StudyID", "D0")
+  
+  AntBexp7 <- AntBexp7[,c("StudyID", "V1")]
+  colnames(AntBexp7) <- c("StudyID", "D7")
+  
+  AntBexp28 <- AntBexp28[,c("StudyID", "V1")]
+  colnames(AntBexp28) <- c("StudyID", "D28")
+  
+  AntBexpF <- merge(AntBexp0, AntBexp7, all = TRUE, sort = FALSE)
+  AntBexpF <- merge(AntBexpF, AntBexp28, all = TRUE, sort = FALSE)
+    
+  write.csv(AntBexpF, file = paste0(study, "antigen_breadth_table.csv"))
+  
+#Plot by day
   
   #set factor order for day
   AntB$day <- factor(AntB$day, levels = as.character(c("D0", "D7", "D28")))
