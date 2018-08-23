@@ -1,16 +1,18 @@
 #Sanger Data Analysis Script
 #Katie Glass
+#updated: 8/23/18
 
 #####################################
 ############DATA ANALYSIS############
 #####################################
 
 #If you haven't just continued from the processing script, run:
-#rm(list=ls())
+#
+rm(list=ls())
 
 #I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
-#"/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens"
-setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens")
+#"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens"
+setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens")
 getwd()
 
 require("gtools")
@@ -25,15 +27,29 @@ library(gcookbook)
 library(dplyr)
 library(reshape2)
 
-load(file="SangerTagSubtracted.RData")
+load(file="Sanger.2.Update.RData")
 #updated to 
 #older version: "SangerAfterProcessing.RData"
 
+#I don't think we need to do this anymore
 #import an updated target metadata file
-target_file <- "sanger_target_metadata_KT_v2.csv" 
-target_meta.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
+# target_file <- "sanger_target_metadata_KT_v2.csv" 
+# target_meta.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
 
-###Sample Prep and GST, CD4 subtraction!!!###
+###Prep For further analysis and FMM Cutoff determination ####
+
+#For determining cutoffs with FMM models, using normalized data INCLUDING NEGATIVE VALUES
+
+#Before doing any further analysis, we have to get rid of samples or targets that we are no longer 
+#interested in.
+#E.g. If control individuals are in our analysis, they will affect mixture model based cut-offs
+#E.g. If control targets are still in our analysis, they will muck up our protein breadth estimates
+#KG - for now this still includes the same protein target at different dilutions
+#This means we have to subset the data, so some earlier annotations will from here on be wrong 
+#(e.g. index_sample will no longer equal 96)
+
+
+
 
 #For this section, using normalized data with negative values set to 0 (norm4.matrix)
 
