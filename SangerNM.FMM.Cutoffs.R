@@ -95,33 +95,41 @@ fit.ab2<-normalmixEM(antibody1, lambda=c(0.5,0.5),mu=c(0,5),k=2)
 #5 Plot Cut off Value
 summary(fit.ab2)
 
+#cutoff below which is negative - manually set interval end points
 cutoff<-uniroot(f,c(-3,9),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
 
+#cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(-3,9),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-sum(antibody1>cutoff2)/length(antibody1)
+#percentage positive 
+pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 
-sum(antibody1<cutoff)/length(antibody1)
+#percentage negative
+neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 
-1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)
+#percentage indeterminate
+indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(0,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='wb titres',ylab='classification probability')
+#Plot cutoffs
+png(filename = paste0(study,"_FMM_Cutoffs_53_Tg.tif"), width = 5, height = 5, units = "in", res = 600)
+par(mfrow = c(1,1), mar = c(5, 5, 2, 2), oma = c(6, 1, 1, 1))
+
+plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(0,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability')
 
 rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
-
 title('C',adj=0,cex.main=1.5)
-
 lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
 
 abline(h=0.90,lwd=1.5,lty=2)
-
 abline(v=cutoff,lwd=1)
-
 abline(v=cutoff2,lwd=1)
 
 lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
-
 lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
-
 legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))
 
+mtext(c(paste("Positive Cutoff:", round(cutoff2, digits=3), "; ", round(pos, digits = 2), "% of samples")), side=1, cex=0.8, line=1.5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("Negative Cutoff:", round(cutoff, digits=3),"; ", round(neg, digits = 2), "% of samples")), side=1, cex=0.8, line=3, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste(round(indet, digits=2),"% of samples are indeterminate")), side=1, cex=0.8, line=4.5, outer=TRUE, xpd=NA, adj=0)
+
+graphics.off()
