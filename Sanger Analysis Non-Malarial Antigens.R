@@ -46,27 +46,26 @@ load(file="Sanger.2.Update.RData")
 #E.g. If control targets are still in our analysis, they will muck up our protein breadth estimates
 #KG - for now this still includes the same protein target at different dilutions
 #This means we have to subset the data, so some earlier annotations will from here on be wrong 
-#(e.g. index_sample will no longer equal 96)
+
+#Remove control protein targets
+#Remove samples that should be excluded and isolate test samples - leaves 1325 samples
+#This means that the two neg pools and 6 malaria positive controls are not affecting the FMMs
+subdata <- norm3.matrix[-rmsamp_all,!(colnames(norm3.matrix) %in% samples_exclude)]
+testdata <- subdata[,(colnames(subdata) %in% samples_test)]
+
+#Replace current target names with original target names now that control targets are removed
+testdata.df <- merge(testdata, annotation_targets.df, by ="row.names", sort = FALSE)
+testdata.df <- tibble::column_to_rownames(testdata.df, var="Row.names")
+row.names(testdata.df) <- testdata.df$Name
+Ftestdata <- testdata.df[,1:ncol(testdata)]
+
+#Merge with target metadata to filter based on expression tag etc.
+target.df <- merge(target_meta.df, Ftestdata, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
 
 
 
 
 #For this section, using normalized data with negative values set to 0 (norm4.matrix)
-
-#Before doing any further analysis, we have to get rid of samples or targets that we are no longer 
-#interested in.
-#E.g. If control individuals are in our analysis, they will affect mixture model based cut-offs
-#E.g. If control targets are still in our analysis, they will muck up our protein breadth estimates
-#KG - for now this still includes the same protein target at different dilutions
-#This means we have to subset the data, so some earlier annotations will from here on be wrong 
-#(e.g. index_sample will no longer equal 96)
-
-#Assign sample type names, to identify control and test samples (logical)
-samples_test <- sample_meta.df$sample_id_unique[which(sample_meta.df$sample_type =="test")]
-samples_control <- sample_meta.df$sample_id_unique[which(sample_meta.df$sample_type =="control")]
-
-#Define a list of targets to be removed from further analysis (controls)
-rmsamp_all <- unique(c(targets_blank, targets_buffer, targets_ref, targets_std, high_targets_disinclude))
 
 #Remove control protein targets
 #Don't remove control samples yet, need to do tag subtraction from those samples as well, 
@@ -80,122 +79,9 @@ norm_sub3.df <- tibble::column_to_rownames(norm_sub3.df, var="Row.names")
 row.names(norm_sub3.df) <- norm_sub3.df$Name
 norm_sub4.df <- norm_sub3.df[,1:ncol(norm_sub.matrix)]
 
-#Make the dilution column of target_meta.df a character type
-target_meta.df$Dilution <- as.character(target_meta.df$Dilution)
-
 #Merge with target metadata to filter based on expression tag etc.
 target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
   
-### Subtracting Protein Tag Signal from tagged antigens - only for norm4.matrix (no negative values)
-#Prepare data frame with GST tagged proteins only for subtraction
-GST_antigens.df <- filter(target.df, Expression_Tag == "GST" | Expression_Tag == "GST/His")
-GST_antigens.df <- tibble::column_to_rownames(GST_antigens.df, var="Name")
-GST_antigens.df <- GST_antigens.df[,sapply(GST_antigens.df, is.numeric)]
-
-#Subtract GST signal from GST tagged proteins
-GST <- c(grep("GST", rownames(norm_sub4.df), fixed = TRUE))
-
-sub_GST_antigens.df <- data.frame(matrix(0, nrow = nrow(GST_antigens.df), ncol = ncol(GST_antigens.df)))
-rownames(sub_GST_antigens.df) <- rownames(GST_antigens.df)
-colnames(sub_GST_antigens.df) <- colnames(GST_antigens.df)
-
-#All the NAs have been removed already by excluding targets and samples
-for(b in 1:ncol(GST_antigens.df)){
-  for(a in 1:nrow(GST_antigens.df)){
-  # when the GST value is positive only, subtract GST value, 
-  #otherwise want to leave as whatever the value was before (because GST was at or below buffer mean for that sample)
-    if (norm_sub4.df[GST,b] > 0){
-        #calculate difference in original MFI form (not log2)
-        sub_GST_antigens.df[a,b] <- 2^GST_antigens.df[a,b] - 2^norm_sub4.df[GST,b]
-        #can only do log2 if the difference is greater than 0, otherwise set to 0 (normalized log2 value is not above buffer)
-        if (sub_GST_antigens.df[a,b] > 0) {
-          sub_GST_antigens.df[a,b] <- log2(sub_GST_antigens.df[a,b])
-          #if the log2 tag-subtracted value is negative, means normalized value is below buffer mean,
-          #so also need to set those negatives to 0 again.
-            if(sub_GST_antigens.df[a,b] < 0){
-              sub_GST_antigens.df[a,b] <- 0
-            }
-        } else { 
-          sub_GST_antigens.df[a,b] <- 0
-          }
-    } else {
-      sub_GST_antigens.df[a,b] <- GST_antigens.df[a,b]
-      }
-  }
-}
-remove(a,b)
-
-#Prepare CD4-tagged only data frame (Sanger antigens)
-CD4_antigens.df <- filter(target.df, Expression_Tag == "CD4")
-CD4_antigens.df <- tibble::column_to_rownames(CD4_antigens.df, var="Name")
-CD4_antigens.df <- CD4_antigens.df[,sapply(CD4_antigens.df, is.numeric)]
-
-#Subtract CD4 from CD4 tagged antigens
-CD4 <- c(grep("CD4", rownames(norm_sub4.df), fixed = TRUE))
-
-sub_CD4_antigens.df <- data.frame(matrix(0, nrow = nrow(CD4_antigens.df), ncol = ncol(CD4_antigens.df)))
-rownames(sub_CD4_antigens.df) <- rownames(CD4_antigens.df)
-colnames(sub_CD4_antigens.df) <- colnames(CD4_antigens.df)
-
-#All the NAs have been removed already by excluding targets and samples
-for(b in 1:ncol(CD4_antigens.df)){
-  for(a in 1:nrow(CD4_antigens.df)){
-    # when the CD4 value is positive only, subtract CD4 value, 
-    #otherwise want to leave as whatever the value was before (because CD4 was at or below buffer mean for that sample)
-    if (norm_sub4.df[CD4,b] > 0){
-      #calculate difference in original MFI form (not log2)
-      sub_CD4_antigens.df[a,b] <- 2^CD4_antigens.df[a,b] - 2^norm_sub4.df[CD4,b]
-      #can only do log2 if the difference is greater than 0, otherwise set to 0 (normalized log2 value is not above buffer)
-      if (sub_CD4_antigens.df[a,b] > 0) {
-        sub_CD4_antigens.df[a,b] <- log2(sub_CD4_antigens.df[a,b])
-        #if the log2 tag-subtracted value is negative, means normalized value is below buffer mean,
-        #so also need to set those negatives to 0 again.
-        if(sub_CD4_antigens.df[a,b] < 0){
-          sub_CD4_antigens.df[a,b] <- 0
-        }
-      } else { 
-        sub_CD4_antigens.df[a,b] <- 0
-      }
-    } else {
-      sub_CD4_antigens.df[a,b] <- CD4_antigens.df[a,b]
-    }
-  }
-}
-remove(a,b)
-
-### Plot CD4 and GST signals
-GST_val <- c(as.matrix(norm_sub4.df[GST,]))
-CD4_val <- c(as.matrix(norm_sub4.df[CD4,]))
-
-png(filename = paste0(study, "_Tags_GST_CD4.tif"), width = 5, height = 7.5, units = "in", res = 1200)
-par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
-plot(GST_val, pch='*', col = "blue", ylim=c(0,max(GST_val)*1.25), main = "GST",
-     ylab="Normalized log2(MFI)", xlab="Sample (Array)")
-
-plot(CD4_val, pch='*', col = "darkblue", ylim=c(0,max(CD4_val)*1.25), main = "CD4",
-     ylab="Normalized log2(MFI)", xlab="Sample (Array)")
-
-#print text on the plots for number of samples where GST and CD4 are above buffer
-mtext(paste("Total Samples with GST > 0:", round(sum(norm_sub4.df[GST,] > 0), digits=2), 
-  "(", round(sum(norm_sub4.df[GST,] > 0)/length(GST_val)*100, digits=2), "%)"), side=1, cex=0.8, line=0.5, outer=TRUE, xpd=NA, adj=0)
-mtext(paste("Total Samples with CD4 > 0:", round(sum(norm_sub4.df[CD4,] > 0), digits=2), 
-  "(", round(sum(norm_sub4.df[CD4,] > 0)/length(CD4_val)*100, digits=2), "%)"), side=1, cex=0.8, line=1.5, outer=TRUE, xpd=NA, adj=0)
-
-graphics.off()
-
-#Make another data frame where the tagged protein values are replaced by their subtracted values
-#filter out the GST and CD4 proteins
-no_tags.df <- filter(target.df, !(Expression_Tag == "CD4" | Expression_Tag == "GST" | Expression_Tag == "GST/His"))
-no_tags.df <- tibble::column_to_rownames(no_tags.df, var="Name")
-no_tags.df <- no_tags.df[,sapply(no_tags.df, is.numeric)]
-#then rbind the GST and the CD4 data frames to that one. The order of the targets
-#shouldn't matter anymore
-norm_sub5.df <- rbind(no_tags.df, sub_GST_antigens.df, sub_CD4_antigens.df)
-
-#Up to this point, everything has been the same for the malarial and non-malarial analysis.
-#Save another .RData file to start here in the future. 
-save.image("SangerTagSubtracted.RData")
-
 ###Seropositivity Thresholds!!!###
 
 #DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
