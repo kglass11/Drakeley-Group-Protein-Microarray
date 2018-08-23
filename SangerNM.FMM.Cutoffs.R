@@ -90,7 +90,7 @@ title('B',adj=0,cex.main=1.5)
 graphics.off()
 
 #Remember to change mu based on the density plot
-fit.ab2<-normalmixEM(antibody1, lambda=c(0.5,0.5),mu=c(0,5),k=2)
+fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),mu=c(0,5),k=2)
 
 #5 Plot Cut off Value
 summary(fit.ab2)
@@ -133,3 +133,44 @@ mtext(c(paste("Negative Cutoff:", round(cutoff, digits=3),"; ", round(neg, digit
 mtext(c(paste(round(indet, digits=2),"% of samples are indeterminate")), side=1, cex=0.8, line=4.5, outer=TRUE, xpd=NA, adj=0)
 
 graphics.off()
+
+#Lindsey's code / plots (adapted from her function "cutoff": 
+
+plot.data <- antibody1
+
+fit <- normalmixEM(na.omit(plot.data),2)
+print("FMM 2 component (MFI)")
+summary(fit)
+
+mu1 <- fit$mu[1]
+mu2 <- fit$mu[2]
+sig1 <- fit$sigma[1]
+sig2 <- fit$sigma[2]
+
+min_comp1 <- which(fit$mu == min(fit$mu))
+
+cut <- cut_all[i] <- fit$mu[min_comp1]+no_sd*sqrt(fit$sigma[min_comp1])
+
+plot_x <- seq(0,max(plot.data,na.rm=T),1)
+
+gauss1a <- dnorm(plot_x,mu1,sig1)
+gauss2a <- dnorm(plot_x,mu2,sig2)
+
+png(filename = paste0(study,"_FMM_Cutoffs_53_Tg_Lindsey.tif"), width = 5, height = 5, units = "in", res = 600)
+
+hist(plot.data,breaks=100, main=i,xlab="MFI",freq = F,
+     ylim=c(0,max(gauss1a,gauss2a)))
+
+if(is.null(neg_label)==F) abline(v=neg.mean,col="springgreen4",lwd=2)
+#abline(v=neg.data,col=alpha("springgreen4",0.5),lty=3,lwd=0.2)
+if(is.null(blank_label)==F) abline(v=blank.mean,col="darkgrey",lwd=1)
+#abline(v=blank.data,col=alpha("darkgrey",0.5),lty=3,lwd=0.2)
+abline(v=cut,col="red",lwd=2)
+lines(plot_x,gauss1a,col="dodgerblue4")
+lines(plot_x,gauss2a,col="dodgerblue4")
+
+legend("topleft",paste0("cutoff (MFI): ",round(cut,3)),lty=1,col="red",cex=0.9,bty="n",y.intersp=0.2,x.intersp=0.2,seg.len=0.5,text.col="red")
+  
+graphics.off()
+
+
