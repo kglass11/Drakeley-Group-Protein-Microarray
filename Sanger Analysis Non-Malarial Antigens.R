@@ -28,7 +28,6 @@ library(dplyr)
 library(reshape2)
 
 load(file="Sanger.2.Update.RData")
-#updated to 
 #older version: "SangerAfterProcessing.RData"
 
 #I don't think we need to do this anymore
@@ -70,6 +69,9 @@ rownames(NMdata) <- NMdatameta$Name
 min(NMdata) #-7.300968
 max(NMdata) #8.524411
 
+#Transpose data so antigens are columns - it's now a matrix
+tNMdata <- t(NMdata)
+
 #define functions that take results of mixture model to set cutoffs
 f<-function(x,prob,lambda,mu,sigma,k,k1){
   lista<-order(mu)
@@ -100,68 +102,76 @@ f2<-function(x,prob,lambda,mu,sigma,k,k1){
 }
 
 #add for loop to go through each antigen and do all the calculations and plots
+ag_list <- colnames(tNMdata)
 
-antibody <- as.numeric(c(trans.norm.df$"53_Tg_1"))
-antibody1<-sort(antibody)
+for(i in 12:length(ag_list)){
 
-fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),k=2)
+  antigen <- ag_list[i]
 
-#5 Plot Cut off Value
-summary(fit.ab2)
+  antibody <- as.numeric(c(tNMdata[,i]))
+  antibody1<-sort(antibody)
+  
+  #FMM function
+  fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),k=2)
+  summary(fit.ab2)
 
-#cutoff below which is negative - manually set interval end points
-cutoff<-uniroot(f,c(-7,8.5),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+  #cutoff below which is negative - manually set interval end points
+  cutoff<-uniroot(f,c(-7,8.5),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
 
-#cutoff above which is positive - manually set interval end points
-cutoff2<-uniroot(f2,c(-7,8.5),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+  #cutoff above which is positive - manually set interval end points
+  cutoff2<-uniroot(f2,c(-7,8.5),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#percentage positive 
-pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
+  #percentage positive 
+  pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 
-#percentage negative
-neg <- sum(antibody1<cutoff)/length(antibody1) * 100
+  #percentage negative
+  neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 
-#percentage indeterminate
-indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
+  #percentage indeterminate
+  indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#Plot cutoffs 
-png(filename = paste0(study,"_FMM_Cutoffs_53_Tg.tif"), width = 5, height = 5, units = "in", res = 600)
-par(mfrow = c(1,1), mar = c(5, 5, 2, 2), oma = c(6, 1, 1, 1))
+  #Plot cutoffs 
+  png(filename = paste0(study,"_FMM_Cutoffs_", antigen, ".tif"), width = 5, height = 5, units = "in", res = 600)
+  par(mfrow = c(1,1), mar = c(5, 5, 2, 2), oma = c(6, 1, 1, 1))
 
-plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(0,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability')
+    plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(0,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability')
 
-rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
-title('C',adj=0,cex.main=1.5)
-lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
+    rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
+    title('C',adj=0,cex.main=1.5)
+    title(antigen, adj=0.5)
+    lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
 
-abline(h=0.90,lwd=1.5,lty=2)
-abline(v=cutoff,lwd=1)
-abline(v=cutoff2,lwd=1)
+    abline(h=0.90,lwd=1.5,lty=2)
+    abline(v=cutoff,lwd=1)
+    abline(v=cutoff2,lwd=1)
 
-lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
-lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
-legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))
+    lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
+    lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
+    legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))
 
-mtext(c(paste("Positive Cutoff:", round(cutoff2, digits=3), "; ", round(pos, digits = 2), "% of samples")), side=1, cex=0.8, line=1.5, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("Negative Cutoff:", round(cutoff, digits=3),"; ", round(neg, digits = 2), "% of samples")), side=1, cex=0.8, line=3, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste(round(indet, digits=2),"% of samples are indeterminate")), side=1, cex=0.8, line=4.5, outer=TRUE, xpd=NA, adj=0)
+    mtext(c(paste("Positive Cutoff:", round(cutoff2, digits=3), "; ", round(pos, digits = 2), "% of samples")), side=1, cex=0.8, line=1.5, outer=TRUE, xpd=NA, adj=0)
+    mtext(c(paste("Negative Cutoff:", round(cutoff, digits=3),"; ", round(neg, digits = 2), "% of samples")), side=1, cex=0.8, line=3, outer=TRUE, xpd=NA, adj=0)
+    mtext(c(paste(round(indet, digits=2),"% of samples are indeterminate")), side=1, cex=0.8, line=4.5, outer=TRUE, xpd=NA, adj=0)
 
-graphics.off()
+  dev.off()
 
-#4 Plot Density and QQPlots - Cutoff marked on Density Plot
+  #4 Plot Density and QQPlots - Cutoff marked on Density Plot
+  png(filename = paste0(study,"_Density_QQ_", antigen, ".tif"), width = 8, height = 4, units = "in", res = 600)
+  par(mfrow=c(1,2))
 
-png(filename = paste0(study,"_Pre_FMM_53_Tg.tif"), width = 8, height = 4, units = "in", res = 600)
-par(mfrow=c(1,2))
+    plot(density(antibody1),xlab='Log2(MFI Ratio)',main='')
+    title('A',adj=0,cex.main=1.5)
+    title(antigen,adj=0.5)
+    abline(v=cutoff2,col="red",lwd=1.5)
+    legend("topleft",paste0("cutoff: ",round(cutoff2,3)),lty=1,col="red",cex=0.75,bty="n",y.intersp=0.2,x.intersp=0.2,seg.len=0.5,text.col="red")
 
-plot(density(antibody1),xlab='Log2(MFI Ratio)',main='')
-title('A',adj=0,cex.main=1.5)
-title('Tg',adj=0.5)
+    qqnorm(antibody1,las=1,pch=21,bg='grey',cex=0.75)
+    qqline(antibody1)
+    title('B',adj=0,cex.main=1.5)
 
-qqnorm(antibody1,las=1,pch=21,bg='grey',cex=0.75)
-qqline(antibody1)
-title('B',adj=0,cex.main=1.5)
+  dev.off()
 
-graphics.off()
+}
 
 
 
