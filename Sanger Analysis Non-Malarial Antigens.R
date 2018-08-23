@@ -1,16 +1,19 @@
-#Sanger Data Analysis Script
+#Sanger Non-malarial Antigens Data Analysis Script
 #Katie Glass
+#updated: 8/23/18
+
+#This is continuing on from the processing script in the master branch 
+#called "Sanger v2 data processing.R"
 
 #####################################
 ############DATA ANALYSIS############
 #####################################
 
-#If you haven't just continued from the processing script, run:
-#rm(list=ls())
+rm(list=ls())
 
-#
-#/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens
-setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens")
+#I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
+#"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens"
+setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens")
 getwd()
 
 require("gtools")
@@ -25,15 +28,46 @@ library(gcookbook)
 library(dplyr)
 library(reshape2)
 
-load(file="SangerTagSubtracted.RData")
-#updated to "SangerTagSubtracted.RData"
-#old file: SangerAfterProcessing.RData
+load(file="Sanger.2.Update.RData")
+#updated to 
+#older version: "SangerAfterProcessing.RData"
 
+#I don't think we need to do this anymore
 #import an updated target metadata file
-target_file <- "sanger_target_metadata_KT_v2.csv" 
-target_meta.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
+# target_file <- "sanger_target_metadata_KT_v2.csv" 
+# target_meta.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
 
-###Sample Prep and GST, CD4 subtraction!!!###
+###Prep For further analysis and FMM Cutoff determination ####
+
+#For determining cutoffs with FMM models, using normalized data INCLUDING NEGATIVE VALUES
+
+#Before doing any further analysis, we have to get rid of samples or targets that we are no longer 
+#interested in.
+#E.g. If control individuals are in our analysis, they will affect mixture model based cut-offs
+#E.g. If control targets are still in our analysis, they will muck up our protein breadth estimates
+#KG - for now this still includes the same protein target at different dilutions
+#This means we have to subset the data, so some earlier annotations will from here on be wrong 
+#(e.g. index_sample will no longer equal 96)
+
+#Remove control protein targets
+#Don't remove control samples yet, need to do tag subtraction from those samples as well, 
+#and want them included in some exported data
+#Do remove samples that should be excluded
+norm_sub.matrix <- norm4.matrix[-rmsamp_all,(!colnames(norm4.matrix) %in% samples_exclude)]
+
+#Replace current target names with original target names now that control targets are removed
+norm_sub3.df <- merge(norm_sub.matrix, annotation_targets.df, by ="row.names", sort = FALSE)
+norm_sub3.df <- tibble::column_to_rownames(norm_sub3.df, var="Row.names")
+row.names(norm_sub3.df) <- norm_sub3.df$Name
+norm_sub4.df <- norm_sub3.df[,1:ncol(norm_sub.matrix)]
+
+#Make the dilution column of target_meta.df a character type
+target_meta.df$Dilution <- as.character(target_meta.df$Dilution)
+
+#Merge with target metadata to filter based on expression tag etc.
+target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+
+
 
 #For this section, using normalized data with negative values set to 0 (norm4.matrix)
 
@@ -180,31 +214,6 @@ norm_sub5.df <- rbind(no_tags.df, sub_GST_antigens.df, sub_CD4_antigens.df)
 #Save another .RData file to start here in the future. 
 save.image("SangerTagSubtracted.RData")
 
-###Additional Standard Curve Plots!! 
-
-stdmelt <- melt(stds_norm, varnames = c("Std", "Sample"))
-
-png(filename = paste0(study, "_stds_norm.tif"), width = 7, height = 5, units = "in", res = 1200)
-
-ggplot(stdmelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-  labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Normalized") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
-
-graphics.off()
-
-std1premelt <- melt(stds_pre, varnames = c("Std", "Sample"))
-
-png(filename = paste0(study, "_stds_pre.tif"), width = 7, height = 5, units = "in", res = 1200)
-
-ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-  labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Pre-Normalization") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
-  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
-
-graphics.off()
-
-
 ###Seropositivity Thresholds!!!###
 
 #DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
@@ -221,7 +230,7 @@ norm_sample_cutoff <- log_sample_cutoff - log_buffer_sample_mean
 #Tailor the norm_sample_cutoff to remove excluded samples ONLY
 buffer_cutoff.matrix <- as.matrix(norm_sample_cutoff)
 rownames(buffer_cutoff.matrix, colnames(norm4.matrix))
-sub_cutoff <- as.matrix(buffer_cutoff.matrix[(!rownames(sub_buf_cutoff.matrix) %in% samples_exclude),])
+sub_cutoff <- as.matrix(buffer_cutoff.matrix[(!rownames(buffer_cutoff.matrix) %in% samples_exclude),])
 
 #Plot the sample cutoffs for samples included in analysis
 png(filename = paste0(study, "_Buffer_Cutoffs.tif"), width = 5, height = 4, units = "in", res = 1200)
@@ -235,7 +244,7 @@ graphics.off()
 final_cutoff <- sub_cutoff
 final_cutoff[which(final_cutoff<1)] <- 1
 
-#How many samples have a cutoff below 1? --> 464/1361 = 34.1%
+#How many samples have a cutoff below 1? --> 464/1361 = 34.1% (now coming out to 463/1361 = 34.01%)
 sum(sub_cutoff<1)
 sum(sub_cutoff<1)/length(sub_cutoff) *100
 
@@ -264,6 +273,10 @@ norm_sub6.df <- norm_sub5.df[,colnames(norm_sub5.df) %in% samples_test]
 SP_sub1.df <- SP_all.df[,colnames(SP_all.df) %in% samples_test]
 SP_sub_data.df <- SP_all_data.df[,colnames(SP_all_data.df) %in% samples_test]
 
+#also subset seropositivity matrices for control data
+SP_con <- SP_all.df[,colnames(SP_all.df) %in% samples_control]
+SP_con_data <- SP_all_data.df[,colnames(SP_all_data.df) %in% samples_control]
+
 #Make target.df merged data frames for further use with tag-subtracted values and test samples only
 target2.df <- merge(target_meta.df, norm_sub6.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
 target_SP.df <- merge(target_meta.df, SP_sub1.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
@@ -273,12 +286,14 @@ target_SP_data.df <- merge(target_meta.df, SP_sub_data.df, by.x = "Name", by.y =
 targetcontrol.df <- merge(target_meta.df, norm_sub5.df[,colnames(norm_sub5.df) %in% samples_control], by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
 #export this to use for CP3 CV analysis
 write.csv(targetcontrol.df, file = "SangerControlswithTargetinfo.csv")
+#targets merged with SP control data frame
+target_SP_con_data.df <- merge(target_meta.df, SP_con_data, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
 
 #isolate non-malarial antigens
 NM_target2.df <- filter(target2.df, Category == "non_malarial")
 NM_targetcontrol.df <- filter(targetcontrol.df, Category == "non_malarial")
 
-#For seropositivity calculations, do for all antigens, all dilutions
+#isolate sample columns only
 NMtest.df <- tibble::column_to_rownames(NM_target2.df, var="Name")
 NMtest.df <- NMtest.df[,sapply(NMtest.df, is.numeric)]
 
@@ -348,23 +363,43 @@ ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized))
 
 graphics.off()
 
+#add negative controls as points to the boxplot?
+NM_con_data <- filter(target_SP_con_data.df, Category == "non_malarial")
+NM_con_data <- tibble::column_to_rownames(NM_con_data, var = "Name")
+neg_samples <-c(grep("Neg", colnames(NM_con_data)))
+NM_neg_data <- NM_con_data[,neg_samples]
+#There are only two values to add to the plot...one for TT and one for RubIV, both the same neg pool
+#Not sure if it's worth the trouble of adding these to the plot or just mentioning in the figure caption and text.
 
+png(filename = paste0(study, "_NM_All_SP_data_box_Neg.tif"), width = 5, height = 8, units = "in", res = 1200)
 
+ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + theme_bw() +
+  geom_boxplot(outlier.size = 0.3) + coord_flip() + xlab("Target") + ylab("Normalized Log2(MFI)") + 
+  theme(text = element_text(size=10)) + theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black")) + ylim(0,8)
 
-#Pf plot of normalized data for each antigen organized by highest median
-#Only include the data if the person is seropositive and an exposed person
-exposed_SP_Pf.df <- SP_Pf.df[Pf_target_reactive==TRUE, Pf_person_exposed==TRUE]
-reactive_Pf.df <- Pf_antigens.df[Pf_target_reactive==TRUE,Pf_person_exposed==TRUE]
+graphics.off()
+
 
 
    
 #negative control data for Pf reactive targets, tag-subtracted data
-neg_samples <-c(grep("Neg", colnames(norm4.matrix)))
+neg_samples <-c(grep("Neg", colnames(target_SP_con_data.df)))
 neg_data <- norm_sub5.df[-rmsamp_all, neg_samples]
 Pf_neg_data <- neg_data[Pf_target_reactive==TRUE,]
 Pf_neg_mean <- as.matrix(rowMeans(Pf_neg_data))
 
-#Add negative control data to the plot?
+
+
+
+
+
+
+
+
+
+
+
 
 #Violin and Box Plots of data for reactive Pf antigens, sorted by highest median to lowest
 ggplot(melt.Pf, aes(x=reorder(Target, -Normalized, FUN=median), y=Normalized)) + geom_violin()
