@@ -28,12 +28,12 @@ library(corrplot)
 library(ggbeeswarm)
 
 #set working directory
-#"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgM"
-setwd("/Users/Katie/Desktop/R files from work/Lou HCC/IgG")
+#"/Users/Katie/Desktop/R files from work/Lou HCC/IgA"
+setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
-load(file = "Pk_HCC_analysis_IgG.RData")
+load(file = "Pk_HCC_analysis_IgA_V02.RData")
 
 #Add time point to the sample metadata
 sample_meta_f.df$day <- 0
@@ -249,7 +249,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   
   subtacosm <- melt(subtacos, measure.vars = antnames, na.rm = TRUE)
   
-  subtacosm$age <- as.numeric(subtacosm$age)
+  subtacosm$Age <- as.numeric(subtacosm$Age)
 
 #plot parasite count vs antibody response
   
@@ -271,7 +271,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   
   png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.age.tif"), width = 3.5, height = 3, units = "in", res = 1200)
   
-  print(ggplot(ant1, aes(x = age, y = value, color = day)) + geom_point() +
+  print(ggplot(ant1, aes(x = Age, y = value, color = day)) + geom_point() +
           theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + 
           theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
           theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
