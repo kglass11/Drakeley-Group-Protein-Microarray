@@ -98,7 +98,7 @@ f2<-function(x,prob,lambda,mu,sigma,k,k1){
 
 #Go through each antigen one at a time to do all the calculations and plots
 ag_list <- colnames(tNMdata)
-i <- 6
+i <- 28
 
   antigen <- ag_list[i]
 
@@ -106,15 +106,15 @@ i <- 6
   antibody1<-sort(antibody)
   
   #FMM function
-  fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),k=2)
+  fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),mu = c(0,4),k=2)
   paste(i, antigen)
   summary(fit.ab2)
 
   #cutoff below which is negative - manually set interval end points
-  cutoff<-uniroot(f,c(-7,8.5),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+  cutoff<-uniroot(f,c(0,5),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
 
   #cutoff above which is positive - manually set interval end points
-  cutoff2<-uniroot(f2,c(-7,8.5),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+  cutoff2<-uniroot(f2,c(0,5),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
   #percentage positive 
   pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
