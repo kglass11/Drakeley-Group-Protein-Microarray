@@ -11,8 +11,8 @@
 rm(list=ls())
 
 #I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
-#"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens"
-setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens")
+#"/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens"
+setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens")
 getwd()
 
 require("gtools")
@@ -29,11 +29,6 @@ library(reshape2)
 
 load(file="Sanger.2.Update.RData")
 #older version: "SangerAfterProcessing.RData"
-
-#I don't think we need to do this anymore
-#import an updated target metadata file
-# target_file <- "sanger_target_metadata_KT_v2.csv" 
-# target_meta.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
 
 ###Prep For further analysis and FMM Cutoff determination ####
 
@@ -101,10 +96,9 @@ f2<-function(x,prob,lambda,mu,sigma,k,k1){
   prob-sum(p[k1:k])/sum(p)
 }
 
-#add for loop to go through each antigen and do all the calculations and plots
+#Go through each antigen one at a time to do all the calculations and plots
 ag_list <- colnames(tNMdata)
-
-for(i in 12:length(ag_list)){
+i <- 6
 
   antigen <- ag_list[i]
 
@@ -113,6 +107,7 @@ for(i in 12:length(ag_list)){
   
   #FMM function
   fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),k=2)
+  paste(i, antigen)
   summary(fit.ab2)
 
   #cutoff below which is negative - manually set interval end points
@@ -163,6 +158,7 @@ for(i in 12:length(ag_list)){
     title('A',adj=0,cex.main=1.5)
     title(antigen,adj=0.5)
     abline(v=cutoff2,col="red",lwd=1.5)
+    abline(v=fit.ab2$mu, col = "purple", lwd = 1)
     legend("topleft",paste0("cutoff: ",round(cutoff2,3)),lty=1,col="red",cex=0.75,bty="n",y.intersp=0.2,x.intersp=0.2,seg.len=0.5,text.col="red")
 
     qqnorm(antibody1,las=1,pch=21,bg='grey',cex=0.75)
@@ -171,9 +167,7 @@ for(i in 12:length(ag_list)){
 
   dev.off()
 
-}
-
-
+remove(cutoff, cutoff2)
 
 #For this section, using normalized data with negative values set to 0 (norm4.matrix)
 
