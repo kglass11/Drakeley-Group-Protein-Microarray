@@ -98,7 +98,18 @@ f2<-function(x,prob,lambda,mu,sigma,k,k1){
 
 #Go through each antigen one at a time to do all the calculations and plots
 ag_list <- colnames(tNMdata)
-i <- 28
+
+cutoffsaved <- matrix(NA, nrow = length(ag_list), ncol = 3)
+rownames(cutoffsaved) <- ag_list
+colnames(cutoffsaved) <- c("unirootN", "unirootP", "xSD")
+
+#number of SD to add to mean to get cutoff
+xSD <- 2
+
+#List of i that will not be used: 1, 
+i <- 3
+
+###### run this part for each antigen like a manual for loop
 
   antigen <- ag_list[i]
 
@@ -106,15 +117,25 @@ i <- 28
   antibody1<-sort(antibody)
   
   #FMM function
-  fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),mu = c(0,4),k=2)
+  fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),k=2)
   paste(i, antigen)
   summary(fit.ab2)
 
   #cutoff below which is negative - manually set interval end points
-  cutoff<-uniroot(f,c(0,5),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+  cutoff<-uniroot(f,c(-4,1),prob=0.99,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
 
   #cutoff above which is positive - manually set interval end points
-  cutoff2<-uniroot(f2,c(0,5),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+  cutoff2<-uniroot(f2,c(0,2),prob=0.99, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+  
+  #cutoffSD method
+  min_comp1 <- which(fit.ab2$mu == min(fit.ab2$mu))
+  
+  cutoffSD <- fit.ab2$mu[min_comp1] + xSD * sqrt(fit.ab2$sigma[min_comp1])
+  
+  #store cutoffs
+  cutoffsaved[i,3] <- cutoffSD
+  cutoffsaved[i,2] <- cutoff2
+  cutoffsaved[i,1] <- cutoff
 
   #percentage positive 
   pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -126,17 +147,17 @@ i <- 28
   indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
   #Plot cutoffs 
-  png(filename = paste0(study,"_FMM_Cutoffs_", antigen, ".tif"), width = 5, height = 5, units = "in", res = 600)
+  png(filename = paste0(study,"_FMM_Cutoffs_.99", antigen, ".tif"), width = 5, height = 5, units = "in", res = 600)
   par(mfrow = c(1,1), mar = c(5, 5, 2, 2), oma = c(6, 1, 1, 1))
 
-    plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(0,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability')
+    plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-5,7),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability')
 
     rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
     title('C',adj=0,cex.main=1.5)
     title(antigen, adj=0.5)
     lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
 
-    abline(h=0.90,lwd=1.5,lty=2)
+    abline(h=0.99,lwd=1.5,lty=2)
     abline(v=cutoff,lwd=1)
     abline(v=cutoff2,lwd=1)
 
@@ -151,7 +172,7 @@ i <- 28
   dev.off()
 
   #4 Plot Density and QQPlots - Cutoff marked on Density Plot
-  png(filename = paste0(study,"_Density_QQ_", antigen, ".tif"), width = 8, height = 4, units = "in", res = 600)
+  png(filename = paste0(study,"_Density_QQ_.99_2SD", antigen, "v2.tif"), width = 8, height = 4, units = "in", res = 600)
   par(mfrow=c(1,2))
 
     plot(density(antibody1),xlab='Log2(MFI Ratio)',main='')
@@ -159,15 +180,18 @@ i <- 28
     title(antigen,adj=0.5)
     abline(v=cutoff2,col="red",lwd=1.5)
     abline(v=fit.ab2$mu, col = "purple", lwd = 1)
-    legend("topleft",paste0("cutoff: ",round(cutoff2,3)),lty=1,col="red",cex=0.75,bty="n",y.intersp=0.2,x.intersp=0.2,seg.len=0.5,text.col="red")
-
+    abline(v=cutoffSD, col = "blue", lwd = 1.5)
+    legend("topleft",c(paste0("cutoff(uni): ",round(cutoff2,3)),paste0("cutoff(SD): ",round(cutoffSD,3))),lty=1,col=c("red", "blue"),cex=0.75,bty="n",y.intersp=1.1,x.intersp=0.2,seg.len=0.5,text.col=c("red", "blue"))
+  
     qqnorm(antibody1,las=1,pch=21,bg='grey',cex=0.75)
     qqline(antibody1)
     title('B',adj=0,cex.main=1.5)
 
   dev.off()
 
-remove(cutoff, cutoff2)
+remove(cutoff, cutoff2, cutoffSD, min_comp1)
+
+###### stop manual for loop ####
 
 #For this section, using normalized data with negative values set to 0 (norm4.matrix)
 
