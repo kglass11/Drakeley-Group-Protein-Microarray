@@ -106,8 +106,8 @@ colnames(cutoffsaved) <- c("unirootN", "unirootP", "xSD")
 #number of SD to add to mean to get cutoff
 xSD <- 2
 
-#List of i that will not be used: 1, 
-i <- 3
+#List of i that will not be used: 1,6(,maybe) 
+i <- 14
 
 ###### run this part for each antigen like a manual for loop
 
@@ -122,10 +122,10 @@ i <- 3
   summary(fit.ab2)
 
   #cutoff below which is negative - manually set interval end points
-  cutoff<-uniroot(f,c(-4,1),prob=0.99,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+  cutoff<-uniroot(f,c(-4,0),prob=0.99,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
 
   #cutoff above which is positive - manually set interval end points
-  cutoff2<-uniroot(f2,c(0,2),prob=0.99, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+  cutoff2<-uniroot(f2,c(-2,2),prob=0.99, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
   
   #cutoffSD method
   min_comp1 <- which(fit.ab2$mu == min(fit.ab2$mu))
