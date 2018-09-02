@@ -1,6 +1,6 @@
 #Sanger Data Analysis Script
 #Katie Glass
-#updated: 8/23/18
+#updated: 9/2/18
 
 #####################################
 ############DATA ANALYSIS############
@@ -11,8 +11,8 @@
 rm(list=ls())
 
 #I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
-#"/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens"
-setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens")
+#"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens"
+setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens")
 getwd()
 
 require("gtools")
@@ -99,15 +99,15 @@ f2<-function(x,prob,lambda,mu,sigma,k,k1){
 #Go through each antigen one at a time to do all the calculations and plots
 ag_list <- colnames(tNMdata)
 
-cutoffsaved <- matrix(NA, nrow = length(ag_list), ncol = 3)
+cutoffsaved <- matrix(NA, nrow = length(ag_list), ncol = 4)
 rownames(cutoffsaved) <- ag_list
-colnames(cutoffsaved) <- c("unirootN", "unirootP", "xSD")
+colnames(cutoffsaved) <- c("unirootN", "unirootP", "xSD-L", "3SD")
 
 #number of SD to add to mean to get cutoff
 xSD <- 2
 
 #List of i that will not be used: 1,6(,maybe) 
-i <- 14
+i <- 5
 
 ###### run this part for each antigen like a manual for loop
 
@@ -122,17 +122,20 @@ i <- 14
   summary(fit.ab2)
 
   #cutoff below which is negative - manually set interval end points
-  cutoff<-uniroot(f,c(-4,0),prob=0.99,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+  cutoff<-uniroot(f,c(0,6),prob=0.99,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
 
   #cutoff above which is positive - manually set interval end points
-  cutoff2<-uniroot(f2,c(-2,2),prob=0.99, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+  cutoff2<-uniroot(f2,c(0,6),prob=0.99, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
   
   #cutoffSD method
   min_comp1 <- which(fit.ab2$mu == min(fit.ab2$mu))
   
   cutoffSD <- fit.ab2$mu[min_comp1] + xSD * sqrt(fit.ab2$sigma[min_comp1])
   
+  cutoff3SD <- log2(2^(fit.ab2$mu[min_comp1]) +  3 * 2^(fit.ab2$sigma[min_comp1]))
+  
   #store cutoffs
+  cutoffsaved[i,4] <- cutoff3SD
   cutoffsaved[i,3] <- cutoffSD
   cutoffsaved[i,2] <- cutoff2
   cutoffsaved[i,1] <- cutoff
@@ -181,7 +184,8 @@ i <- 14
     abline(v=cutoff2,col="red",lwd=1.5)
     abline(v=fit.ab2$mu, col = "purple", lwd = 1)
     abline(v=cutoffSD, col = "blue", lwd = 1.5)
-    legend("topleft",c(paste0("cutoff(uni): ",round(cutoff2,3)),paste0("cutoff(SD): ",round(cutoffSD,3))),lty=1,col=c("red", "blue"),cex=0.75,bty="n",y.intersp=1.1,x.intersp=0.2,seg.len=0.5,text.col=c("red", "blue"))
+    abline(v=cutoff3SD, col = "green", lwd = 1.5)
+    legend("topleft",c(paste0("cutoff(uni): ",round(cutoff2,3)),paste0("cutoff(2SD): ",round(cutoffSD,3)), paste0("cutoff(3SD): ",round(cutoff3SD,3))),lty=1,col=c("red", "blue", "green"),cex=0.5,bty="n",y.intersp=1.1,x.intersp=0.2,seg.len=0.5,text.col=c("red", "blue", "green"))
   
     qqnorm(antibody1,las=1,pch=21,bg='grey',cex=0.75)
     qqline(antibody1)
@@ -189,7 +193,7 @@ i <- 14
 
   dev.off()
 
-remove(cutoff, cutoff2, cutoffSD, min_comp1)
+remove(cutoff, cutoff2, cutoffSD, cutoff3SD, min_comp1)
 
 ###### stop manual for loop ####
 
