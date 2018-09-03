@@ -80,11 +80,40 @@ for(i in 1:length(Ig)){
   
 }
 
+###### Linear Mixed Effects Modeling for SysMalVac
+
+#isolate data from lou antigens only and samples only from one study at a time only 
+
+#Make another target.df merged data frame for further use with tag-subtracted values and test samples only
+target2.df <- merge(target_meta.df, norm_sub5.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+
+#Isolate Lou antigens
+Lou.df <- filter(target2.df, Source == "Lou")
+subLou.df <- tibble::column_to_rownames(Lou.df, var="Name")
+subLou.df <- subLou.df[,sapply(subLou.df, is.numeric)]
+
+#transpose Lou antigens
+subLouT.df <- as.data.frame(t(subLou.df))
+subLouT2.df <- tibble::rownames_to_column(subLouT.df, var = "sample_id_unique")
+Louness.df <- merge(sample_meta_f.df,subLouT2.df, sort = FALSE)
+
+#filter samples by study - starting with SysMalVac, then change to "ComBioMalSuSe"
+Mstudy <- "SysMalVac"
+
+subLouness <- filter(Louness.df, Study == Mstudy)
+rownames(subLouness) <- subLouness$sample_id_unique
+
+PkLouT <- subLouness[,(ncol(sample_meta_f.df)+1):ncol(subLouness)]
+
+
+
+
+
+
+
 ###### Calculating seropositivity ######
 
 ## ******* This has not been updated yet for macaque studies - will need to separate by study for plots!!
-## Also, the data processing done does not have norm_sub5.df 
-## ends with trans.norm.df which is has excluded samples removed, and first column is sample_id_unique 
 
 #Seropositivity above a threshold of mean of sample specific buffer spots + 3SD. 
 sample_cutoff <- cor2_buffer_sample_mean + 3*cor2_buffer_sample_sd
