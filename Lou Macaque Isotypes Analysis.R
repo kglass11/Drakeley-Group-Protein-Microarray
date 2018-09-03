@@ -35,12 +35,18 @@ getwd()
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
 load(file = "Macaque_IgM_after_Processing.RData")
 
+#read in new sample metadata file which has additional information: 
+sample_meta_new <- read.csv(file = "Macaque metadata_03092018.csv")
+
+#however, this lacks sample id unique so need to merge with old sample metadata
+sample_meta_N <- merge(sample_meta_f.df, sample_meta_new, all.x = TRUE)
+
 #make some columns of sample_meta_f character instead of numeric
-sample_meta_f.df$DW <- as.character(sample_meta_f.df$DW)
-sample_meta_f.df$Box <- as.character(sample_meta_f.df$Box)
-sample_meta_f.df$slide_no <- as.character(sample_meta_f.df$slide_no)
-sample_meta_f.df$block_rep_1 <- as.character(sample_meta_f.df$block_rep_1)
-sample_meta_f.df$block_rep_2 <- as.character(sample_meta_f.df$block_rep_2)
+sample_meta_N$DW <- as.character(sample_meta_N$DW)
+sample_meta_N$Box <- as.character(sample_meta_N$Box)
+sample_meta_N$slide_no <- as.character(sample_meta_N$slide_no)
+sample_meta_N$block_rep_1 <- as.character(sample_meta_N$block_rep_1)
+sample_meta_N$block_rep_2 <- as.character(sample_meta_N$block_rep_2)
 
 ########## Additional Standard Plots ##########
 
@@ -95,7 +101,7 @@ subLou.df <- subLou.df[,sapply(subLou.df, is.numeric)]
 #transpose Lou antigens
 subLouT.df <- as.data.frame(t(subLou.df))
 subLouT2.df <- tibble::rownames_to_column(subLouT.df, var = "sample_id_unique")
-Louness.df <- merge(sample_meta_f.df,subLouT2.df, sort = FALSE)
+Louness.df <- merge(sample_meta_N,subLouT2.df, sort = FALSE)
 
 #filter samples by study - starting with SysMalVac, then change to "ComBioMalSuSe"
 Mstudy <- "SysMalVac"
@@ -105,6 +111,8 @@ rownames(subLouness) <- subLouness$sample_id_unique
 
 PkLouT <- subLouness[,(ncol(sample_meta_f.df)+1):ncol(subLouness)]
 
+#fixed effects are: time point, 
+#random effects are: sample; using random slope model where print buffer and blocking buffer (and dilution) affect sample variation
 
 
 
