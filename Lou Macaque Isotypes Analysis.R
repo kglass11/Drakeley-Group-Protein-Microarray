@@ -27,6 +27,16 @@ library(corrgram)
 library(corrplot)
 library(ggbeeswarm)
 
+library(broom)
+library(lme4)
+library(multcomp)
+library(emmeans)
+library(pbkrtest)
+library(phia)
+library(lmerTest)
+library(multcompView)
+library(MuMIn)
+
 #set working directory
 #"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
 setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgM")
@@ -44,6 +54,7 @@ sample_meta_N <- merge(sample_meta_f.df, sample_meta_new, all.x = TRUE)
 #make some columns of sample_meta_f character instead of numeric
 sample_meta_N$DW <- as.character(sample_meta_N$DW)
 sample_meta_N$Box <- as.character(sample_meta_N$Box)
+sample_meta_N$box <- as.character(sample_meta_N$box)
 sample_meta_N$slide_no <- as.character(sample_meta_N$slide_no)
 sample_meta_N$block_rep_1 <- as.character(sample_meta_N$block_rep_1)
 sample_meta_N$block_rep_2 <- as.character(sample_meta_N$block_rep_2)
@@ -111,8 +122,25 @@ rownames(subLouness) <- subLouness$sample_id_unique
 
 PkLouT <- subLouness[,(ncol(sample_meta_f.df)+1):ncol(subLouness)]
 
-#fixed effects are: time point, 
-#random effects are: sample; using random slope model where print buffer and blocking buffer (and dilution) affect sample variation
+meltsubLou <- melt(subLouness)
+
+#the names of the columns have spaces. So they cannot be used in lmer and other functions
+newnames <- make.names(colnames(subLouness))
+colnames(subLouness) <- newnames
+
+#save workspace image to start from this point
+save.image(file = "MacaqueLMMready.RData")
+
+#Run linear mixed effects model
+#fixed effects are: time point (TimePoint_code), control vs. experimental treatment (sample_type)
+#random effects are: animal
+
+#AMA1
+colnames(subLouness[25])
+fullmodel <- lmer(PKH_031930.ag1 ~ TimePoint_code + sample_type + (1|animal), 
+                  REML = FALSE, data = subLouness)
+summary(fullmodel)
+r.squaredGLMM(fullmodel)
 
 
 
