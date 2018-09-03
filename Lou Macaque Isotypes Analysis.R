@@ -28,20 +28,16 @@ library(corrplot)
 library(ggbeeswarm)
 
 #set working directory
-#"/Users/Katie/Desktop/R files from work/Lou HCC/IgA"
-setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou")
+#"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
+setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgM")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
-load(file = "Pk_HCC_analysis_IgA_V02.RData")
-
-#Add time point to the sample metadata
-sample_meta_f.df$day <- 0
-sample_meta_f.df$day[grep("D7", sample_meta_f.df$sample_id)] <- 7
-sample_meta_f.df$day[grep("D28", sample_meta_f.df$sample_id)] <- 28
+load(file = "Macaque_IgM_after_Processing.RData")
 
 #make some columns of sample_meta_f character instead of numeric
-sample_meta_f.df$day <- as.character(sample_meta_f.df$day)
+sample_meta_f.df$DW <- as.character(sample_meta_f.df$DW)
+sample_meta_f.df$Box <- as.character(sample_meta_f.df$Box)
 sample_meta_f.df$slide_no <- as.character(sample_meta_f.df$slide_no)
 sample_meta_f.df$block_rep_1 <- as.character(sample_meta_f.df$block_rep_1)
 sample_meta_f.df$block_rep_2 <- as.character(sample_meta_f.df$block_rep_2)
@@ -61,7 +57,7 @@ for(i in 1:length(Ig)){
   #normalized
   std1melt <- melt(norm, varnames = c("Std", "Sample"))
   
-  png(filename = paste0(study, "_stds_norm_1_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
+  png(filename = paste0(study, "_stds_norm_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
   print(ggplot(std1melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
           labs(x = "Sample", y = "Log2(MFI Ratio)", title = "Stds Normalized") +
@@ -73,7 +69,7 @@ for(i in 1:length(Ig)){
   #not normalized
   std1premelt <- melt(pre, varnames = c("Std", "Sample"))
   
-  png(filename = paste0(study, "_stds_pre_1_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
+  png(filename = paste0(study, "_stds_pre_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
   print(ggplot(std1premelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
           labs(x = "Sample", y = "Log2(MFI)", title = "Stds Pre-Normalization") +
@@ -86,12 +82,16 @@ for(i in 1:length(Ig)){
 
 ###### Calculating seropositivity ######
 
+## ******* This has not been updated yet for macaque studies - will need to separate by study for plots!!
+## Also, the data processing done does not have norm_sub5.df 
+## ends with trans.norm.df which is has excluded samples removed, and first column is sample_id_unique 
+
 #Seropositivity above a threshold of mean of sample specific buffer spots + 3SD. 
 sample_cutoff <- cor2_buffer_sample_mean + 3*cor2_buffer_sample_sd
 log_sample_cutoff <- log2(sample_cutoff)
 norm_sample_cutoff <- log_sample_cutoff - log_buffer_sample_mean
 
-#Tailor the norm_sample_cutoff to remove excluded samples and control samples
+#Tailor the norm_sample_cutoff to remove excluded samples
 buffer_cutoff.matrix <- as.matrix(norm_sample_cutoff)
 rownames(buffer_cutoff.matrix, colnames(norm4.matrix))
 sub_cutoff <- buffer_cutoff.matrix[(!rownames(buffer_cutoff.matrix) %in% samples_exclude),]
