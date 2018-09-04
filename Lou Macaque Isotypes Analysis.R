@@ -49,7 +49,7 @@ load(file = "Macaque_IgM_after_Processing.RData")
 sample_meta_new <- read.csv(file = "Macaque metadata_03092018.csv")
 
 #however, this lacks sample id unique so need to merge with old sample metadata
-sample_meta_N <- merge(sample_meta_f.df, sample_meta_new, all.x = TRUE)
+sample_meta_N <- merge(sample_meta_f.df, sample_meta_new, by = "sample_id", all.x = TRUE)
 
 #make some columns of sample_meta_f character instead of numeric
 sample_meta_N$DW <- as.character(sample_meta_N$DW)
@@ -129,18 +129,53 @@ newnames <- make.names(colnames(subLouness))
 colnames(subLouness) <- newnames
 
 #save workspace image to start from this point
-save.image(file = "MacaqueLMMready.RData")
+save.image(file = "SysMalVacLMMready.RData")
 
 #Run linear mixed effects model
 #fixed effects are: time point (TimePoint_code), control vs. experimental treatment (sample_type)
 #random effects are: animal
 
-#AMA1
-colnames(subLouness[25])
-fullmodel <- lmer(PKH_031930.ag1 ~ TimePoint_code + sample_type + (1|animal), 
-                  REML = FALSE, data = subLouness)
+#run this part for each antigen like a manual for loop
+#PKH_031930.ag2
+Agnum <- 30
+antigen <- colnames(subLouness[Agnum])
+antigen
+
+#fullmodel - model by time point and sample type without interaction
+fullmodel <- lmer(PKH_031930.ag2 ~ TimePoint_code + sample_type + (1|animal), 
+                  REML = TRUE, data = subLouness)
 summary(fullmodel)
 r.squaredGLMM(fullmodel)
+
+#intmodel - model by time point and sample type with interaction
+intmodel <- lmer(PKH_031930.ag2 ~ TimePoint_code * sample_type + (1|animal), 
+                 REML = TRUE, data = subLouness)
+summary(intmodel)
+r.squaredGLMM(intmodel)
+
+#Plot residuals - fullmodel - there is heteroskedasticity, cannot use model
+png(filename = paste0(antigen,"full.resid.tif"), width = 8, height = 4.5, units = "in", res = 1200)
+par(mfrow=c(1,2), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+plot(fitted(fullmodel),residuals(fullmodel),  pch='*', col = "blue", xlab = "Fitted", ylab = "Residuals")
+abline(a=0, b=0)
+hist(residuals(fullmodel), xlab = "Residuals")
+
+graphics.off()
+
+#Plot residuals - intmodel - there is heteroskedasticity, cannot use model
+png(filename = paste0(antigen,"int.resid.tif"), width = 8, height = 4.5, units = "in", res = 1200)
+par(mfrow=c(1,2), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+plot(fitted(intmodel),residuals(intmodel),  pch='*', col = "blue", xlab = "Fitted", ylab = "Residuals")
+abline(a=0, b=0)
+hist(residuals(intmodel), xlab = "Residuals")
+
+graphics.off()
+
+
+
+
 
 
 
