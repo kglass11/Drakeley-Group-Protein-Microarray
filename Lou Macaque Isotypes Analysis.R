@@ -39,11 +39,11 @@ library(MuMIn)
 
 #set working directory
 #"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
-setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgM")
+setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgG")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
-load(file = "Macaque_IgM_after_Processing.RData")
+load(file = "Macaque_IgG_after_Processing.RData")
 
 #read in new sample metadata file which has additional information: 
 sample_meta_new <- read.csv(file = "Macaque metadata_03092018.csv")
@@ -52,7 +52,7 @@ sample_meta_new <- read.csv(file = "Macaque metadata_03092018.csv")
 sample_meta_N <- merge(sample_meta_f.df, sample_meta_new, by = "sample_id", all.x = TRUE)
 
 #make some columns of sample_meta_f character instead of numeric
-sample_meta_N$DW <- as.character(sample_meta_N$DW)
+#sample_meta_N$DW <- as.character(sample_meta_N$DW)
 sample_meta_N$Box <- as.character(sample_meta_N$Box)
 sample_meta_N$box <- as.character(sample_meta_N$box)
 sample_meta_N$slide_no <- as.character(sample_meta_N$slide_no)
@@ -136,19 +136,19 @@ save.image(file = "SysMalVacLMMready.RData")
 #random effects are: animal
 
 #run this part for each antigen like a manual for loop
-#PKH_031930.ag2
-Agnum <- 30
+#PkSERA3.ag2
+Agnum <- 33
 antigen <- colnames(subLouness[Agnum])
 antigen
 
 #fullmodel - model by time point and sample type without interaction
-fullmodel <- lmer(PKH_031930.ag2 ~ TimePoint_code + sample_type + (1|animal), 
+fullmodel <- lmer(PkSERA3.ag2 ~ TimePoint_code + sample_type + (1|animal), 
                   REML = TRUE, data = subLouness)
 summary(fullmodel)
 r.squaredGLMM(fullmodel)
 
 #intmodel - model by time point and sample type with interaction
-intmodel <- lmer(PKH_031930.ag2 ~ TimePoint_code + sample_type + TimePoint_code * sample_type + (1|animal), 
+intmodel <- lmer(PkSERA3.ag2 ~ TimePoint_code + sample_type + TimePoint_code * sample_type + (1|animal), 
                  REML = TRUE, data = subLouness)
 summary(intmodel)
 r.squaredGLMM(intmodel)
@@ -173,8 +173,66 @@ hist(residuals(intmodel), xlab = "Residuals")
 
 graphics.off()
 
+###### Linear Mixed Effects Modeling for ComBioMalSuSe
 
+#filter samples by study  "ComBioMalSuSe"
+Mstudy <- "ComBioMalSuSe"
 
+subLouness <- filter(Louness.df, Study == Mstudy)
+rownames(subLouness) <- subLouness$sample_id_unique
+
+PkLouT <- subLouness[,(ncol(sample_meta_f.df)+1):ncol(subLouness)]
+
+meltsubLou <- melt(subLouness)
+
+#the names of the columns have spaces. So they cannot be used in lmer and other functions
+newnames <- make.names(colnames(subLouness))
+colnames(subLouness) <- newnames
+
+#save workspace image to start from this point
+save.image(file = "ComBioMalSuSeLMMready.RData")
+
+#Run linear mixed effects model
+#fixed effects are: time point (TimePoint_code), country (CountryOrigin)
+#random effects are: animal, Studynumber
+
+#run this part for each antigen like a manual for loop
+#SSP2
+Agnum <- 34
+antigen <- colnames(subLouness[Agnum])
+antigen
+
+#fullmodel - model by time point and sample type without interaction
+fullmodel <- lmer(SSP2 ~ TimePoint_code + CountryOrigin + (1|animal) + (1|Studynumber), 
+                  REML = TRUE, data = subLouness)
+summary(fullmodel)
+r.squaredGLMM(fullmodel)
+
+#intmodel - model by time point and sample type with interaction
+intmodel <- lmer(SSP2 ~ TimePoint_code + CountryOrigin + TimePoint_code * CountryOrigin + (1|animal) + (1|Studynumber), 
+                 REML = TRUE, data = subLouness)
+summary(intmodel)
+r.squaredGLMM(intmodel)
+
+#Plot residuals - fullmodel - there is heteroskedasticity, cannot use model
+png(filename = paste0(antigen,".ComBio.full.resid.tif"), width = 8, height = 4.5, units = "in", res = 1200)
+par(mfrow=c(1,2), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+plot(fitted(fullmodel),residuals(fullmodel),  pch='*', col = "blue", xlab = "Fitted", ylab = "Residuals")
+abline(a=0, b=0)
+hist(residuals(fullmodel), xlab = "Residuals")
+
+graphics.off()
+
+#Plot residuals - intmodel - there is heteroskedasticity, cannot use model
+png(filename = paste0(antigen,".ComBio.int.resid.tif"), width = 8, height = 4.5, units = "in", res = 1200)
+par(mfrow=c(1,2), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+plot(fitted(intmodel),residuals(intmodel),  pch='*', col = "blue", xlab = "Fitted", ylab = "Residuals")
+abline(a=0, b=0)
+hist(residuals(intmodel), xlab = "Residuals")
+
+graphics.off()
 
 
 
@@ -463,5 +521,7 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
     
   }
   remove(i)
+  
+
   
   
