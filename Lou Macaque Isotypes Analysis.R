@@ -234,12 +234,18 @@ hist(residuals(intmodel), xlab = "Residuals")
 
 graphics.off()
 
+#We have determined that the linear mixed effects modeling will not work for this data. 
+
+#### Area under the curve for sysmalvac, each antigen separately 
+
+  #use the trapz function, input x and y, get AUC, store in a vector for each animal and control or treatment
+
+  #Then use a t test or wilcoxan signed rank test to compare control vs. treatment. 
 
 
 
 
-
-
+#below is not updated yet for macaque, this is directly from HCC: 
 ###### Calculating seropositivity ######
 
 ## ******* This has not been updated yet for macaque studies - will need to separate by study for plots!!
