@@ -148,7 +148,7 @@ summary(fullmodel)
 r.squaredGLMM(fullmodel)
 
 #intmodel - model by time point and sample type with interaction
-intmodel <- lmer(PKH_031930.ag2 ~ TimePoint_code * sample_type + (1|animal), 
+intmodel <- lmer(PKH_031930.ag2 ~ TimePoint_code + sample_type + TimePoint_code * sample_type + (1|animal), 
                  REML = TRUE, data = subLouness)
 summary(intmodel)
 r.squaredGLMM(intmodel)
