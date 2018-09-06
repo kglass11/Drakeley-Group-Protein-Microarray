@@ -12,6 +12,7 @@ rm(list=ls())
 # install.packages("ggbeeswarm")
 install.packages("afex")
 install.packages("car")
+install.packages("caTools")
 
 ###Load packages needed for this script
 require("gtools")
@@ -41,6 +42,7 @@ library(MuMIn)
 
 library(afex)
 library(car)
+library(caTools)
 
 #set working directory
 #"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
@@ -160,7 +162,7 @@ str(subLouness)
 antnames <- noquote(colnames(subLouness[29:38]))
 
 timept <- levels(subLouness$TimePoint)
-timept1 <- noquote(timept[18:28])
+timept1 <- noquote(timept[18:26])
 
 #loop over 10 antigens and 9 time points
 for(k in 3:length(timept1)){
@@ -191,6 +193,69 @@ for(k in 3:length(timept1)){
 }
 
 remove(i,k)
+
+#### Area under the curve for SysMalVac, each antigen separately 
+
+#isolate control or experimental data for all antigens and time points
+exp.auc <- filter(subLouness, sample_type == "experimental")
+con.auc <- filter(subLouness, sample_type == "control")
+
+for(i in 1:length(antnames)){
+  antnow <- antnames[i]
+  #isolate data for each animal and each antigen 
+  exp.auc1 <- exp.auc[exp.auc$Animal_id == "R07083",colnames(exp.auc) %in% antnow]
+  exp.auc2 <- exp.auc[exp.auc$Animal_id == "R07106",colnames(exp.auc) %in% antnow]
+  exp.auc3 <- exp.auc[exp.auc$Animal_id == "R07109",colnames(exp.auc) %in% antnow]
+  exp.auc4 <- exp.auc[exp.auc$Animal_id == "R08091",colnames(exp.auc) %in% antnow]
+  
+  con.auc1 <- con.auc[con.auc$Animal_id == "R05006",colnames(con.auc) %in% antnow]
+  con.auc2 <- con.auc[con.auc$Animal_id == "R07114",colnames(con.auc) %in% antnow]
+  con.auc3 <- con.auc[con.auc$Animal_id == "R08016",colnames(con.auc) %in% antnow]
+  con.auc4 <- con.auc[con.auc$Animal_id == "R08096",colnames(con.auc) %in% antnow]
+  
+  #use the trapz function, input x and y, get AUC, store in a vector for each animal and control or treatment
+  AUCdata <- as.data.frame(matrix(nrow=4, ncol=2))
+  colnames(AUCdata) <- c("control", "experimental")
+  
+  AUCdata[1,1] <- trapz(x = c(0:8), y = con.auc1)
+  AUCdata[2,1] <- trapz(x = c(0:8), y = con.auc2)
+  AUCdata[3,1] <- trapz(x = c(0:8), y = con.auc3)
+  AUCdata[4,1] <- trapz(x = c(0:8), y = con.auc4)
+  
+  AUCdata[1,2] <- trapz(x = c(0:8), y = exp.auc1)
+  AUCdata[2,2] <- trapz(x = c(0:8), y = exp.auc2)
+  AUCdata[3,2] <- trapz(x = c(0:8), y = exp.auc3)
+  AUCdata[4,2] <- trapz(x = c(0:8), y = exp.auc4)
+  
+  print(antnow)
+  print(AUCdata)
+  
+  #Then use a t test or wilcoxan signed rank test to compare control vs. treatment.
+  #not using welch correction this time
+  print(t.test(AUCdata[,1], AUCdata[,2]))
+  
+}
+
+##### repeated measures two way ANOVA / MANOVA for ComBioSuSe
+
+#filter samples by study  "ComBioMalSuSe"
+Mstudy <- "ComBioMalSuSe"
+
+subLouness <- filter(Louness.df, Study == Mstudy)
+rownames(subLouness) <- subLouness$sample_id_unique
+
+PkLouT <- subLouness[,(ncol(sample_meta_f.df)+1):ncol(subLouness)]
+
+meltsubLou <- melt(subLouness)
+
+#the names of the columns have spaces. So they cannot be used in lmer and other functions
+newnames <- make.names(colnames(subLouness))
+colnames(subLouness) <- newnames
+
+
+
+
+############### STOP HERE ################
 
 ###### Linear Mixed Effects Modeling for SysMalVac
 
@@ -301,14 +366,6 @@ hist(residuals(intmodel), xlab = "Residuals")
 graphics.off()
 
 #We have determined that the linear mixed effects modeling will not work for this data. 
-
-#### Area under the curve for sysmalvac, each antigen separately 
-
-  #use the trapz function, input x and y, get AUC, store in a vector for each animal and control or treatment
-
-  #Then use a t test or wilcoxan signed rank test to compare control vs. treatment. 
-
-
 
 
 #below is not updated yet for macaque, this is directly from HCC: 
