@@ -1,5 +1,5 @@
 #Lou Pk Macaque Isotypes Q-dot Study Analysis 
-#Sept 3, 2018
+#Sept 6, 2018
 
 #Run separately for IgG, IgA, and IgM
 
@@ -252,6 +252,63 @@ meltsubLou <- melt(subLouness)
 newnames <- make.names(colnames(subLouness))
 colnames(subLouness) <- newnames
 
+subdub <- filter(subLouness, !TimePoint == "t=PK", !TimePoint == "t=OP")
+
+#check structure of data frame to make sure that columns we want are listed as factors
+str(subdub)
+
+#print summary for anova function, this is from afex package
+#change the antigen name each time manually, can copy from structure report
+#copy all summaries into a word doc
+antnames[10]
+(anova2 <- aov_car(PKH_080030 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub))
+
+#	Two antigens had significant interaction terms,  and a few others had significant main effects (note the main effects on the graph)
+#	If interaction is significant, can do pairwise comparisons with posthoc
+#	If main effect is significant, do one way ANOVA on that factor
+
+#Pairwise comparisons for PkSERA3.ag2 and TSERA2.ag1
+#rerun anova to store for later use 
+(anova3 <- aov_car(PkSERA3.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub))
+(anova4 <- aov_car(TSERA2.ag1 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub))
+
+#look at a graph of  means to see how they change/interact
+lsmip(anova3, CountryOrigin ~ TimePoint)
+lsmip(anova4, CountryOrigin ~ TimePoint)
+
+#calculate emms for interactions
+emm.sera3 <- emmeans(anova3, ~ CountryOrigin | TimePoint)
+emm.tsera2 <- emmeans(anova4, ~ CountryOrigin | TimePoint)
+
+#the contrast function used by cld function automatically uses Tukey adjustment
+#for multiple comparisons
+
+#PkSERA3.ag2 - calculate pairwise comparisons
+pairsera3 <- cld(emm.sera3, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
+#save the results to a file. 
+write.csv(as.data.frame(pairsera3$emmeans), file = "ComBio.PkSERA3.ag2.ALLPairwiseEmmeans.csv")
+write.csv(as.data.frame(pairsera3$comparisons), file = "ComBio.PkSERA3.ag2.ALLPairwiseComparisons.csv")
+
+#TSERA2.ag1 - calculate pairwise comparisons
+pairTsera2 <- cld(emm.tsera2, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
+#save the results to a file. 
+write.csv(as.data.frame(pairTsera2$emmeans), file = "ComBio.TSERA2.ag1.ALLPairwiseEmmeans.csv")
+write.csv(as.data.frame(pairTsera2$comparisons), file = "ComBio.TSERA2.ag1.ALLPairwiseComparisons.csv")
+
+#get significance and do pairwise comparisons using emmeans for Main effects
+#default adjustment for multiple comparisons is Tukey
+
+#PKH_031930.ag2 had main effect of time point
+anovaA <- aov_car(PKH_031930.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub)
+emmeans(anovaA, pairwise ~ TimePoint)
+
+# TSERA2.ag2 had main effect of time point
+anovaB <- aov_car(TSERA2.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub)
+emmeans(anovaB, pairwise ~ TimePoint)
+
+#PKH_021580 had main effect of country origin
+anovaC <- aov_car(PKH_021580 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub)
+emmeans(anovaC, pairwise ~ CountryOrigin)
 
 
 
