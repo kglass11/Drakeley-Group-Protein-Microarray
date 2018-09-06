@@ -10,6 +10,8 @@ rm(list=ls())
 # install.packages("corrgram")
 # install.packages("corrplot")
 # install.packages("ggbeeswarm")
+install.packages("afex")
+install.packages("car")
 
 ###Load packages needed for this script
 require("gtools")
@@ -36,6 +38,9 @@ library(phia)
 library(lmerTest)
 library(multcompView)
 library(MuMIn)
+
+library(afex)
+library(car)
 
 #set working directory
 #"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
@@ -97,7 +102,7 @@ for(i in 1:length(Ig)){
   
 }
 
-###### Linear Mixed Effects Modeling for SysMalVac
+##### Isolate appropriate data for stats 
 
 #isolate data from lou antigens only and samples only from one study at a time only 
 
@@ -127,6 +132,67 @@ meltsubLou <- melt(subLouness)
 #the names of the columns have spaces. So they cannot be used in lmer and other functions
 newnames <- make.names(colnames(subLouness))
 colnames(subLouness) <- newnames
+
+##### repeated measures two way ANOVA / MANOVA for SysMalVac
+
+#Example from package afex: 
+data("fhch2010")
+
+mean(!fhch2010$correct)
+fhch <- droplevels(fhch2010[ fhch2010$correct,])
+str(fhch2010)
+
+(a1 <- aov_car(log_rt ~ task*length*stimulus + Error(id/(length*stimulus)), fhch))
+
+#mimic example 
+
+#check structure of data frame to make sure that columns we want are listed as factors
+str(subLouness)
+
+#print summary for anova function, this is from afex package
+#change the antigen name each time manually, can copy from structure report
+#copy all summaries into a word doc
+(anova1 <- aov_car(PKH_080030  ~ sample_type * TimePoint + Error(Animal_id/TimePoint), subLouness))
+
+#Move to comparing within each time point, control vs treatment.
+
+#get list of antigen names without quotations
+antnames <- noquote(colnames(subLouness[29:38]))
+
+timept <- levels(subLouness$TimePoint)
+timept1 <- noquote(timept[18:28])
+
+#loop over 10 antigens and 9 time points
+for(k in 3:length(timept1)){
+    timenow <- timept1[k]
+    
+    #isolate data for this time point
+    my_data <- filter(subLouness, TimePoint == timept1[k])
+    
+    #isolate control or experimental data for all antigens
+    exp.data <- filter(my_data, sample_type == "experimental")
+    con.data <- filter(my_data, sample_type == "control")
+   
+  #run through all antigens for each time point   
+  for(i in 1:length(antnames)){
+    antnow <- antnames[i]
+    
+    con.data1 <- con.data[,colnames(con.data) %in% antnow]
+    exp.data1 <- exp.data[,colnames(exp.data) %in% antnow]
+    
+    print(noquote(paste(timenow, antnow)))
+   #Shapiro-Wilk normality test for control data
+    #print(shapiro.test(con.data1))
+    #Shapiro-Wilk normality test for experimental data
+    #print(shapiro.test(exp.data1))
+    #unpaired t-test, welch correction, which does not assume homogeneity of variances
+    print(t.test(con.data1, exp.data1, var.equal = FALSE))
+  }
+}
+
+remove(i,k)
+
+###### Linear Mixed Effects Modeling for SysMalVac
 
 #save workspace image to start from this point
 save.image(file = "SysMalVacLMMready.RData")
