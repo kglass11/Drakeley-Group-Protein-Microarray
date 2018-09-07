@@ -10,9 +10,9 @@ rm(list=ls())
 # install.packages("corrgram")
 # install.packages("corrplot")
 # install.packages("ggbeeswarm")
-install.packages("afex")
-install.packages("car")
-install.packages("caTools")
+# install.packages("afex")
+# install.packages("car")
+# install.packages("caTools")
 
 ###Load packages needed for this script
 require("gtools")
@@ -41,16 +41,15 @@ library(multcompView)
 library(MuMIn)
 
 library(afex)
-library(car)
 library(caTools)
 
 #set working directory
 #"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
-setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgG")
+setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgM")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
-load(file = "Macaque_IgG_after_Processing.RData")
+load(file = "Macaque_IgM_after_Processing.RData")
 
 #read in new sample metadata file which has additional information: 
 sample_meta_new <- read.csv(file = "Macaque metadata_03092018.csv")
@@ -136,36 +135,35 @@ newnames <- make.names(colnames(subLouness))
 colnames(subLouness) <- newnames
 
 ##### repeated measures two way ANOVA / MANOVA for SysMalVac
-
-#Example from package afex: 
-data("fhch2010")
-
-mean(!fhch2010$correct)
-fhch <- droplevels(fhch2010[ fhch2010$correct,])
-str(fhch2010)
-
-(a1 <- aov_car(log_rt ~ task*length*stimulus + Error(id/(length*stimulus)), fhch))
-
-#mimic example 
-
 #check structure of data frame to make sure that columns we want are listed as factors
 str(subLouness)
+
+#get list of antigen names without quotations
+antnames <- noquote(colnames(subLouness[29:38]))
+antnames[10]
 
 #print summary for anova function, this is from afex package
 #change the antigen name each time manually, can copy from structure report
 #copy all summaries into a word doc
 (anova1 <- aov_car(PKH_080030  ~ sample_type * TimePoint + Error(Animal_id/TimePoint), subLouness))
 
-#Move to comparing within each time point, control vs treatment.
+### determining if there is a significant difference main effect for PKH_080030
+## one-way ANOVA with tukey post hoc
+emm.PKH_080030 <- emmeans(anova1, pairwise ~ TimePoint)
 
-#get list of antigen names without quotations
-antnames <- noquote(colnames(subLouness[29:38]))
+#calculate pairwise comparisons
+pairPKH_080030 <- cld(emm.PKH_080030, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
+#save the results to a file. 
+write.csv(as.data.frame(pairPKH_080030$emmeans), file = "SysMal.PKH_080030.ALLPairwiseEmmeans.csv")
+write.csv(as.data.frame(pairPKH_080030$comparisons), file = "SysMal.PKH_080030.ALLPairwiseComparisons.csv")
+
+#Move to comparing within each time point, control vs treatment.
 
 timept <- levels(subLouness$TimePoint)
 timept1 <- noquote(timept[18:26])
 
 #loop over 10 antigens and 9 time points
-for(k in 3:length(timept1)){
+for(k in 1:length(timept1)){
     timenow <- timept1[k]
     
     #isolate data for this time point
@@ -187,6 +185,7 @@ for(k in 3:length(timept1)){
     #print(shapiro.test(con.data1))
     #Shapiro-Wilk normality test for experimental data
     #print(shapiro.test(exp.data1))
+    
     #unpaired t-test, welch correction, which does not assume homogeneity of variances
     print(t.test(con.data1, exp.data1, var.equal = FALSE))
   }
@@ -231,7 +230,6 @@ for(i in 1:length(antnames)){
   print(AUCdata)
   
   #Then use a t test or wilcoxan signed rank test to compare control vs. treatment.
-  #not using welch correction this time
   print(t.test(AUCdata[,1], AUCdata[,2]))
   
 }
@@ -252,65 +250,18 @@ meltsubLou <- melt(subLouness)
 newnames <- make.names(colnames(subLouness))
 colnames(subLouness) <- newnames
 
-subdub <- filter(subLouness, !TimePoint == "t=PK", !TimePoint == "t=OP")
+# subdub <- filter(subLouness, !TimePoint == "t=PK", !TimePoint == "t=OP")
+# 
+# #check structure of data frame to make sure that columns we want are listed as factors
+# str(subdub)
+# 
+# #print summary for anova function, this is from afex package
+# #change the antigen name each time manually, can copy from structure report
+# #copy all summaries into a word doc
+# antnames[10]
+# (anova2 <- aov_car(PKH_080030 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub))
 
-#check structure of data frame to make sure that columns we want are listed as factors
-str(subdub)
-
-#print summary for anova function, this is from afex package
-#change the antigen name each time manually, can copy from structure report
-#copy all summaries into a word doc
-antnames[10]
-(anova2 <- aov_car(PKH_080030 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub))
-
-#	Two antigens had significant interaction terms,  and a few others had significant main effects (note the main effects on the graph)
-#	If interaction is significant, can do pairwise comparisons with posthoc
-#	If main effect is significant, do one way ANOVA on that factor
-
-#Pairwise comparisons for PkSERA3.ag2 and TSERA2.ag1
-#rerun anova to store for later use 
-(anova3 <- aov_car(PkSERA3.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub))
-(anova4 <- aov_car(TSERA2.ag1 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub))
-
-#look at a graph of  means to see how they change/interact
-lsmip(anova3, CountryOrigin ~ TimePoint)
-lsmip(anova4, CountryOrigin ~ TimePoint)
-
-#calculate emms for interactions
-emm.sera3 <- emmeans(anova3, ~ CountryOrigin | TimePoint)
-emm.tsera2 <- emmeans(anova4, ~ CountryOrigin | TimePoint)
-
-#the contrast function used by cld function automatically uses Tukey adjustment
-#for multiple comparisons
-
-#PkSERA3.ag2 - calculate pairwise comparisons
-pairsera3 <- cld(emm.sera3, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
-#save the results to a file. 
-write.csv(as.data.frame(pairsera3$emmeans), file = "ComBio.PkSERA3.ag2.ALLPairwiseEmmeans.csv")
-write.csv(as.data.frame(pairsera3$comparisons), file = "ComBio.PkSERA3.ag2.ALLPairwiseComparisons.csv")
-
-#TSERA2.ag1 - calculate pairwise comparisons
-pairTsera2 <- cld(emm.tsera2, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
-#save the results to a file. 
-write.csv(as.data.frame(pairTsera2$emmeans), file = "ComBio.TSERA2.ag1.ALLPairwiseEmmeans.csv")
-write.csv(as.data.frame(pairTsera2$comparisons), file = "ComBio.TSERA2.ag1.ALLPairwiseComparisons.csv")
-
-#get significance and do pairwise comparisons using emmeans for Main effects
-#default adjustment for multiple comparisons is Tukey
-
-#PKH_031930.ag2 had main effect of time point
-anovaA <- aov_car(PKH_031930.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub)
-emmeans(anovaA, pairwise ~ TimePoint)
-
-# TSERA2.ag2 had main effect of time point
-anovaB <- aov_car(TSERA2.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub)
-emmeans(anovaB, pairwise ~ TimePoint)
-
-#PKH_021580 had main effect of country origin
-anovaC <- aov_car(PKH_021580 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub)
-emmeans(anovaC, pairwise ~ CountryOrigin)
-
-#### Repeat ANOVAs two way for Study two only, three countries and 3 time points
+#### ANOVAs two way for Study two only, three countries and 3 time points
 subdub1 <- filter(subLouness, !TimePoint == "t=OP")
 
 #check structure of data frame to make sure that columns we want are listed as factors
@@ -326,27 +277,27 @@ antnames[10]
 #	If interaction is significant, can do pairwise comparisons with posthoc
 #	If main effect is significant, do one way ANOVA on that factor
 
-#Pairwise comparisons for PKH_080030 and PKH_031930.ag2
+#Pairwise comparisons for SSP2
 #rerun anova to store for later use 
-(anova31 <- aov_car(PKH_080030 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
+(anova31 <- aov_car(SSP2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
 (anova41 <- aov_car(PKH_031930.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
 
 #look at a graph of  means to see how they change/interact
 lsmip(anova31, CountryOrigin ~ TimePoint)
 lsmip(anova41, CountryOrigin ~ TimePoint)
 
-#calculate emms for interactions
-emm.PKH_080030 <- emmeans(anova31, ~ CountryOrigin | TimePoint)
+#calculate emms for main effect of country origin
+emm.SSP2 <- emmeans(anova31, ~ CountryOrigin)
 emm.PKH_031930.ag2 <- emmeans(anova41, ~ CountryOrigin | TimePoint)
 
 #the contrast function used by cld function automatically uses Tukey adjustment
 #for multiple comparisons
 
-#PKH_080030 - calculate pairwise comparisons
-pairPKH_080030 <- cld(emm.PKH_080030, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
+#SSP2 - calculate pairwise comparisons
+pairSSP2 <- cld(emm.SSP2, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
 #save the results to a file. 
-write.csv(as.data.frame(pairPKH_080030$emmeans), file = "ComBio.PKH_080030.ALLPairwiseEmmeans.csv")
-write.csv(as.data.frame(pairPKH_080030$comparisons), file = "ComBio.PKH_080030.ALLPairwiseComparisons.csv")
+write.csv(as.data.frame(pairSSP2$emmeans), file = "ComBio.SSP2.ALLPairwiseEmmeans.csv")
+write.csv(as.data.frame(pairSSP2$comparisons), file = "ComBio.SSP2.ALLPairwiseComparisons.csv")
 
 #PKH_031930.ag2 - calculate pairwise comparisons
 pairPKH_031930.ag2 <- cld(emm.PKH_031930.ag2, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
