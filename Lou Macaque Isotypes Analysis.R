@@ -310,6 +310,49 @@ emmeans(anovaB, pairwise ~ TimePoint)
 anovaC <- aov_car(PKH_021580 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub)
 emmeans(anovaC, pairwise ~ CountryOrigin)
 
+#### Repeat ANOVAs two way for Study two only, three countries and 3 time points
+subdub1 <- filter(subLouness, !TimePoint == "t=OP")
+
+#check structure of data frame to make sure that columns we want are listed as factors
+str(subdub1)
+
+#print summary for anova function, this is from afex package
+#change the antigen name each time manually, can copy from structure report
+#copy all summaries into a word doc
+antnames[10]
+(anova11 <- aov_car(PKH_080030 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
+
+#	Two antigens had significant interaction terms
+#	If interaction is significant, can do pairwise comparisons with posthoc
+#	If main effect is significant, do one way ANOVA on that factor
+
+#Pairwise comparisons for PKH_080030 and PKH_031930.ag2
+#rerun anova to store for later use 
+(anova31 <- aov_car(PKH_080030 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
+(anova41 <- aov_car(PKH_031930.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
+
+#look at a graph of  means to see how they change/interact
+lsmip(anova31, CountryOrigin ~ TimePoint)
+lsmip(anova41, CountryOrigin ~ TimePoint)
+
+#calculate emms for interactions
+emm.PKH_080030 <- emmeans(anova31, ~ CountryOrigin | TimePoint)
+emm.PKH_031930.ag2 <- emmeans(anova41, ~ CountryOrigin | TimePoint)
+
+#the contrast function used by cld function automatically uses Tukey adjustment
+#for multiple comparisons
+
+#PKH_080030 - calculate pairwise comparisons
+pairPKH_080030 <- cld(emm.PKH_080030, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
+#save the results to a file. 
+write.csv(as.data.frame(pairPKH_080030$emmeans), file = "ComBio.PKH_080030.ALLPairwiseEmmeans.csv")
+write.csv(as.data.frame(pairPKH_080030$comparisons), file = "ComBio.PKH_080030.ALLPairwiseComparisons.csv")
+
+#PKH_031930.ag2 - calculate pairwise comparisons
+pairPKH_031930.ag2 <- cld(emm.PKH_031930.ag2, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
+#save the results to a file. 
+write.csv(as.data.frame(pairPKH_031930.ag2$emmeans), file = "ComBio.PKH_031930.ag2.ALLPairwiseEmmeans.csv")
+write.csv(as.data.frame(pairPKH_031930.ag2$comparisons), file = "ComBio.PKH_031930.ag2.ALLPairwiseComparisons.csv")
 
 
 ############### STOP HERE ################
