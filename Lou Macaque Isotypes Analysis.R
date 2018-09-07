@@ -45,11 +45,11 @@ library(caTools)
 
 #set working directory
 #"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
-setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgM")
+setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgA")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
-load(file = "Macaque_IgM_after_Processing.RData")
+load(file = "Macaque_IgA_after_Processing.RData")
 
 #read in new sample metadata file which has additional information: 
 sample_meta_new <- read.csv(file = "Macaque metadata_03092018.csv")
@@ -140,22 +140,25 @@ str(subLouness)
 
 #get list of antigen names without quotations
 antnames <- noquote(colnames(subLouness[29:38]))
-antnames[10]
+antnames[9]
 
 #print summary for anova function, this is from afex package
 #change the antigen name each time manually, can copy from structure report
 #copy all summaries into a word doc
-(anova1 <- aov_car(PKH_080030  ~ sample_type * TimePoint + Error(Animal_id/TimePoint), subLouness))
+(anova1 <- aov_car(PKH_021580  ~ sample_type * TimePoint + Error(Animal_id/TimePoint), subLouness))
+
+(anova13 <- aov_car(SSP2  ~ sample_type * TimePoint + Error(Animal_id/TimePoint), subLouness))
+(anova14 <- aov_car(PKH_021580  ~ sample_type * TimePoint + Error(Animal_id/TimePoint), subLouness))
 
 ### determining if there is a significant difference main effect for PKH_080030
 ## one-way ANOVA with tukey post hoc
-emm.PKH_080030 <- emmeans(anova1, pairwise ~ TimePoint)
+emm.PKH_021580 <- emmeans(anova14, pairwise ~ sample_type| TimePoint)
 
 #calculate pairwise comparisons
-pairPKH_080030 <- cld(emm.PKH_080030, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
+pairPKH_021580 <- cld(emm.PKH_021580, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
 #save the results to a file. 
-write.csv(as.data.frame(pairPKH_080030$emmeans), file = "SysMal.PKH_080030.ALLPairwiseEmmeans.csv")
-write.csv(as.data.frame(pairPKH_080030$comparisons), file = "SysMal.PKH_080030.ALLPairwiseComparisons.csv")
+write.csv(as.data.frame(pairPKH_021580$emmeans), file = "SysMal.PKH_021580.ALLPairwiseEmmeans.csv")
+write.csv(as.data.frame(pairPKH_021580$comparisons), file = "SysMal.PKH_021580.ALLPairwiseComparisons.csv")
 
 #Move to comparing within each time point, control vs treatment.
 
@@ -163,7 +166,7 @@ timept <- levels(subLouness$TimePoint)
 timept1 <- noquote(timept[18:26])
 
 #loop over 10 antigens and 9 time points
-for(k in 1:length(timept1)){
+for(k in 5:length(timept1)){
     timenow <- timept1[k]
     
     #isolate data for this time point
@@ -270,8 +273,8 @@ str(subdub1)
 #print summary for anova function, this is from afex package
 #change the antigen name each time manually, can copy from structure report
 #copy all summaries into a word doc
-antnames[10]
-(anova11 <- aov_car(PKH_080030 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
+antnames[9]
+(anova11 <- aov_car(PKH_021580 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
 
 #	Two antigens had significant interaction terms
 #	If interaction is significant, can do pairwise comparisons with posthoc
@@ -279,7 +282,7 @@ antnames[10]
 
 #Pairwise comparisons for SSP2
 #rerun anova to store for later use 
-(anova31 <- aov_car(SSP2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
+(anova31 <- aov_car(PKH_031930.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
 (anova41 <- aov_car(PKH_031930.ag2 ~ CountryOrigin * TimePoint + Error(Animal_id/TimePoint), subdub1))
 
 #look at a graph of  means to see how they change/interact
