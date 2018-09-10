@@ -12,7 +12,7 @@ rm(list=ls())
 
 #I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
 #"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens"
-setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger Non-malarial Antigens")
+setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger NM V2")
 getwd()
 
 require("gtools")
@@ -99,101 +99,55 @@ f2<-function(x,prob,lambda,mu,sigma,k,k1){
 #Go through each antigen one at a time to do all the calculations and plots
 ag_list <- colnames(tNMdata)
 
-cutoffsaved <- matrix(NA, nrow = length(ag_list), ncol = 4)
+cutoffsaved <- matrix(NA, nrow = length(ag_list), ncol = 1)
 rownames(cutoffsaved) <- ag_list
-colnames(cutoffsaved) <- c("unirootN", "unirootP", "xSD-L", "3SD")
+colnames(cutoffsaved) <- c("xSD-L", "3SD")
 
 #number of SD to add to mean to get cutoff
 xSD <- 2
 
-#List of i that will not be used: 1,6(,maybe) 
-i <- 5
-
-###### run this part for each antigen like a manual for loop
+for(i in 1: length(ag_list)){
+  
+  i =2
 
   antigen <- ag_list[i]
 
   antibody <- as.numeric(c(tNMdata[,i]))
   antibody1<-sort(antibody)
   
-  #FMM function
-  fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5),k=2)
-  paste(i, antigen)
-  summary(fit.ab2)
-
-  #cutoff below which is negative - manually set interval end points
-  cutoff<-uniroot(f,c(0,6),prob=0.99,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
-
-  #cutoff above which is positive - manually set interval end points
-  cutoff2<-uniroot(f2,c(0,6),prob=0.99, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+  antibody1 <- antibody1[antibody1 >= 0]
   
+  #FMM function
+  fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5), k=2)
+  print(paste(i, antigen))
+  print(summary(fit.ab2))
+
   #cutoffSD method
   min_comp1 <- which(fit.ab2$mu == min(fit.ab2$mu))
-  
+
   cutoffSD <- fit.ab2$mu[min_comp1] + xSD * sqrt(fit.ab2$sigma[min_comp1])
   
-  cutoff3SD <- log2(2^(fit.ab2$mu[min_comp1]) +  3 * 2^(fit.ab2$sigma[min_comp1]))
-  
   #store cutoffs
-  cutoffsaved[i,4] <- cutoff3SD
-  cutoffsaved[i,3] <- cutoffSD
-  cutoffsaved[i,2] <- cutoff2
-  cutoffsaved[i,1] <- cutoff
-
-  #percentage positive 
-  pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
-
-  #percentage negative
-  neg <- sum(antibody1<cutoff)/length(antibody1) * 100
-
-  #percentage indeterminate
-  indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
-
-  #Plot cutoffs 
-  png(filename = paste0(study,"_FMM_Cutoffs_.99", antigen, ".tif"), width = 5, height = 5, units = "in", res = 600)
-  par(mfrow = c(1,1), mar = c(5, 5, 2, 2), oma = c(6, 1, 1, 1))
-
-    plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-5,7),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability')
-
-    rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
-    title('C',adj=0,cex.main=1.5)
-    title(antigen, adj=0.5)
-    lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
-
-    abline(h=0.99,lwd=1.5,lty=2)
-    abline(v=cutoff,lwd=1)
-    abline(v=cutoff2,lwd=1)
-
-    lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
-    lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
-    legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))
-
-    mtext(c(paste("Positive Cutoff:", round(cutoff2, digits=3), "; ", round(pos, digits = 2), "% of samples")), side=1, cex=0.8, line=1.5, outer=TRUE, xpd=NA, adj=0)
-    mtext(c(paste("Negative Cutoff:", round(cutoff, digits=3),"; ", round(neg, digits = 2), "% of samples")), side=1, cex=0.8, line=3, outer=TRUE, xpd=NA, adj=0)
-    mtext(c(paste(round(indet, digits=2),"% of samples are indeterminate")), side=1, cex=0.8, line=4.5, outer=TRUE, xpd=NA, adj=0)
-
-  dev.off()
-
+  cutoffsaved[i,1] <- cutoffSD
+ 
   #4 Plot Density and QQPlots - Cutoff marked on Density Plot
-  png(filename = paste0(study,"_Density_QQ_.99_2SD", antigen, "v2.tif"), width = 8, height = 4, units = "in", res = 600)
+  png(filename = paste0(study,"_Density_QQ_2SD", antigen, "v2.tif"), width = 8, height = 4, units = "in", res = 600)
   par(mfrow=c(1,2))
 
     plot(density(antibody1),xlab='Log2(MFI Ratio)',main='')
-    title('A',adj=0,cex.main=1.5)
     title(antigen,adj=0.5)
-    abline(v=cutoff2,col="red",lwd=1.5)
     abline(v=fit.ab2$mu, col = "purple", lwd = 1)
     abline(v=cutoffSD, col = "blue", lwd = 1.5)
-    abline(v=cutoff3SD, col = "green", lwd = 1.5)
-    legend("topleft",c(paste0("cutoff(uni): ",round(cutoff2,3)),paste0("cutoff(2SD): ",round(cutoffSD,3)), paste0("cutoff(3SD): ",round(cutoff3SD,3))),lty=1,col=c("red", "blue", "green"),cex=0.5,bty="n",y.intersp=1.1,x.intersp=0.2,seg.len=0.5,text.col=c("red", "blue", "green"))
+    legend("topleft",paste0("cutoff(2SD): ",round(cutoffSD,3)),lty=1,col="blue",cex=0.5,bty="n",y.intersp=1.1,x.intersp=0.2,seg.len=0.5,text.col="blue")
   
     qqnorm(antibody1,las=1,pch=21,bg='grey',cex=0.75)
     qqline(antibody1)
-    title('B',adj=0,cex.main=1.5)
 
   dev.off()
+  
+}
 
-remove(cutoff, cutoff2, cutoffSD, cutoff3SD, min_comp1)
+remove(cutoffSD, min_comp1,i)
 
 ###### stop manual for loop ####
 
