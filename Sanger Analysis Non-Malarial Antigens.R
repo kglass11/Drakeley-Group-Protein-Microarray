@@ -107,15 +107,13 @@ colnames(cutoffsaved) <- c("xSD-L", "3SD")
 xSD <- 2
 
 for(i in 1: length(ag_list)){
-  
-  i =12
 
   antigen <- ag_list[i]
 
   antibody <- as.numeric(c(tNMdata[,i]))
   antibody1<-sort(antibody)
   
-  #antibody1 <- antibody1[antibody1 >= -.3]
+  #antibody1 <- antibody1[antibody1 >= -0.4]
   
   #FMM function
   fit.ab2<-normalmixEM(antibody1, k=2)
@@ -131,7 +129,7 @@ for(i in 1: length(ag_list)){
   cutoffsaved[i,1] <- cutoffSD
  
   #4 Plot Density and QQPlots - Cutoff marked on Density Plot
-  png(filename = paste0(study,"_Density_QQ_2SD", antigen, "v2.tif"), width = 8, height = 4, units = "in", res = 600)
+  png(filename = paste0(study,"_Density_QQ_2SD", antigen, "v3.tif"), width = 8, height = 4, units = "in", res = 600)
   par(mfrow=c(1,2))
 
     plot(density(antibody1),xlab='Log2(MFI Ratio)',main='')
@@ -150,6 +148,12 @@ for(i in 1: length(ag_list)){
 remove(cutoffSD, min_comp1,i)
 
 ###### stop manual for loop ####
+
+### SAVE THE CUTOFFS SAVED IN A SPECIAL OBJECT!!! MAKE SURE NOT TO OVERWRITE THIS EVER!!! 
+#cutoffsavedfinal <- as.matrix(cutoffsaved[,1])
+#save(cutoffsavedfinal, file = "sangerNMcutoffsfinal.RData")
+
+load("sangerNMcutoffsfinal.RData")
 
 #For this section, using normalized data with negative values set to 0 (norm4.matrix)
 
