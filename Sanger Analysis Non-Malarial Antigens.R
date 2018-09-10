@@ -108,17 +108,17 @@ xSD <- 2
 
 for(i in 1: length(ag_list)){
   
-  i =2
+  i =12
 
   antigen <- ag_list[i]
 
   antibody <- as.numeric(c(tNMdata[,i]))
   antibody1<-sort(antibody)
   
-  antibody1 <- antibody1[antibody1 >= 0]
+  #antibody1 <- antibody1[antibody1 >= -.3]
   
   #FMM function
-  fit.ab2<-normalmixEM(antibody1,lambda=c(0.5,0.5), k=2)
+  fit.ab2<-normalmixEM(antibody1, k=2)
   print(paste(i, antigen))
   print(summary(fit.ab2))
 
