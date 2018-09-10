@@ -45,7 +45,7 @@ library(caTools)
 
 #set working directory
 #"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
-setwd("/Users/Katie/Desktop/R files from work/Lou Macaque/IgA")
+setwd("/Users/Katie/Desktop/R files from work/Lou Macaque latest/IgA")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
@@ -153,12 +153,20 @@ antnames[9]
 ### determining if there is a significant difference main effect for PKH_080030
 ## one-way ANOVA with tukey post hoc
 emm.PKH_021580 <- emmeans(anova14, pairwise ~ sample_type| TimePoint)
+emm.SSP2 <- emmeans(anova13, pairwise ~ sample_type| TimePoint)
 
 #calculate pairwise comparisons
-pairPKH_021580 <- cld(emm.PKH_021580, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = TRUE)
+pairPKH_021580 <- cld(emm.PKH_021580, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = FALSE)
 #save the results to a file. 
 write.csv(as.data.frame(pairPKH_021580$emmeans), file = "SysMal.PKH_021580.ALLPairwiseEmmeans.csv")
 write.csv(as.data.frame(pairPKH_021580$comparisons), file = "SysMal.PKH_021580.ALLPairwiseComparisons.csv")
+
+#calculate pairwise comparisons
+pairSSP2 <- cld(emm.SSP2, by = NULL, Letters = LETTERS, sort = TRUE, reversed = TRUE, details = FALSE)
+#save the results to a file. 
+write.csv(as.data.frame(pairSSP2$emmeans), file = "SysMal.SSP2.ALLPairwiseEmmeans.csv")
+write.csv(as.data.frame(pairSSP2$comparisons), file = "SysMal.SSP2.ALLPairwiseComparisons.csv")
+
 
 #Move to comparing within each time point, control vs treatment.
 
