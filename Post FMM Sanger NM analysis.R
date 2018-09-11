@@ -64,3 +64,9 @@ rmant <- c("CT706","Pertussis JNIH-5 [100] *", "CT110", "Pertussis JNIH-3 [1] *"
 finalcut <- as.matrix(cutoffsavedfinal[!rownames(cutoffsavedfinal) %in% rmant,])
 
 itta <- as.data.frame(tNMdata[,!colnames(tNMdata) %in% rmant])
+
+### do correlation plots with ALL data, including negative values. 
+
+
+
+##### isolate seropositive data!! :) 
