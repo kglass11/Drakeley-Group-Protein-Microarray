@@ -1,6 +1,6 @@
 #Sanger Data Analysis Script
 #Katie Glass
-#updated: 9/2/18
+#updated: 9/10/18
 
 #####################################
 ############DATA ANALYSIS############
