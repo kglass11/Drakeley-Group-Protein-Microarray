@@ -24,6 +24,7 @@ library(ggplot2)
 library(gcookbook)
 library(dplyr)
 library(reshape2)
+library(corrplot)
 
 load(file="Sanger.2.Update.RData")
 load(file = "sangerNMcutoffsfinal.RData")
@@ -65,8 +66,28 @@ finalcut <- as.matrix(cutoffsavedfinal[!rownames(cutoffsavedfinal) %in% rmant,])
 
 itta <- as.data.frame(tNMdata[,!colnames(tNMdata) %in% rmant])
 
+############### Correlation between antigens #################
+
 ### do correlation plots with ALL data, including negative values. 
 
+#run correlation significance test with pearson's method
+restime <- cor.mtest(itta, conf.level = .95, na.rm = TRUE)
 
+#Plot with significance showing - x over NOT significant
+png(filename = paste0("Sig_allANT_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
+
+print(corrplot.mixed(cor(itta, use = "complete.obs"), p.mat = as.matrix(restime$p), sig.level = .05, tl.col="black", order = "FPC", 
+    tl.pos = "lt", tl.cex = 0.5, number.cex = 0.7))
+
+graphics.off()
+
+#Plot without significance showing - only a few not significant because of high n. the significance test is basically pointless. 
+#note, the above plot is in a different order than this one because of the significance not working with alphabetical order
+png(filename = paste0("allANT_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
+
+print(corrplot.mixed(cor(itta, use = "complete.obs"), tl.col="black", order = "alphabet", 
+                     tl.pos = "lt", tl.cex = 0.7, number.cex = 0.75))
+
+graphics.off()
 
 ##### isolate seropositive data!! :) 
