@@ -8,10 +8,10 @@
 
 rm(list=ls())
 
-#I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
+#"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens/Sanger NM V2"
 #"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens"
-#"/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger NM V2"
-setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens/Sanger NM V2")
+#
+setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger NM V2")
 getwd()
 
 require("gtools")
@@ -29,7 +29,7 @@ library(corrplot)
 load(file="Sanger.2.Update.RData")
 load(file = "sangerNMcutoffsfinal.RData")
 
-###### Isolate data for non-malarial antigens and test samples only (no controls). 
+###### Isolate data for non-malarial antigens and test samples only (no controls) or test samples and controls
     ###negative values are included here
     ###this first section is repeated from FMM script (Sanger Analysis Non-Malarial Antigens)
 
@@ -45,8 +45,16 @@ testdata.df <- tibble::column_to_rownames(testdata.df, var="Row.names")
 row.names(testdata.df) <- testdata.df$Name
 Ftestdata <- testdata.df[,1:ncol(testdata)]
 
+#do the same thing for the matrix that has the controls - need this later
+#Replace current target names with original target names now that control targets are removed
+subdata.df <- merge(subdata, annotation_targets.df, by ="row.names", sort = FALSE)
+subdata.df <- tibble::column_to_rownames(subdata.df, var="Row.names")
+row.names(subdata.df) <- subdata.df$Name
+Fsubdata <- subdata.df[,1:ncol(subdata)]
+
 #Merge with target metadata to filter based on expression tag etc.
 target.df <- merge(target_meta.df, Ftestdata, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+targetsub.df <- merge(target_meta.df, Fsubdata, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
 
 #isolate data for non-malarial antigens
 NMdatameta <- filter(target.df, Category == "non_malarial")
@@ -56,8 +64,15 @@ rownames(NMdata) <- NMdatameta$Name
 min(NMdata) #-7.300968
 max(NMdata) #8.524411
 
+#repeat for subdata (test and control samples)
+NMallsampmeta <- filter(targetsub.df, Category == "non_malarial")
+NMallsampdata <- NMallsampmeta[,(ncol(target_meta.df)+1):ncol(NMallsampmeta)]
+rownames(NMallsampdata) <- NMallsampmeta$Name
+
 #Transpose data so antigens are columns - it's now a matrix
 tNMdata <- t(NMdata)
+
+tNMallsampdata <- t(NMallsampdata)
 
 ##### Remove antigens which we are not analyzing from cutoff matrix and data matrix
 rmant <- c("CT706","Pertussis JNIH-5 [100] *", "CT110", "Pertussis JNIH-3 [1] *", "Pertussis JNIH-3 [0.1] *")
@@ -97,21 +112,26 @@ graphics.off()
 #DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
 #Then can subset antigens, samples, etc from the seropositivity matrix and the final data frame.
 
-#Do seropositivity calculations on norm_sub5.df, which has excluded samples removed, but still includes controls.
+#Do seropositivity calculations on NMallsampdata, which has excluded samples removed, but still includes controls.
+
+#need to remove the antigens we aren't using again, from all samp data
+bitta <- as.data.frame(tNMallsampdata[,!colnames(tNMallsampdata) %in% rmant])
+
+#confirm that all antigens are in the same order - all TRUE
+rownames(finalcut) == colnames(bitta)
 
 #Apply the final cutoff to ALL antigens, ALL dilutions, for test and control samples
-SP_all.df <- t(apply(norm_sub5.df, 1, function(x) ((x > final_cutoff)+0)))
-colnames(SP_all.df) <- colnames(norm_sub5.df)
+SP_all.df <- t(apply(bitta, 1, function(x) ((x > c(finalcut))+0)))
 
 #Make a new data frame where seropositive values will be the data and otherwise it will be NA
-SP_all_data.df <- data.frame(matrix(NA, nrow = nrow(norm_sub5.df), ncol = ncol(norm_sub5.df)))
-rownames(SP_all_data.df) <- rownames(norm_sub5.df)
-colnames(SP_all_data.df) <- colnames(norm_sub5.df)
+SP_all_data.df <- data.frame(matrix(NA, nrow = nrow(bitta), ncol = ncol(bitta)))
+rownames(SP_all_data.df) <- rownames(bitta)
+colnames(SP_all_data.df) <- colnames(bitta)
 
-for(b in 1:ncol(norm_sub5.df)){
-  for(a in 1:nrow(norm_sub5.df)){
+for(b in 1:ncol(bitta)){
+  for(a in 1:nrow(bitta)){
     if(SP_all.df[[a,b]]==1){
-      SP_all_data.df[[a,b]] <- norm_sub5.df[[a,b]] 
+      SP_all_data.df[[a,b]] <- bitta[[a,b]] 
     }
   }
 }
