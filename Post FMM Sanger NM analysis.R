@@ -1,6 +1,6 @@
 #Sanger Data Analysis Script
 #Katie Glass
-#updated: 9/11/18
+#updated: 9/12/18
 
 #####################################
 ############DATA ANALYSIS############
@@ -25,6 +25,7 @@ library(gcookbook)
 library(dplyr)
 library(reshape2)
 library(corrplot)
+library(ggbeeswarm)
 
 load(file="Sanger.2.Update.RData")
 load(file = "sangerNMcutoffsfinal.RData")
@@ -210,3 +211,48 @@ neg_data_melt
 
 #There are only three values to add to the plot.
 #Not worth adding these to the plot - just mention them in the figure caption and text.
+
+###3. Plot Antigen Continuous data by age and gender 
+
+#merge relevant data with sample meta data 
+subtacos <- merge(sample_meta_f.df, tacos.Pk.data, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
+
+antnames <- colnames(tacos.Pk.data)
+
+subtacos$day <- factor(subtacos$day, levels = as.character(c("0", "7", "28")))
+
+#need to melt the data for ggplot2
+
+subtacosm <- melt(subtacos, measure.vars = antnames, na.rm = TRUE)
+
+subtacosm$Age <- as.numeric(subtacosm$Age)
+
+#plot parasite count vs antibody response
+
+for(i in 1:length(antnames)){
+  
+  antigen = antnames[i]
+  
+  ant1 <- filter(subtacosm, variable == antigen)
+  
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.PC.tif"), width = 3.5, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1, aes(x = parasitecount, y = value, color = day)) + geom_point() +
+          theme_bw() + labs(x = "Parasite Count at Day 0", y = "Log2(MFI Ratio)", title = antigen) + 
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12))+ xlim(0,7000) + ylim(0,7))
+  
+  graphics.off()
+  
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.age.tif"), width = 3.5, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1, aes(x = Age, y = value, color = day)) + geom_point() +
+          theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + 
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12))+ xlim(0,60) + ylim(0,7))
+  
+  graphics.off()
+  
+}
