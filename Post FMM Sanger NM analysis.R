@@ -240,7 +240,7 @@ for(i in 1:length(antnames)){
   #isolate cutoff for the antigen
   cut1 <- finalcut[i]
   
-  #age in years (no bins)
+  #age in years (no bins) scatter plot
   png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.age.tif"), width = 3.5, height = 3, units = "in", res = 1200)
   
   print(ggplot(ant1, aes(x = ant1$"Age in years", y = value)) + geom_point(color = "blue", shape = 17, size = 0.5) +
@@ -251,5 +251,21 @@ for(i in 1:length(antnames)){
           geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
   
   graphics.off()
+  
+  # by gender boxplot
+  ant1gender <- filter(ant1, Gender == "male" | Gender == "female")
+  
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Gender.tif"), width = 2.7, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1gender, aes(x = Gender, y = value, fill = Gender)) + geom_boxplot(outlier.size = 0.3, show.legend=F) +
+          theme_bw() + labs(x = "Gender", y = "Log2(MFI Ratio)", title = antigen) + 
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+          geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+  
+  graphics.off()
+  
+  # 
   
 }
