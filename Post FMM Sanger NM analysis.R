@@ -227,6 +227,7 @@ antnames <- colnames(SP_NM_test2)
 subtacosm <- melt(subtacos, measure.vars = antnames, na.rm = TRUE)
 
 subtacosm$"Age in years" <- as.numeric(subtacosm$"Age in years")
+subtacosm$"Number of episodes of malaria in life" <- as.numeric(subtacosm$"Number of episodes of malaria in life")
 
 #plot with selected epi variables vs antibody response
 
@@ -266,13 +267,11 @@ for(i in 1:length(antnames)){
   
   graphics.off()
   
-  # by ethnicity boxplot 
-  ant1eth <- filter(ant1, Ethnicity == "black" | Ethnicity == "mestiza" | Ethnicity == "white" )
+  #by gender beeswarm and violin plot
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Gender_V_bee.tif"), width = 3, height = 4, units = "in", res = 1200)
   
-  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Eth.tif"), width = 3, height = 3, units = "in", res = 1200)
-  
-  print(ggplot(ant1eth, aes(x = Ethnicity, y = value, fill = Ethnicity)) + geom_boxplot(outlier.size = 0.3, show.legend=F) +
-          theme_bw() + labs(x = "Ethnicity", y = "Log2(MFI Ratio)", title = antigen) + 
+  print(ggplot(ant1gender, aes(x = Gender, y = value, color = Gender)) + geom_violin(scale = "width", color = "black") +
+          theme_bw() + labs(x = "Gender", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 1, size = 0.5, show.legend = F) +
           theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
           theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
           theme(legend.title = element_text(size = 12)) + ylim(0,8) +
@@ -280,10 +279,28 @@ for(i in 1:length(antnames)){
   
   graphics.off()
   
-  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Eth_V.tif"), width = 3, height = 3, units = "in", res = 1200)
+  #by occupation beeswarm and violin plot
+  ant1occ <- filter(ant1, !(Occupation == "" | Occupation == "NA"))
   
-  print(ggplot(ant1eth, aes(x = Ethnicity, y = value, fill = Ethnicity)) + geom_violin(scale = "width", show.legend=F) +
-          theme_bw() + labs(x = "Ethnicity", y = "Log2(MFI Ratio)", title = antigen) + 
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Occup_V_bee.tif"), width = 7, height = 4, units = "in", res = 1200)
+  
+  print(ggplot(ant1occ, aes(x = Occupation, y = value, color = Occupation)) + geom_violin(scale = "width", color = "black") +
+          theme_bw() + labs(x = "Occupation", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = .3, size = 0.5, show.legend = F) +
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+          theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 9)) +
+          geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+  
+  graphics.off()
+  
+  #by hospitalized by malaria beeswarm and violin plot 
+  ant1hosp <- filter(ant1, ant1$"Hospitalised by malaria" == "yes" |  ant1$"Hospitalised by malaria" == "no")
+  
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.HospM_V_bee.tif"), width = 3, height = 4, units = "in", res = 1200)
+  
+  print(ggplot(ant1hosp, aes(x = ant1hosp$"Hospitalised by malaria", y = value, color = ant1hosp$"Hospitalised by malaria")) + geom_violin(scale = "width", color = "black") +
+          theme_bw() + labs(x = "Hospitalized by Malaria", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 1, size = 0.5, show.legend = F) +
           theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
           theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
           theme(legend.title = element_text(size = 12)) + ylim(0,8) +
@@ -291,17 +308,32 @@ for(i in 1:length(antnames)){
   
   graphics.off()
   
-  #This beeswarm plot showed me that there is no point doing ethnicity because there probably ~1000 black people, and only a few mestiza and white people
-  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Eth_V_bee.tif"), width = 3, height = 3, units = "in", res = 1200)
+  #by number malaria episodes scatter plot - this is probably not worth doing, but can tell if it is from this plot
+  ant1malep <- filter(ant1, !(ant1$"Number of episodes of malaria in life" == "" | ant1$"Number of episodes of malaria in life" == "NA"))
   
-  print(ggplot(ant1eth, aes(x = Ethnicity, y = value, color = Ethnicity)) + geom_violin(scale = "width", color = "black") +
-          theme_bw() + labs(x = "Ethnicity", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 3.5) +
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.MalEp.tif"), width = 3.5, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1malep, aes(x = ant1malep$"Number of episodes of malaria in life", y = value)) + geom_point(color = "blue", shape = 17, size = 0.5) +
+          theme_bw() + labs(x = "Number of malaria episodes", y = "Log2(MFI Ratio)", title = antigen) + 
           theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
           theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
-          theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+          theme(legend.title = element_text(size = 12))+ xlim(0,10) + ylim(0,8) +
           geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
   
   graphics.off()
   
+  #by number malaria episodes beeswarm and violin plot -- this looks stupid, violin part not working  
+  # 
+  # 
+  # png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.MalEp_V_bee.tif"), width = 7, height = 4, units = "in", res = 1200)
+  # 
+  # print(ggplot(ant1malep, aes(x = ant1malep$"Number of episodes of malaria in life", y = value, color = ant1malep$"Number of episodes of malaria in life")) + geom_violin(scale = "width", color = "black") +
+  #         theme_bw() + labs(x = "Number of malaria episodes", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = .3, size = 0.5, show.legend = F) +
+  #         theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+  #         theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+  #         theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+  #         geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+  # 
+  # graphics.off()
   
 }
