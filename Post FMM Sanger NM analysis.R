@@ -266,6 +266,42 @@ for(i in 1:length(antnames)){
   
   graphics.off()
   
-  # 
+  # by ethnicity boxplot 
+  ant1eth <- filter(ant1, Ethnicity == "black" | Ethnicity == "mestiza" | Ethnicity == "white" )
+  
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Eth.tif"), width = 3, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1eth, aes(x = Ethnicity, y = value, fill = Ethnicity)) + geom_boxplot(outlier.size = 0.3, show.legend=F) +
+          theme_bw() + labs(x = "Ethnicity", y = "Log2(MFI Ratio)", title = antigen) + 
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+          geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+  
+  graphics.off()
+  
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Eth_V.tif"), width = 3, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1eth, aes(x = Ethnicity, y = value, fill = Ethnicity)) + geom_violin(scale = "width", show.legend=F) +
+          theme_bw() + labs(x = "Ethnicity", y = "Log2(MFI Ratio)", title = antigen) + 
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+          geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+  
+  graphics.off()
+  
+  #This beeswarm plot showed me that there is no point doing ethnicity because there probably ~1000 black people, and only a few mestiza and white people
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Eth_V_bee.tif"), width = 3, height = 3, units = "in", res = 1200)
+  
+  print(ggplot(ant1eth, aes(x = Ethnicity, y = value, color = Ethnicity)) + geom_violin(scale = "width", color = "black") +
+          theme_bw() + labs(x = "Ethnicity", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 3.5) +
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+          geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+  
+  graphics.off()
+  
   
 }
