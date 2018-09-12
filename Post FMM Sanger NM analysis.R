@@ -142,14 +142,14 @@ remove(a,b)
 ########################################
 
 ###1. Plot number of seropositive people for each NM antigen, not including negative controls
+#there are 1325 test samples
+#there are 1361 with all controls. There are only two negative control pools. 
 
-#Isolate NM antigens and test samples only for seropositivity matrix
-SP_NM_test <- filter(target_SP.df, Category == "non_malarial")
-SP_NM_test <- tibble::column_to_rownames(SP_NM_test, var = "Name")
-SP_NM_test <- SP_NM_test[,sapply(SP_NM_test, is.numeric)]
+SP_test.df <- SP_all.df[(rownames(SP_all.df) %in% samples_test),]
+dim(SP_test.df)
 
 #data frame of sums of seropositives for each antigen, sorted highest to lowest
-SPpeople <- as.data.frame(as.matrix((sort(rowSums(SP_NM_test), decreasing = TRUE))))
+SPpeople <- as.data.frame(as.matrix((sort(rowSums(t(SP_test.df)), decreasing = TRUE))))
 SPpeople <- cbind(Target = rownames(SPpeople), SPpeople)
 SPpeople$Target <- as.factor(SPpeople$Target)
 #explicitly set factor levels to the correct order
