@@ -91,3 +91,110 @@ print(corrplot.mixed(cor(itta, use = "complete.obs"), tl.col="black", order = "a
 graphics.off()
 
 ##### isolate seropositive data!! :) 
+
+###Seropositivity Thresholds!!!###
+
+#DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
+#Then can subset antigens, samples, etc from the seropositivity matrix and the final data frame.
+
+#Do seropositivity calculations on norm_sub5.df, which has excluded samples removed, but still includes controls.
+
+#Apply the final cutoff to ALL antigens, ALL dilutions, for test and control samples
+SP_all.df <- t(apply(norm_sub5.df, 1, function(x) ((x > final_cutoff)+0)))
+colnames(SP_all.df) <- colnames(norm_sub5.df)
+
+#Make a new data frame where seropositive values will be the data and otherwise it will be NA
+SP_all_data.df <- data.frame(matrix(NA, nrow = nrow(norm_sub5.df), ncol = ncol(norm_sub5.df)))
+rownames(SP_all_data.df) <- rownames(norm_sub5.df)
+colnames(SP_all_data.df) <- colnames(norm_sub5.df)
+
+for(b in 1:ncol(norm_sub5.df)){
+  for(a in 1:nrow(norm_sub5.df)){
+    if(SP_all.df[[a,b]]==1){
+      SP_all_data.df[[a,b]] <- norm_sub5.df[[a,b]] 
+    }
+  }
+}
+remove(a,b)
+
+########################################
+############### Plots!!! ###############
+########################################
+
+###1. Plot number of seropositive people for each NM antigen, not including negative controls
+
+#Isolate NM antigens and test samples only for seropositivity matrix
+SP_NM_test <- filter(target_SP.df, Category == "non_malarial")
+SP_NM_test <- tibble::column_to_rownames(SP_NM_test, var = "Name")
+SP_NM_test <- SP_NM_test[,sapply(SP_NM_test, is.numeric)]
+
+#data frame of sums of seropositives for each antigen, sorted highest to lowest
+SPpeople <- as.data.frame(as.matrix((sort(rowSums(SP_NM_test), decreasing = TRUE))))
+SPpeople <- cbind(Target = rownames(SPpeople), SPpeople)
+SPpeople$Target <- as.factor(SPpeople$Target)
+#explicitly set factor levels to the correct order
+SPpeople$Target <- factor(SPpeople$Target, levels = SPpeople$Target[order(-SPpeople$V1)])
+
+png(filename = paste0(study, "_NM_SPpeople.tif"), width = 8, height = 4.5, units = "in", res = 1200)
+
+ggplot(SPpeople, aes(x = Target, y = V1)) + theme_bw() + geom_bar(stat="identity") + 
+  ylab("Number of Seropositive Individuals") + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black"))
+
+graphics.off()
+
+###2. Boxplot of seropositive data from highest to lowest median value
+#Add negative controls plotted separately as a point on the same plot? or a small red line?
+
+#isolate data for NM only (it's already test samples only)
+#This data frame only has 1182 out of 1325 test samples now, 
+#because the others were not seropositive to any antigens and were therefore NA, which is not numeric
+SP_NM_test2 <- filter(target_SP_data.df, Category == "non_malarial")
+SP_NM_test2 <- tibble::column_to_rownames(SP_NM_test2, var = "Name")
+SP_NM_test2 <- SP_NM_test2[,sapply(SP_NM_test2, is.numeric)]
+
+#melt the SP only data with Na.rm = TRUE to organize for ggplot2
+SPdatamelt <- melt(as.matrix(SP_NM_test2), na.rm = TRUE)
+colnames(SPdatamelt) <- c("Target", "Sample", "Normalized")
+
+#violin plot
+ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + geom_violin()
+
+png(filename = paste0(study, "_NM_All_SP_data_violin.tif"), width = 5, height = 8, units = "in", res = 1200)
+
+ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + theme_bw() +
+  geom_violin() + coord_flip() + xlab("Target") + ylab("Normalized Log2(MFI)") + 
+  theme(text = element_text(size=10)) + theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black"))
+
+graphics.off()
+
+#boxplot
+png(filename = paste0(study, "_NM_All_SP_data_box.tif"), width = 5, height = 8, units = "in", res = 1200)
+
+ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + theme_bw() +
+  geom_boxplot(outlier.size = 0.3) + coord_flip() + xlab("Target") + ylab("Normalized Log2(MFI)") + 
+  theme(text = element_text(size=10)) + theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black")) + ylim(0,8)
+
+graphics.off()
+
+#add negative controls as points to the boxplot?
+NM_con_data <- filter(target_SP_con_data.df, Category == "non_malarial")
+NM_con_data <- tibble::column_to_rownames(NM_con_data, var = "Name")
+neg_samples <-c(grep("Neg", colnames(NM_con_data)))
+NM_neg_data <- NM_con_data[,neg_samples]
+#There are only two values to add to the plot...one for TT and one for RubIV, both the same neg pool
+#Not sure if it's worth the trouble of adding these to the plot or just mentioning in the figure caption and text.
+
+png(filename = paste0(study, "_NM_All_SP_data_box_Neg.tif"), width = 5, height = 8, units = "in", res = 1200)
+
+ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + theme_bw() +
+  geom_boxplot(outlier.size = 0.3) + coord_flip() + xlab("Target") + ylab("Normalized Log2(MFI)") + 
+  theme(text = element_text(size=10)) + theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black")) + ylim(0,8)
+
+graphics.off()
+
+
