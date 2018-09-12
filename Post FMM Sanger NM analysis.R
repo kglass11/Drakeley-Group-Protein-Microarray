@@ -159,7 +159,7 @@ SPpeople$Target <- factor(SPpeople$Target, levels = SPpeople$Target[order(-SPpeo
 png(filename = paste0(study, "_NM_SPpeople.tif"), width = 8, height = 4.5, units = "in", res = 1200)
 
 ggplot(SPpeople, aes(x = Target, y = V1)) + theme_bw() + geom_bar(stat="identity") + 
-  ylab("Number of Seropositive Individuals") + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
+  ylab("Number of Seropositive Individuals") + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 8)) +
   theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
   theme(axis.text.x = element_text(color = "black"))
 
@@ -187,13 +187,24 @@ ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized))
 
 graphics.off()
 
-#boxplot
+#boxplot vertical
 png(filename = paste0(study, "_NM_All_SP_data_box.tif"), width = 5, height = 8, units = "in", res = 1200)
 
 ggplot(SPdatamelt, aes(x=reorder(Target, Normalized, FUN=median), y=Normalized)) + theme_bw() +
   geom_boxplot(outlier.size = 0.3, fill ="lightblue") + coord_flip() + xlab("Target") + ylab("Normalized Log2(MFI)") + 
   theme(text = element_text(size=10)) + theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
   theme(axis.text.x = element_text(color = "black")) + ylim(0,8)
+
+graphics.off()
+
+#boxplot horizontal
+png(filename = paste0(study, "_NM_All_SP_data_box_H.tif"), width = 8, height = 5, units = "in", res = 1200)
+
+ggplot(SPdatamelt, aes(x=reorder(Target, -Normalized, FUN=median), y=Normalized)) + theme_bw() +
+  geom_boxplot(outlier.size = 0.3, fill ="lightblue") + xlab("Target") + ylab("Normalized Log2(MFI)") + 
+  theme(text = element_text(size=10)) + theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  theme(axis.text.x = element_text(color = "black")) + ylim(0,8) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 8))
 
 graphics.off()
 
@@ -214,6 +225,24 @@ neg_data_melt
 
 ###3. Plot Antigen Continuous data by age, gender, occupation, hospitalized by malaria, 
   #ethnicity, number of episodes of malaria in life
+
+sample_meta_f.df$AgeBin <- NA
+
+#add age bins to sample_meta_f.df 
+for(i in 1:nrow(sample_meta_f.df)){
+  if (is.na(sample_meta_f.df$"Age in years"[i])) {i = i +1}
+  else if (sample_meta_f.df$"Age in years"[i] < 5) {sample_meta_f.df$AgeBin[i] <- "< 5"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 5 & sample_meta_f.df$"Age in years"[i] < 15) {sample_meta_f.df$AgeBin[i] <- "5-14"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 15 & sample_meta_f.df$"Age in years"[i] < 25) {sample_meta_f.df$AgeBin[i] <- "15-24"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 25 & sample_meta_f.df$"Age in years"[i] < 35) {sample_meta_f.df$AgeBin[i] <- "25-34"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 35 & sample_meta_f.df$"Age in years"[i] < 50) {sample_meta_f.df$AgeBin[i] <- "35-49"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 50 & sample_meta_f.df$"Age in years"[i] < 70) {sample_meta_f.df$AgeBin[i] <- "50-69"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 70 & sample_meta_f.df$"Age in years"[i] < 100) {sample_meta_f.df$AgeBin[i] <- "70-100"}
+}
+
+#explicitly set factor levels for age bins
+sample_meta_f.df$AgeBin <- factor(sample_meta_f.df$AgeBin, levels = c("< 5", "5-14","15-24","25-34", "35-49", "50-69", "70-100"))
+
 
 #merge relevant data with sample meta data 
 subtacos <- merge(sample_meta_f.df, SP_NM_test2 , by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
@@ -249,6 +278,20 @@ for(i in 1:length(antnames)){
           theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
           theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
           theme(legend.title = element_text(size = 12))+ xlim(0,100) + ylim(0,8) +
+          geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+  
+  graphics.off()
+  
+  #age bins bee swarm and violin plot -- change the plot below! 
+  ant1bin <- filter(ant1, !AgeBin == "NA")
+  
+  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.ageBINS_V_bee.tif"), width = 7, height = 4, units = "in", res = 1200)
+  
+  print(ggplot(ant1bin, aes(x = AgeBin, y = value, color = AgeBin)) + geom_violin(scale = "width", color = "black") +
+          theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 0.75, size = 0.5, show.legend = F) +
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+          theme(legend.title = element_text(size = 12)) + ylim(0,8) +
           geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
   
   graphics.off()
