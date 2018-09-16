@@ -106,6 +106,18 @@ print(corrplot.mixed(cor(itta, use = "complete.obs"), tl.col="black", order = "a
 
 graphics.off()
 
+#Scatter plot for HSV1 vs HSV2
+png(filename = paste0(study, "_HSV1_v_HSV2.tif"), width = 5, height = 4, units = "in", res = 600)
+par(mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
+    mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=1)
+
+plot(itta$HSV1, itta$HSV2, col="red", cex = 0.1, xlab = "HSV1", ylab = "HSV2")
+abline(h=1.3977643) #cutoff for HSV2
+abline(v=1.4123652) #cutoff for HSV1
+
+graphics.off()
+
+
 ##### isolate seropositive data!! :) 
 
 ###Seropositivity Thresholds!!!###
