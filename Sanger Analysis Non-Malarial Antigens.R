@@ -12,7 +12,7 @@ rm(list=ls())
 
 #I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Data Processed
 #"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens"
-setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger NM V2")
+setwd("I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens/Sanger NM V2")
 getwd()
 
 require("gtools")
@@ -99,9 +99,9 @@ f2<-function(x,prob,lambda,mu,sigma,k,k1){
 #Go through each antigen one at a time to do all the calculations and plots
 ag_list <- colnames(tNMdata)
 
-cutoffsaved <- matrix(NA, nrow = length(ag_list), ncol = 1)
+cutoffsaved <- matrix(NA, nrow = length(ag_list), ncol = 2)
 rownames(cutoffsaved) <- ag_list
-colnames(cutoffsaved) <- c("xSD-L", "3SD")
+colnames(cutoffsaved) <- c("xSD-L", "2SD")
 
 #number of SD to add to mean to get cutoff
 xSD <- 2
@@ -125,11 +125,14 @@ for(i in 1: length(ag_list)){
 
   cutoffSD <- fit.ab2$mu[min_comp1] + xSD * sqrt(fit.ab2$sigma[min_comp1])
   
+  cutoff2SD <- log2(2^(fit.ab2$mu[min_comp1]) + xSD * 2^(fit.ab2$sigma[min_comp1]))
+  
   #store cutoffs
   cutoffsaved[i,1] <- cutoffSD
+  cutoffsaved[i,2] <- cutoff2SD
  
   #4 Plot Density and QQPlots - Cutoff marked on Density Plot
-  png(filename = paste0(study,"_Density_QQ_2SD", antigen, "v3.tif"), width = 8, height = 4, units = "in", res = 600)
+  png(filename = paste0(study,"_Density_QQ_2SD", antigen, "v4.tif"), width = 8, height = 4, units = "in", res = 600)
   par(mfrow=c(1,2))
 
     plot(density(antibody1),xlab='Log2(MFI Ratio)',main='')
