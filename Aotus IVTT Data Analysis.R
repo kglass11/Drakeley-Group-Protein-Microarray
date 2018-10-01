@@ -30,6 +30,23 @@ load("Macaque_IVTT_AfterProcessing.RData")
 
 sample_meta1 <- read.csv("Pvivax_Aotus_Repeated_Expt_Samples_List_092518.csv")
 
+#need to add green box monkeys as a metadata column, these are different for each inoculation (INOC_LEVEL)
+
+sample_meta1$Green_box <- "No"
+
+mone <- c("30014", "30034", "32028", "32047", "25029", "29012")
+mtwo <- c("30014", "30034", "32028", "32047", "25029", "29041")
+mthree <- c("30014", "32028", "32047", "25029", "32029")
+mfour <- c("30014","27050","32028","32047", "25029","31029")
+
+#this isn't working yet
+for (k in 1: length(mone)){
+  for(i in nrow(sample_meta1)){
+    if(sample_meta1[i,sample_meta1$INOC_LEVEL] == 1 & sample_meta1[i,2] == mone[k]){
+      sample_meta1[i,sample_meta1$Green_box] <- "Yes"}
+}
+}
+
 #use this data frame for everything where you need extract metadata
 sampleinfo <- merge(sample_meta_f.df, sample_meta1, by.x = "sample_id", by.y = "SAMPLE_ID", all.x = TRUE)
 
