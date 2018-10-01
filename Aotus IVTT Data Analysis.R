@@ -44,6 +44,8 @@ missingmeta <- filter(sampleinfo, is.na(sampleinfo$MONKEY) & sample_type == "tes
 sampleinfo$DAY <- as.character(sampleinfo$DAY)
 sampleinfo$slide_no <- as.character(sampleinfo$slide_no)
 sampleinfo$block_rep_1 <- as.character(sampleinfo$block_rep_1)
+sampleinfo$MONKEY <- as.character(sampleinfo$MONKEY)
+
 
 #maybe should look at the data before determining how to do the cutoffs, 
 #whether to do them for each sample or each antigen
@@ -77,7 +79,7 @@ sample_cutoff <- cor2_buffer_sample_mean + 3*cor2_buffer_sample_sd
 log_sample_cutoff <- log2(sample_cutoff)
 norm_sample_cutoff <- log_sample_cutoff - log_buffer_sample_mean
 
-#Tailor the norm_sample_cutoff to remove excluded samples and control samples
+#Tailor the norm_sample_cutoff to remove excluded samples
 buffer_cutoff.matrix <- as.matrix(norm_sample_cutoff)
 rownames(buffer_cutoff.matrix, colnames(norm4.matrix))
 sub_cutoff <- buffer_cutoff.matrix[(!rownames(buffer_cutoff.matrix) %in% samples_exclude),]
@@ -90,14 +92,50 @@ plot(sub_cutoff, pch='*', col = "blue", ylim=c(0,max(sub_cutoff)*1.25),
 
 graphics.off()
 
-#### pick up from here tomorrow, the below needs workd
-
-#At this point, Remove control samples for further analysis
-norm_sub6.df <- norm_sub5.df[,colnames(norm_sub5.df) %in% samples_test]
-
-#Then can apply the norm_sample_cutoff all antigens
+#Then can apply the norm_sample_cutoff all antigens and all samples
 seropos.matrix <- t(apply(norm_sub4.df, 1, function(x) ((x > sub_cutoff)+0)))
 
+#At this point, Remove control samples for further analysis
+norm_sub6.df <- norm_sub4.df[,colnames(norm_sub4.df) %in% samples_test]
+SP.matrix <- seropos.matrix[,1:150]
+
+
+###Create a threshold for overall target reactivity
+#e.g. To be included in heatmaps and other analyses, perhaps targets should be reacted to by at least 5% of people?
+#All Pv antigens
+Pv_target_breadth <- rowSums(SP.matrix, na.rm=TRUE)
+Pv_target_reactive <- Pv_target_breadth > (ncol(SP.matrix)/100)*5
+cat(sum(Pv_target_reactive), "out of", nrow(SP.matrix), "Pv targets are reactive in at least 5% of monkey samples")
+
+#49 out of 244 Pv targets are reactive in at least 5% of monkey samples
+#34 out of 244 Pv targets are reactive in at least 10% of monkey samples
+
+#Make a data frame with only seropositive data, NA for everything else
+#This is for ALL SAMPLES and ANTIGENS in case you want the other data later
+onlySP.df <- as.data.frame(matrix(NA, nrow = nrow(norm_sub4.df), ncol = ncol(norm_sub4.df)))
+rownames(onlySP.df) <- rownames(norm_sub4.df)
+colnames(onlySP.df) <- colnames(norm_sub4.df)
+
+for(i in 1:nrow(norm_sub4.df)){
+  for(k in 1:ncol(norm_sub4.df)){
+    if (seropos.matrix[i,k] == 1){
+      onlySP.df[i,k] <- norm_sub4.df[i,k]
+    }
+  }
+}
+
+# isolate only SP data for the target reactive only
+reactiveSP.df <- onlySP.df[Pv_target_reactive,]
+TreactiveSP <- as.data.frame(t(reactiveSP.df))
+
+# merge this with sample_meta to select by time point
+reactive_meta <- merge(sampleinfo, TreactiveSP, by.y = "row.names", by.x = "sample_id", sort = FALSE)
+
+#melt this for ggplot2
+antigens <- rownames(reactiveSP.df)
+reactivemelt <- melt(reactive_meta, measure.vars = antigens, na.rm = TRUE)
+
+#for each inoculation level separately, for each antigen separately, plot each monkey vs time.  
 
 
 
