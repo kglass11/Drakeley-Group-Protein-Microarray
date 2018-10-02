@@ -47,7 +47,7 @@ sampleinfo$slide_no <- as.character(sampleinfo$slide_no)
 sampleinfo$block_rep_1 <- as.character(sampleinfo$block_rep_1)
 sampleinfo$MONKEY <- as.character(sampleinfo$MONKEY)
 
-#make a separate metadata file for green monkeys only
+###make a separate metadata file for green monkeys only
 mone <- c("30014", "30034", "32028", "32047", "25029", "29012")
 mtwo <- c("30014", "30034", "32028", "32047", "25029", "29041")
 mthree <- c("30014", "32028", "32047", "25029", "32029")
@@ -67,6 +67,63 @@ green4 <- filter(sampleinfo, INOC_LEVEL == 4,
 
 greenmonkeys <- rbind(green1, green2, green3, green4)
 
+###merge greenmonkey metadata with all antigen data, no cutoffs implemented 
+
+#norm_sub4.df has data with control targets removed, no control samples removed;
+#GST subtracted, negative values set to 0 data 
+normsub4T <- t(norm_sub4.df)
+
+greenmonkdata <- merge(greenmonkeys, normsub4T, by.y = "row.names", by.x = "sample_id", sort = FALSE) 
+
+###export green monkey data for heatmap in excel 
+
+write.csv(greenmonkdata, file = "greenmonkeydata.csv")
+
+max(greenmonkdata[,16:259]) #5.753585
+.5 * max(greenmonkdata[,16:259]) #2.876793
+
+###determine which antigens have at least one value > 0 
+isogreen <-  greenmonkdata[,16:259]
+rownames(isogreen) <- greenmonkdata$sample_id
+
+greenpos <- apply(isogreen, 1, function(x) ((x > 0)+0))
+
+notzero <- which(rowSums(greenpos) > 0)
+length(notzero) #229/244 Pv IVTT antigens reactive in at least 1 sample
+
+nrow(greenmonkdata) * 0.05
+#5% of samples = 6.5 samples
+#10% of samples = 13 samples 
+
+#which antigens are reactive (above 0) in more than 5% of samples (rounding up)? 108 antigens
+fiveper <- which(rowSums(greenpos) > 7)
+length(fiveper)
+
+#which antigens are reactive (above 0) in more than 10% of samples? 71 antigens
+tenper <- which(rowSums(greenpos) > 13)
+length(tenper)
+
+#prepare the data to make a heatmap of only the antigens which are reactive in more than 10% of samples
+tengreen <- isogreen[,tenper]
+mns <- colMeans(tengreen)
+tengreen <- tengreen[,order(mns, decreasing = TRUE)]
+
+#prepare data frame to export to excel to make heatmap
+
+subgreenmonk <- merge(greenmonkeys, tengreen, by.y = "row.names", by.x = "sample_id", sort = FALSE) 
+
+###export green monkey data for heatmap in excel 
+
+write.csv(subgreenmonk, file = "subgreenmonk.csv")
+
+
+
+###### Plots!!! ######
+
+#for each inoculation level separately, for each antigen separately, plot each monkey vs time.  
+
+
+######### Seropositivity Cutoffs ########### 
 
 #maybe should look at the data before determining how to do the cutoffs, 
 #whether to do them for each sample or each antigen
@@ -74,12 +131,7 @@ greenmonkeys <- rbind(green1, green2, green3, green4)
 # seropositivity cutoffs for each antigen based on mean + 3SD of reactivity of uninfected monkeys (time zero)
 #use data where the negatives have been set to 0 or not? look at data then decide 
 
-#norm_sub4.df has data with control targets removed, no control samples removed;
-#GST subtracted, negative values set to 0 data 
-
 #prepare overall data frame with all data and sample metadata for filtering 
-normsub4T <- t(norm_sub4.df)
-
 info_data <- merge(sampleinfo, normsub4T, by.y = "row.names", by.x = "sample_id", sort = FALSE)
 
 #isolate data for time 0 (uninfected monkeys)
