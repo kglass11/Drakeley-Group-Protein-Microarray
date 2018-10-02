@@ -24,28 +24,12 @@ library(corrgram)
 library(corrplot)
 library(ggbeeswarm)
 
-setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/120718 Monkey_IVTT")
+setwd("/Users/Katie/Desktop/R files from work/120718 Monkey_IVTT")
+#"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/120718 Monkey_IVTT"
 
 load("Macaque_IVTT_AfterProcessing.RData")
 
 sample_meta1 <- read.csv("Pvivax_Aotus_Repeated_Expt_Samples_List_092518.csv")
-
-#need to add green box monkeys as a metadata column, these are different for each inoculation (INOC_LEVEL)
-
-sample_meta1$Green_box <- "No"
-
-mone <- c("30014", "30034", "32028", "32047", "25029", "29012")
-mtwo <- c("30014", "30034", "32028", "32047", "25029", "29041")
-mthree <- c("30014", "32028", "32047", "25029", "32029")
-mfour <- c("30014","27050","32028","32047", "25029","31029")
-
-#this isn't working yet
-for (k in 1: length(mone)){
-  for(i in nrow(sample_meta1)){
-    if(sample_meta1[i,sample_meta1$INOC_LEVEL] == 1 & sample_meta1[i,2] == mone[k]){
-      sample_meta1[i,sample_meta1$Green_box] <- "Yes"}
-}
-}
 
 #use this data frame for everything where you need extract metadata
 sampleinfo <- merge(sample_meta_f.df, sample_meta1, by.x = "sample_id", by.y = "SAMPLE_ID", all.x = TRUE)
@@ -62,6 +46,26 @@ sampleinfo$DAY <- as.character(sampleinfo$DAY)
 sampleinfo$slide_no <- as.character(sampleinfo$slide_no)
 sampleinfo$block_rep_1 <- as.character(sampleinfo$block_rep_1)
 sampleinfo$MONKEY <- as.character(sampleinfo$MONKEY)
+
+#make a separate metadata file for green monkeys only
+mone <- c("30014", "30034", "32028", "32047", "25029", "29012")
+mtwo <- c("30014", "30034", "32028", "32047", "25029", "29041")
+mthree <- c("30014", "32028", "32047", "25029", "32029")
+mfour <- c("30014","27050","32028","32047", "25029","31029")
+
+green1 <- filter(sampleinfo, INOC_LEVEL == 1, 
+  (MONKEY == mone[1] | MONKEY == mone[2]| MONKEY == mone[3]| MONKEY == mone[4]| MONKEY == mone[5]| MONKEY == mone[6]))
+
+green2 <- filter(sampleinfo, INOC_LEVEL == 2, 
+  (MONKEY == mtwo[1] | MONKEY == mtwo[2]| MONKEY == mtwo[3]| MONKEY == mtwo[4]| MONKEY == mtwo[5]| MONKEY == mtwo[6]))
+
+green3 <- filter(sampleinfo, INOC_LEVEL == 3, 
+  (MONKEY == mthree[1] | MONKEY == mthree[2]| MONKEY == mthree[3]| MONKEY == mthree[4]| MONKEY == mthree[5]| MONKEY == mthree[6]))
+
+green4 <- filter(sampleinfo, INOC_LEVEL == 4, 
+  (MONKEY == mfour[1] | MONKEY == mfour[2]| MONKEY == mfour[3]| MONKEY == mfour[4]| MONKEY == mfour[5]| MONKEY == mfour[6]))
+
+greenmonkeys <- rbind(green1, green2, green3, green4)
 
 
 #maybe should look at the data before determining how to do the cutoffs, 
