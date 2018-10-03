@@ -109,18 +109,55 @@ mns <- colMeans(tengreen)
 tengreen <- tengreen[,order(mns, decreasing = TRUE)]
 
 #prepare data frame to export to excel to make heatmap
-
 subgreenmonk <- merge(greenmonkeys, tengreen, by.y = "row.names", by.x = "sample_id", sort = FALSE) 
 
 ###export green monkey data for heatmap in excel 
-
 write.csv(subgreenmonk, file = "subgreenmonk.csv")
-
-
 
 ###### Plots!!! ######
 
 #for each inoculation level separately, for each antigen separately, plot each monkey vs time.  
+
+#set factor level order for day manually 
+subgreenmonk$DAY <- factor(subgreenmonk$DAY, levels = as.character(c("-1", "7", "10", "13", "14", "20", "21", "28", "29", "57")))
+
+#antigens are the top 25 antigens by mean from subgreenmonk / tengreen
+antnames <- colnames(tengreen[1:25])
+
+#data is subgreenmonk removing rest of antigens 
+subtacos <- subgreenmonk[,1:(16+24)]
+
+#not sure if we need this yet
+#subtacos$day <- factor(subtacos$day, levels = as.character(c("0", "7", "28")))
+
+#need to melt the data for ggplot2
+subtacosm <- melt(subtacos, measure.vars = antnames, na.rm = TRUE)
+
+#plot antibody response over time, each monkey a different line
+
+for(i in 1:length(antnames)){
+  
+  antigen = antnames[i]
+  
+  ant1 <- filter(subtacosm, variable == antigen)
+  
+  png(filename = paste0(study, "_", antigen,"_time_by_monkey.tif"), width = 8, height = 2.75, units = "in", res = 1200)
+  
+  print(ggplot(ant1, aes(x = DAY, y = as.numeric(value), color = MONKEY)) +
+          geom_point(shape=18, size = 2) +
+          geom_line(aes(group = MONKEY)) + 
+          facet_wrap(~ INOC_LEVEL, nrow = 1, scales = "free_x") +
+          theme_bw() + labs(x = "Day", y = "Log2(MFI Ratio)", title = antigen) + 
+          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+          theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 10, color = "black")) +
+          theme(legend.title = element_text(size = 10)) + 
+          theme(title = element_text(size = 12, face = "bold")) +
+          theme(strip.background = element_rect(colour="black", fill="white", size=1, linetype="solid")))
+          
+  graphics.off()
+  
+}
+
 
 
 ######### Seropositivity Cutoffs ########### 
