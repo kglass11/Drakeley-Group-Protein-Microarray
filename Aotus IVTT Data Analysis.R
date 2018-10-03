@@ -29,17 +29,41 @@ setwd("/Users/Katie/Desktop/R files from work/120718 Monkey_IVTT")
 
 load("Macaque_IVTT_AfterProcessing.RData")
 
+#change the study name 
+study <- "Aotus_IVTT"
+
 sample_meta1 <- read.csv("Pvivax_Aotus_Repeated_Expt_Samples_List_092518.csv")
 
 #use this data frame for everything where you need extract metadata
-sampleinfo <- merge(sample_meta_f.df, sample_meta1, by.x = "sample_id", by.y = "SAMPLE_ID", all.x = TRUE)
+sampleinfo1 <- merge(sample_meta_f.df, sample_meta1, by.x = "sample_id", by.y = "SAMPLE_ID", all.x = TRUE)
 
-duplicatemeta <- sampleinfo[duplicated(sampleinfo$sample_id),] #there are no duplicated sample IDS
+duplicatemeta <- sampleinfo1[duplicated(sampleinfo$sample_id),] #there are no duplicated sample IDS
 
-distinct(as.data.frame(sampleinfo$MONKEY)) #there are 12 monkeys, but only numbers for 11
+distinct(as.data.frame(sampleinfo1$MONKEY)) #there are 12 monkeys, but only numbers for 11
 
 #There are 8 sample IDS for which there is no monkey number or any other metadata 
-missingmeta <- filter(sampleinfo, is.na(sampleinfo$MONKEY) & sample_type == "test") 
+missingmeta <- filter(sampleinfo1, is.na(sampleinfo$MONKEY) & sample_type == "test") 
+
+#it turns out there are actually a lot of duplicate samples, they just have different sample IDs
+
+#isolate duplicate data 
+duplicated(sampleinfo1[,c("DAY", "INOC_LEVEL", "MONKEY")])
+
+#Export a table of duplicate entries that do not match (i.e. there is a problem with epi data) 
+duplicate_metadata <- sample_meta2.df[(duplicated(sample_meta2.df$sample_id)| duplicated(sample_meta2.df$sample_id, fromLast=TRUE)),]
+write.csv(duplicate_metadata, file = paste0(study, "_duplicate_metadata.csv"))
+
+#Remove duplicate entries automatically (both duplicates)
+sample_meta3.df <- sample_meta2.df[!(duplicated(sample_meta2.df$sample_id) | duplicated(sample_meta2.df$sample_id, fromLast=TRUE)),]
+
+
+#remove duplicates from main study 
+
+#average duplicates
+
+#bind together averaged values for each duplicate and the unchanged non-duplicates 
+#call the final metadata data frame sampleinfo
+
 
 #make some columns of sampleinfo character instead of numeric
 sampleinfo$DAY <- as.character(sampleinfo$DAY)
@@ -157,7 +181,6 @@ for(i in 1:length(antnames)){
   graphics.off()
   
 }
-
 
 
 ######### Seropositivity Cutoffs ########### 
