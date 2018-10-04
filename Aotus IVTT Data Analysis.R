@@ -37,32 +37,97 @@ sample_meta1 <- read.csv("Pvivax_Aotus_Repeated_Expt_Samples_List_092518.csv")
 #use this data frame for everything where you need extract metadata
 sampleinfo1 <- merge(sample_meta_f.df, sample_meta1, by.x = "sample_id", by.y = "SAMPLE_ID", all.x = TRUE)
 
-duplicatemeta <- sampleinfo1[duplicated(sampleinfo$sample_id),] #there are no duplicated sample IDS
+duplicatemeta <- sampleinfo1[duplicated(sampleinfo1$sample_id),] #there are no duplicated sample IDS
 
 distinct(as.data.frame(sampleinfo1$MONKEY)) #there are 12 monkeys, but only numbers for 11
 
 #There are 8 sample IDS for which there is no monkey number or any other metadata 
-missingmeta <- filter(sampleinfo1, is.na(sampleinfo$MONKEY) & sample_type == "test") 
+missingmeta <- filter(sampleinfo1, is.na(sampleinfo1$MONKEY) & sample_type == "test") 
 
 #it turns out there are actually a lot of duplicate samples, they just have different sample IDs
 
 #isolate duplicate data 
-duplicated(sampleinfo1[,c("DAY", "INOC_LEVEL", "MONKEY")])
+rep1m <- sampleinfo1[duplicated(sampleinfo1[,c("DAY", "INOC_LEVEL", "MONKEY")]),]
+rep2m <- sampleinfo1[duplicated(sampleinfo1[,c("DAY", "INOC_LEVEL", "MONKEY")], fromLast = TRUE),]
 
-#Export a table of duplicate entries that do not match (i.e. there is a problem with epi data) 
-duplicate_metadata <- sample_meta2.df[(duplicated(sample_meta2.df$sample_id)| duplicated(sample_meta2.df$sample_id, fromLast=TRUE)),]
-write.csv(duplicate_metadata, file = paste0(study, "_duplicate_metadata.csv"))
+#it turns out that except for one sample, the duplicates are one serum and one plasma
+#rep1m (serum) and rep2m (plasma)
 
-#Remove duplicate entries automatically (both duplicates)
-sample_meta3.df <- sample_meta2.df[!(duplicated(sample_meta2.df$sample_id) | duplicated(sample_meta2.df$sample_id, fromLast=TRUE)),]
+#the 8 samples with no metadata are also being counted as duplicates because all the values are NA
 
+#that one sample is 12824 - for 27050, where it looks like at the day post 275, 
+#the inoculation was supposed to be 4,but is written down as 2. I am manually fixing this in the metadata csv file
 
-#remove duplicates from main study 
+#Remove duplicate entries automatically (both duplicates) to check if the rest of the samples are serum or plasma
+norepinfo <- sampleinfo1[!(duplicated(sampleinfo1[,c("DAY", "INOC_LEVEL", "MONKEY")]) | 
+                  duplicated(sampleinfo1[,c("DAY", "INOC_LEVEL", "MONKEY")], fromLast = TRUE)),]
 
-#average duplicates
+#How many samples are serum and how many are plasma?
+length(which(norepinfo$TYPE == "Serum"))
+18/(18+70) #0.2045455
+length(which(norepinfo$TYPE == "Plasma"))
+1 - 18/(18+70) #0.7954545
 
-#bind together averaged values for each duplicate and the unchanged non-duplicates 
+#bind together plasma duplicate and the unchanged non-duplicates 
 #call the final metadata data frame sampleinfo
+sampleinfo <- rbind(norepinfo, rep2m)
+
+
+#This commented section is the script for averaging duplicate spots for APAC, which is similar to this issue
+# #identify list of duplicate 1 and duplicate 2, use that to separate the data for rep1 and rep2
+# maltargets <- filter(target_meta2.df, Category == "malaria")
+# 
+# rep1m <- maltargets[duplicated(maltargets$Name),]
+# rep2m <- maltargets[duplicated(maltargets$Name, fromLast = TRUE),]
+# 
+# rep1unique <- rep1m$target_id_unique
+# rep2unique <- rep2m$target_id_unique
+# 
+# rep1data <- norm.matrix[(rownames(norm.matrix) %in% rep1unique),]
+# rep2data <- norm.matrix[(rownames(norm.matrix) %in% rep2unique),]
+# 
+# #get these matrices in the order where can just average the same element on each matrix
+# rep1d <- merge(annotation_targets.df, rep1data, by = "row.names",sort = FALSE)
+# rep1d <- rep1d[order(rep1d$ID),]
+# row.names(rep1d) <- rep1d$target_id_unique
+# rep1d <- rep1d[,8:ncol(rep1d)]
+# 
+# rep2d <- merge(annotation_targets.df, rep2data, by = "row.names",sort = FALSE)
+# rep2d <- rep2d[order(rep2d$ID),]
+# row.names(rep2d) <- rep2d$target_id_unique
+# rep2d <- rep2d[,8:ncol(rep2d)]
+# 
+# rep1 <- as.matrix(rep1d)
+# rep2 <- as.matrix(rep2d)
+# 
+# ## Calculate correlation coefficient (default is pearson). Deviants are still included.
+# repR <- cor(c(rep1), c(rep2), use = "complete.obs")
+# print(repR)
+# 
+# ## Plot replicate 1 v. replicate 2 for each protein or each person and calculate correlation coefficient.
+# png(filename = paste0(study, "_replicatescorrelation.tif"), width = 5, height = 4, units = "in", res = 600)
+# par(mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
+#     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=1)
+# 
+# plot(rep1, rep2, col="red", cex = 0.1)
+# mtext(c(paste("Pearson correlation coefficient:", round(repR, digits=4))), side=3, adj=0)
+# 
+# graphics.off()
+# 
+# #isolate data that won't be going through the replicate averaging processing:
+# norepdata <- norm.matrix[!(rownames(norm.matrix) %in% rep1unique) & !(rownames(norm.matrix) %in% rep2unique),]
+# 
+# #Average rep1 and rep2
+# normaverageI.matrix <- matrix(nrow = nrow(rep1), ncol = ncol(rep1))
+# colnames(normaverageI.matrix) = colnames(rep1)
+# rownames(normaverageI.matrix) = rownames(rep1)
+# 
+# normaverageI.matrix <- log2((2^rep1 + 2^rep2)/2)
+# #put average data back together with controls/norepdata
+# normaverage.matrix <- rbind(normaverageI.matrix, norepdata)
+# 
+# write.csv(normaverage.matrix, paste0(study, "_average_norm_log_data.csv")) 
+# 
 
 
 #make some columns of sampleinfo character instead of numeric
@@ -103,8 +168,8 @@ greenmonkdata <- merge(greenmonkeys, normsub4T, by.y = "row.names", by.x = "samp
 
 write.csv(greenmonkdata, file = "greenmonkeydata.csv")
 
-max(greenmonkdata[,16:259]) #5.753585
-.5 * max(greenmonkdata[,16:259]) #2.876793
+max(greenmonkdata[,16:259]) #5.543199
+.5 * max(greenmonkdata[,16:259]) #2.771599
 
 ###determine which antigens have at least one value > 0 
 isogreen <-  greenmonkdata[,16:259]
@@ -113,18 +178,18 @@ rownames(isogreen) <- greenmonkdata$sample_id
 greenpos <- apply(isogreen, 1, function(x) ((x > 0)+0))
 
 notzero <- which(rowSums(greenpos) > 0)
-length(notzero) #229/244 Pv IVTT antigens reactive in at least 1 sample
+length(notzero) #217/244 Pv IVTT antigens reactive in at least 1 sample
 
 nrow(greenmonkdata) * 0.05
-#5% of samples = 6.5 samples
-#10% of samples = 13 samples 
+#5% of samples = 5.3 samples
+#10% of samples = 10.6 samples 
 
-#which antigens are reactive (above 0) in more than 5% of samples (rounding up)? 108 antigens
-fiveper <- which(rowSums(greenpos) > 7)
+#which antigens are reactive (above 0) in more than 5% of samples (rounding up)? 95 antigens
+fiveper <- which(rowSums(greenpos) > 6)
 length(fiveper)
 
-#which antigens are reactive (above 0) in more than 10% of samples? 71 antigens
-tenper <- which(rowSums(greenpos) > 13)
+#which antigens are reactive (above 0) in more than 10% of samples (rounding up)? 66 antigens
+tenper <- which(rowSums(greenpos) > 11)
 length(tenper)
 
 #prepare the data to make a heatmap of only the antigens which are reactive in more than 10% of samples
