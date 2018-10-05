@@ -297,6 +297,15 @@ seropos.matrix <- t(apply(norm_sub4.df, 1, function(x) ((x > sub_cutoff)+0)))
 norm_sub6.df <- norm_sub4.df[,colnames(norm_sub4.df) %in% samples_test]
 SP.matrix <- seropos.matrix[,1:150]
 
+#based on the plot 3 samples have super low cutoffs, check these out including for antigen breadth
+which(sub_cutoff < 0.2) #this is 12 samples
+which(sub_cutoff < 0.1) #this is the 3 samples from the plot 12610_125, 12668_141, Neg_1_151
+#the only one of the three samples that is included in green monkeys is 12668.
+#this sample also had an antigen breadth of zero even though the cutoff is so low. 
+#Maybe this sample should be investigated for other QC issues and excluded?
+    #buffer (NO DNA) spots -- no issues
+    #background - no issues
+    #there are no standar plots :( 
 
 ###Create a threshold for overall target reactivity
 #e.g. To be included in heatmaps and other analyses, perhaps targets should be reacted to by at least 5% of people?
@@ -336,42 +345,52 @@ reactivemelt <- melt(reactive_meta, measure.vars = antigens, na.rm = TRUE)
 ############ Calculations and plot for antigen breadth #############
 #taken from Lou HCC Analysis script
 
-AntB <- matrix(ncol = 2)
-colnames(AntB) <- c("V1", "day")
+#prepare SP.matrix for green monkeys only with metadata
+SPt <- as.data.frame(t(SP.matrix))
 
-#calculate sums for sample for each day and bind together
-for(i in 1:length(day)){
-  d <- day[i]
-  SPday <- SP.Pk.Lou[,grep(d, colnames(SP.Pk.Lou))]
-  AntBday <- as.data.frame(as.matrix(colSums(SPday)))
-  AntBday$day <- d
-  AntB <- rbind(AntB, AntBday)
-}
-remove(i)
+SP_green <- merge(greenmonkeys, SPt, by.x = "sample_id", by.y = "row.names", sort = FALSE)
 
-AntB <- AntB[2:nrow(AntB),]
+#add antigen breadth for each sample as a last column in this data frame
 
-#create another formatted data frame with Study ID and antigen breadth for each day 
-#this is to use in PRISM for friedman test
-AntBexp <- merge(sample_meta_f.df, AntB, by.x = "sample_id_unique", by.y = "row.names")
+SP_green$Antigen_Breadth <- rowSums(SP_green[(ncol(greenmonkeys)+1):(ncol(greenmonkeys)+ncol(SPt))])
 
-AntBexp0 <- filter(AntBexp, day.x == 0)
-AntBexp7 <- filter(AntBexp, day.x == 7)
-AntBexp28 <- filter(AntBexp, day.x == 28)
+#set factor level order for day manually 
+SP_green$DAY <- factor(SP_green$DAY, levels = as.character(c("-1", "7", "10", "13", "14", "20", "21", "28", "29", "57")))
 
-AntBexp0 <- AntBexp0[,c("StudyID", "V1")]
-colnames(AntBexp0) <- c("StudyID", "D0")
+#Plot antigen breadth in a similar style plot to those for ab response over time and inoculation
 
-AntBexp7 <- AntBexp7[,c("StudyID", "V1")]
-colnames(AntBexp7) <- c("StudyID", "D7")
+# labeled by monkey
+png(filename = paste0(study, "_Antigen_breadth.tif"), width = 8, height = 3, units = "in", res = 1200)
 
-AntBexp28 <- AntBexp28[,c("StudyID", "V1")]
-colnames(AntBexp28) <- c("StudyID", "D28")
+print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth, color = MONKEY)) +
+        geom_violin(color = "black", scale = "width") + 
+        geom_beeswarm(cex = 3.5) +
+        facet_wrap(~ INOC_LEVEL, nrow = 1, scales = "free_x") +
+        theme_bw() + labs(x = "Day", y = "Antigen Breadth") +  
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+        theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 10, color = "black")) +
+        theme(legend.title = element_text(size = 10)) + 
+        theme(title = element_text(size = 12, face = "bold")) +
+        theme(strip.background = element_rect(colour="black", fill="white", size=1, linetype="solid")))
 
-AntBexpF <- merge(AntBexp0, AntBexp7, all = TRUE, sort = FALSE)
-AntBexpF <- merge(AntBexpF, AntBexp28, all = TRUE, sort = FALSE)
+graphics.off()
 
-write.csv(AntBexpF, file = paste0(study, "antigen_breadth_table.csv"))
+#no different colors 
+png(filename = paste0(study, "_Antigen_breadth_Simple.tif"), width = 8, height = 3, units = "in", res = 1200)
+
+print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth)) +
+        geom_violin(color = "black", scale = "width") + 
+        geom_beeswarm(cex = 3.5, color = "red", size = 0.95) +
+        facet_wrap(~ INOC_LEVEL, nrow = 1, scales = "free_x") +
+        theme_bw() + labs(x = "Day", y = "Antigen Breadth") +  
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+        theme(axis.text = element_text(size = 10, color = "black")) +
+        theme(axis.title = element_text(size = 12, face = "bold")) +
+        theme(strip.background = element_rect(colour="black", fill="white", size=1, linetype="solid")))
+
+graphics.off()
+
+
 
 #Plot by day
 
