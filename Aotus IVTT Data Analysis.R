@@ -24,8 +24,8 @@ library(corrgram)
 library(corrplot)
 library(ggbeeswarm)
 
-setwd("/Users/Katie/Desktop/R files from work/120718 Monkey_IVTT")
-#"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/120718 Monkey_IVTT"
+setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/120718 Monkey_IVTT")
+#"/Users/Katie/Desktop/R files from work/120718 Monkey_IVTT"
 
 load("Macaque_IVTT_AfterProcessing.RData")
 
@@ -326,14 +326,70 @@ for(i in 1:nrow(norm_sub4.df)){
 reactiveSP.df <- onlySP.df[Pv_target_reactive,]
 TreactiveSP <- as.data.frame(t(reactiveSP.df))
 
-# merge this with sample_meta to select by time point
-reactive_meta <- merge(sampleinfo, TreactiveSP, by.y = "row.names", by.x = "sample_id", sort = FALSE)
+# merge this with sample_meta for GREEN MONKEYS ONLY to select by time point
+reactive_meta <- merge(greenmonkeys, TreactiveSP, by.y = "row.names", by.x = "sample_id", sort = FALSE)
 
 #melt this for ggplot2
 antigens <- rownames(reactiveSP.df)
 reactivemelt <- melt(reactive_meta, measure.vars = antigens, na.rm = TRUE)
 
-#for each inoculation level separately, for each antigen separately, plot each monkey vs time.  
+############ Calculations and plot for antigen breadth #############
+#taken from Lou HCC Analysis script
+
+AntB <- matrix(ncol = 2)
+colnames(AntB) <- c("V1", "day")
+
+#calculate sums for sample for each day and bind together
+for(i in 1:length(day)){
+  d <- day[i]
+  SPday <- SP.Pk.Lou[,grep(d, colnames(SP.Pk.Lou))]
+  AntBday <- as.data.frame(as.matrix(colSums(SPday)))
+  AntBday$day <- d
+  AntB <- rbind(AntB, AntBday)
+}
+remove(i)
+
+AntB <- AntB[2:nrow(AntB),]
+
+#create another formatted data frame with Study ID and antigen breadth for each day 
+#this is to use in PRISM for friedman test
+AntBexp <- merge(sample_meta_f.df, AntB, by.x = "sample_id_unique", by.y = "row.names")
+
+AntBexp0 <- filter(AntBexp, day.x == 0)
+AntBexp7 <- filter(AntBexp, day.x == 7)
+AntBexp28 <- filter(AntBexp, day.x == 28)
+
+AntBexp0 <- AntBexp0[,c("StudyID", "V1")]
+colnames(AntBexp0) <- c("StudyID", "D0")
+
+AntBexp7 <- AntBexp7[,c("StudyID", "V1")]
+colnames(AntBexp7) <- c("StudyID", "D7")
+
+AntBexp28 <- AntBexp28[,c("StudyID", "V1")]
+colnames(AntBexp28) <- c("StudyID", "D28")
+
+AntBexpF <- merge(AntBexp0, AntBexp7, all = TRUE, sort = FALSE)
+AntBexpF <- merge(AntBexpF, AntBexp28, all = TRUE, sort = FALSE)
+
+write.csv(AntBexpF, file = paste0(study, "antigen_breadth_table.csv"))
+
+#Plot by day
+
+#set factor order for day
+AntB$day <- factor(AntB$day, levels = as.character(c("D0", "D7", "D28")))
+
+png(filename = paste0(study, "_antigen_breadth.tif"), width = 3, height = 3, units = "in", res = 1200)
+
+ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black", scale = "width") + 
+  geom_beeswarm(cex = 3.5) + 
+  theme_bw() + labs(x = "Day", y = "Antigen Breadth", title = iso) +  
+  theme(text = element_text(size=11)) +
+  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+  scale_y_continuous(breaks=c(0,2,4,6,8,10)) +
+  theme(legend.position="none") +
+  scale_x_discrete(labels=c("0", "7", "28"))
+
+graphics.off()
 
 
 
