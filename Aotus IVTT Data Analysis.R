@@ -360,13 +360,13 @@ SP_green$DAY <- factor(SP_green$DAY, levels = as.character(c("-1", "7", "10", "1
 #Plot antigen breadth in a similar style plot to those for ab response over time and inoculation
 
 # labeled by monkey
-png(filename = paste0(study, "_Antigen_breadth.tif"), width = 8, height = 3, units = "in", res = 1200)
+png(filename = paste0(study, "_Antigen_breadth_monkey.tif"), width = 8, height = 3, units = "in", res = 1200)
 
 print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth, color = MONKEY)) +
-        geom_violin(color = "black", scale = "width") + 
-        geom_beeswarm(cex = 3.5) +
+        geom_point(shape=18, size = 2) +
+        geom_line(aes(group = MONKEY)) + 
         facet_wrap(~ INOC_LEVEL, nrow = 1, scales = "free_x") +
-        theme_bw() + labs(x = "Day", y = "Antigen Breadth") +  
+        theme_bw() + labs(x = "Day", y = "Number of Reactive Antigens") + 
         theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
         theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 10, color = "black")) +
         theme(legend.title = element_text(size = 10)) + 
@@ -382,14 +382,13 @@ print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth)) +
         geom_violin(color = "black", scale = "width") + 
         geom_beeswarm(cex = 3.5, color = "red", size = 0.95) +
         facet_wrap(~ INOC_LEVEL, nrow = 1, scales = "free_x") +
-        theme_bw() + labs(x = "Day", y = "Antigen Breadth") +  
+        theme_bw() + labs(x = "Day", y = "Number of Reactive Antigens") +  
         theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
         theme(axis.text = element_text(size = 10, color = "black")) +
-        theme(axis.title = element_text(size = 12, face = "bold")) +
+        theme(axis.title = element_text(size = 11, face = "bold")) +
         theme(strip.background = element_rect(colour="black", fill="white", size=1, linetype="solid")))
 
 graphics.off()
-
 
 
 #Plot by day
