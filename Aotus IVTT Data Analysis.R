@@ -480,15 +480,29 @@ print(AntbX2)
 print(friedman.test(Antigen_Breadth ~ Day | Monkey,
               data = AntB2))
 
-#end manual for loop
-
 #if any friedman tests are significant, can do pairwise comparisons, otherwise move to comparing 
-#baseline to each time point only, and use wilcoxan matched pairs test
+#baseline to each time point only, and use wilcoxan matched pairs test 
+#NONE WERE SIGNIFICANT 
+
+#Wilcoxan matched pairs test - day = -1 vs day = other
+
+day = levels(AntB2$Day)
+
+for(i in 2:length(day)){
+
+testday <- day[i]
+
+x = as.numeric(as.character(AntB2$Antigen_Breadth[AntB2$Day == "-1"]))
+y = as.numeric(as.character(AntB2$Antigen_Breadth[AntB2$Day == testday]))
+
+print(testday)
+
+print(wilcox.test(x, y, paired = TRUE, alternative = "less"))
+
+}
 
 
-
-
-
+#end manual for loop
 
 
 
