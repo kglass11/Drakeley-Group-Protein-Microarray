@@ -35,6 +35,18 @@ library(ggbeeswarm)
 library(afex)
 library(caTools)
 
+library(multcompView, PMCMRplus, rcompanion)
+
+
+# if(!require(psych)){install.packages("psych")}
+# if(!require(FSA)){install.packages("FSA")}
+# if(!require(lattice)){install.packages("lattice")}
+# if(!require(BSDA)){install.packages("BSDA")}
+# if(!require(multcompView)){install.packages("multcompView")}
+# 
+# if(!require(PMCMRplus)){install.packages("PMCMR")}
+# if(!require(rcompanion)){install.packages("rcompanion")}
+
 setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/120718 Monkey_IVTT")
 #"/Users/Katie/Desktop/R files from work/120718 Monkey_IVTT"
 
@@ -432,7 +444,47 @@ graphics.off()
 
 ####### Statistics #######
 
+
 # antigen breadth - friedman test with factor of time - separately for each inoculation. 
+
+#filter out the correct data - one inoc level at a time and remove the day = 13 samples
+
+#manual for loop to do each inoculation level - this didn't work as a for loop, got held up 
+#on level 2 then level 4
+
+level = 4
+
+Inoc <- filter(SP_green, INOC_LEVEL == level, !DAY == "13")
+
+AntB <- as.data.frame(cbind(Inoc$MONKEY, as.character(Inoc$DAY), Inoc$Antigen_Breadth))
+colnames(AntB) <- c("Monkey", "Day", "Antigen_Breadth") 
+
+#make a contingency table to check that there is a unreplicated block design 
+AntbX <- xtabs(~ Monkey + Day, data = AntB)
+print(AntbX)
+
+AntbX.df <- as.data.frame(AntbX)
+
+#remove monkeys for which there is not a complete design
+monkey <- AntbX.df$Monkey[which(AntbX == 0)]
+
+AntB2 <- AntB[!(AntB$Monkey %in% monkey),]
+
+#set factor levels so that the other monkey isn't counted
+AntB2$Monkey <- factor(AntB2$Monkey, levels = unique(AntB2$Monkey))
+
+AntbX2 <- xtabs(~ Monkey + Day, data = AntB2)
+print(AntbX2)
+
+#run the friedman test
+print(friedman.test(Antigen_Breadth ~ Day | Monkey,
+              data = AntB2))
+
+#end manual for loop
+
+#if any friedman tests are significant, can do pairwise comparisons, otherwise move to comparing 
+#baseline to each time point only, and use wilcoxan matched pairs test
+
 
 
 
