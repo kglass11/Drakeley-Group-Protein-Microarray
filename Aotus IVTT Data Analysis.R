@@ -24,6 +24,17 @@ library(corrgram)
 library(corrplot)
 library(ggbeeswarm)
 
+#library(broom)
+#library(multcomp)
+#library(pbkrtest)
+#library(phia)
+#library(lmerTest)
+#library(multcompView)
+#library(MuMIn)
+
+library(afex)
+library(caTools)
+
 setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/120718 Monkey_IVTT")
 #"/Users/Katie/Desktop/R files from work/120718 Monkey_IVTT"
 
@@ -390,24 +401,40 @@ print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth)) +
 
 graphics.off()
 
+#boxplot plus points
+png(filename = paste0(study, "_Antigen_breadth_Box.tif"), width = 8, height = 3, units = "in", res = 1200)
 
-#Plot by day
-
-#set factor order for day
-AntB$day <- factor(AntB$day, levels = as.character(c("D0", "D7", "D28")))
-
-png(filename = paste0(study, "_antigen_breadth.tif"), width = 3, height = 3, units = "in", res = 1200)
-
-ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black", scale = "width") + 
-  geom_beeswarm(cex = 3.5) + 
-  theme_bw() + labs(x = "Day", y = "Antigen Breadth", title = iso) +  
-  theme(text = element_text(size=11)) +
-  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
-  scale_y_continuous(breaks=c(0,2,4,6,8,10)) +
-  theme(legend.position="none") +
-  scale_x_discrete(labels=c("0", "7", "28"))
+print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth)) +
+        geom_boxplot(color = "black", outlier.shape = NA) + 
+        geom_beeswarm(cex = 3.5, color = "red", size = 0.95) +
+        facet_wrap(~ INOC_LEVEL, nrow = 1, scales = "free_x") +
+        theme_bw() + labs(x = "Day", y = "Number of Reactive Antigens") +  
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+        theme(axis.text = element_text(size = 10, color = "black")) +
+        theme(axis.title = element_text(size = 11, face = "bold")) +
+        theme(strip.background = element_rect(colour="black", fill="white", size=1, linetype="solid")))
 
 graphics.off()
+
+#boxplot no points
+png(filename = paste0(study, "_Antigen_breadth_Box_plain.tif"), width = 8, height = 3, units = "in", res = 1200)
+
+print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth)) +
+        geom_boxplot(color = "black", fill = "light blue") + 
+        facet_wrap(~ INOC_LEVEL, nrow = 1, scales = "free_x") +
+        theme_bw() + labs(x = "Day", y = "Number of Reactive Antigens") +  
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+        theme(axis.text = element_text(size = 10, color = "black")) +
+        theme(axis.title = element_text(size = 11, face = "bold")) +
+        theme(strip.background = element_rect(colour="black", fill="white", size=1, linetype="solid")))
+
+graphics.off()
+
+####### Statistics #######
+
+# antigen breadth - friedman test with factor of time - separately for each inoculation. 
+
+
 
 
 
