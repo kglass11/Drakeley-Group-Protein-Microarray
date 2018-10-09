@@ -508,7 +508,7 @@ print(wilcox.test(x, y, paired = TRUE, alternative = "less"))
 ##Starting with Friedman test - it turns out that many are significant. Therefore, only 
 #doing pairwise comparisons if significant, otherwise not doing anything else for that antigen/inoc combo.
 
-for(k in 2:4){
+for(k in 1:4){
   
   level = k
   
@@ -570,4 +570,59 @@ for(k in 2:4){
 
 remove(i,k, AntD, antigen, AntD2, AntDX, AntDX2, AntDX.df, Inoc1)
 
+### Moving on to wilcoxan matched pairs, only comparing day -1 with the other time points
+#similar to antigen breadth, except doing two-sided for everything because we don't know what to expect
+
+for(k in 1:4){
   
+  level = k
+  
+  Inoc1 <- filter(subtacos, INOC_LEVEL == level, !DAY == "13")
+  
+  print(level)
+  
+  for(i in 1:length(antnames)){
+    
+    antigen = antnames[i]
+    print(antigen)
+    
+    AntD <- as.data.frame(cbind(Inoc1$MONKEY, as.character(Inoc1$DAY), Inoc1[,(15+i)]))
+    colnames(AntD) <- c("Monkey", "Day", "Ab_Response") 
+    
+    AntD$Ab_Response <- as.numeric(as.character(AntD$Ab_Response))
+    
+    #make a contingency table to check that there is a unreplicated block design 
+    AntDX <- xtabs(~ Monkey + Day, data = AntD)
+    
+    AntDX.df <- as.data.frame(AntDX)
+    
+    #remove monkeys for which there is not a complete design
+    monkey <- AntDX.df$Monkey[which(AntDX == 0)]
+    
+    AntD2 <- AntD[!(AntD$Monkey %in% monkey),]
+    
+    #set factor levels so that the other monkey isn't counted
+    AntD2$Monkey <- factor(AntD2$Monkey, levels = unique(AntD2$Monkey))
+    
+    AntDX2 <- xtabs(~ Monkey + Day, data = AntD2)
+    
+
+    day = levels(AntD2$Day)
+
+    for(i in 2:length(day)){
+  
+      testday <- day[i]
+  
+      x = as.numeric(as.character(AntD2$Ab_Response[AntD2$Day == "-1"]))
+      y = as.numeric(as.character(AntD2$Ab_Response[AntD2$Day == testday]))
+  
+      print(testday)
+  
+      print(wilcox.test(x, y, paired = TRUE, alternative = "two.sided"))
+      
+    }
+  }
+  
+  
+}
+
