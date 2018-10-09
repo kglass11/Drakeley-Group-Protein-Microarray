@@ -524,6 +524,8 @@ for(k in 2:4){
     AntD <- as.data.frame(cbind(Inoc1$MONKEY, as.character(Inoc1$DAY), Inoc1[,(15+i)]))
     colnames(AntD) <- c("Monkey", "Day", "Ab_Response") 
     
+    AntD$Ab_Response <- as.numeric(as.character(AntD$Ab_Response))
+    
     #make a contingency table to check that there is a unreplicated block design 
     AntDX <- xtabs(~ Monkey + Day, data = AntD)
     
@@ -540,10 +542,30 @@ for(k in 2:4){
     AntDX2 <- xtabs(~ Monkey + Day, data = AntD2)
     
     #run the friedman test
-    print(friedman.test(Ab_Response ~ Day | Monkey,
-                        data = AntD2))
-  
-}
+    fried <- friedman.test(Ab_Response ~ Day | Monkey,
+                           data = AntD2)
+    print(fried)
+    
+    
+    if(is.na(fried$p.value)){} else if (fried$p.value < 0.05){
+      PT = pairwiseSignTest(Ab_Response ~ Day, 
+                            data   = AntD2,
+                            method = "fdr")
+      # Adjusts p-values for multiple comparisons;
+      # See ?p.adjust for options
+      # assumes already ordered by the blocking variable (MONKEY)
+      
+      print(PT)
+      
+      #summary of letters - only if any are significant
+      if(any(PT$p.adjust <= 0.05)){
+      cldList(p.adjust ~ Comparison,
+              data = PT,
+              threshold  = 0.05)
+      }
+    }
+  }
+   
 }
 
 remove(i,k, AntD, antigen, AntD2, AntDX, AntDX2, AntDX.df, Inoc1)
