@@ -501,8 +501,51 @@ print(wilcox.test(x, y, paired = TRUE, alternative = "less"))
 
 }
 
-
 #end manual for loop
 
+###Stats for the antibody responses for each of the 25 antigens with the highest means. 
 
+##Starting with Friedman test - it turns out that many are significant. Therefore, only 
+#doing pairwise comparisons if significant, otherwise not doing anything else for that antigen/inoc combo.
 
+for(k in 2:4){
+  
+  level = k
+  
+  Inoc1 <- filter(subtacos, INOC_LEVEL == level, !DAY == "13")
+  
+  print(level)
+  
+  for(i in 1:length(antnames)){
+    
+    antigen = antnames[i]
+    print(antigen)
+    
+    AntD <- as.data.frame(cbind(Inoc1$MONKEY, as.character(Inoc1$DAY), Inoc1[,(15+i)]))
+    colnames(AntD) <- c("Monkey", "Day", "Ab_Response") 
+    
+    #make a contingency table to check that there is a unreplicated block design 
+    AntDX <- xtabs(~ Monkey + Day, data = AntD)
+    
+    AntDX.df <- as.data.frame(AntDX)
+    
+    #remove monkeys for which there is not a complete design
+    monkey <- AntDX.df$Monkey[which(AntDX == 0)]
+    
+    AntD2 <- AntD[!(AntD$Monkey %in% monkey),]
+    
+    #set factor levels so that the other monkey isn't counted
+    AntD2$Monkey <- factor(AntD2$Monkey, levels = unique(AntD2$Monkey))
+    
+    AntDX2 <- xtabs(~ Monkey + Day, data = AntD2)
+    
+    #run the friedman test
+    print(friedman.test(Ab_Response ~ Day | Monkey,
+                        data = AntD2))
+  
+}
+}
+
+remove(i,k, AntD, antigen, AntD2, AntDX, AntDX2, AntDX.df, Inoc1)
+
+  
