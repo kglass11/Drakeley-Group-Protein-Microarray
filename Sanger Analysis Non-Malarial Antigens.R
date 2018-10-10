@@ -170,26 +170,34 @@ kcutoffs <- matrix(nrow = length(ag_list), ncol = 8)
 for(i in 1:length(ag_list)){
 
   antigen <- antigen <- ag_list[i]
+  
+  antibody <- as.numeric(c(tNMdata[,i]))
+  antibody1<-sort(antibody)
+  
+  antibody1 <- antibody1[antibody1 >= -2.0]
 
-  kclust <- kmeans(tNMdata[,i],centers = 2, nstart=10)
+  kclust <- kmeans(antibody1, centers = 2, nstart=10)
   kclust
 
   #prepare the clustering data
-  clustdata <- as.data.frame(cbind(tNMdata[,i], kclust$cluster))
+  clustdata <- as.data.frame(cbind(antibody1, kclust$cluster))
   colnames(clustdata) <- c("Ab_Response", "Cluster")
   clustdata$Cluster <- factor(clustdata$Cluster, levels = c("1", "2"))
+  
+  min_comp <- which(kclust$centers == min(kclust$centers))
+  max_comp <- which(kclust$centers == max(kclust$centers))
+  
+  cut = min(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
   
   #plot the two clusters density plot
   png(filename = paste0(study,"_Kmeans", antigen, "v1.tif"), width = 4, height = 3, units = "in", res = 600)
 
     print(ggplot(clustdata, aes(Ab_Response, ..count.., color = Cluster)) + geom_density(adjust = 3/4) +
-    theme_bw() + xlab("Log2(MFI Ratio)") + ggtitle(antigen) +
-    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
-  
+    theme_bw() + xlab("Log2(MFI Ratio)") + ggtitle(paste(antigen, round(cut, digits = 3))) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+    geom_vline(xintercept = cut))
+    
   graphics.off()
-
-  min_comp <- which(kclust$centers == min(kclust$centers))
-  max_comp <- which(kclust$centers == max(kclust$centers))
 
   kcutoffs[i, "min_low"] <- min(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
   kcutoffs[i, "max_low"] <- max(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
