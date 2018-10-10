@@ -165,35 +165,45 @@ load("sangerNMcutoffsfinal.RData")
 #prepare matrix to store info about k means clusters
 kcutoffs <- matrix(nrow = length(ag_list), ncol = 8)
  rownames(kcutoffs) <- ag_list                  
- colnames(kcutoffs) <- c("mean_low", "count_low", "min_low", "max_low", "mean_high", "count_high", "min_high", "max_high")
+ colnames(kcutoffs) <- c("mean_low", "mean_high", "count_low", "count_high", "min_low", "min_high", "max_low", "max_high")
  
-i = 4
+for(i in 1:length(ag_list)){
 
-antigen <- antigen <- ag_list[i]
+  antigen <- antigen <- ag_list[i]
 
-kclust <- kmeans(tNMdata[,i],centers = 2, nstart=10)
-kclust
+  kclust <- kmeans(tNMdata[,i],centers = 2, nstart=10)
+  kclust
 
-#plot the two clusters density plot 
-
-clustdata <- as.data.frame(cbind(tNMdata[,i], kclust$cluster))
-colnames(clustdata) <- c("Ab_Response", "Cluster")
-clustdata$Cluster <- factor(clustdata$Cluster, levels = c("1", "2"))
-
-png(filename = paste0(study,"_Kmeans", antigen, "v1.tif"), width = 4, height = 4, units = "in", res = 600)
-
-ggplot(clustdata, aes(Ab_Response, ..count.., color = Cluster)) + geom_density(adjust = 3/4) +
-  theme_bw() + xlab("Log2(MFI Ratio)") + ggtitle("antigen") +
-theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())
+  #prepare the clustering data
+  clustdata <- as.data.frame(cbind(tNMdata[,i], kclust$cluster))
+  colnames(clustdata) <- c("Ab_Response", "Cluster")
+  clustdata$Cluster <- factor(clustdata$Cluster, levels = c("1", "2"))
   
-graphics.off()
+  #plot the two clusters density plot
+  png(filename = paste0(study,"_Kmeans", antigen, "v1.tif"), width = 4, height = 3, units = "in", res = 600)
 
-print(antigen)
-print(min(clustdata$Ab_Response[which(clustdata$Cluster == "1")]))
-print(max(clustdata$Ab_Response[which(clustdata$Cluster == "1")]))
-print(min(clustdata$Ab_Response[which(clustdata$Cluster == "2")]))
-print(max(clustdata$Ab_Response[which(clustdata$Cluster == "2")]))
+    print(ggplot(clustdata, aes(Ab_Response, ..count.., color = Cluster)) + geom_density(adjust = 3/4) +
+    theme_bw() + xlab("Log2(MFI Ratio)") + ggtitle(antigen) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
+  
+  graphics.off()
 
+  min_comp <- which(kclust$centers == min(kclust$centers))
+  max_comp <- which(kclust$centers == max(kclust$centers))
+
+  kcutoffs[i, "min_low"] <- min(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
+  kcutoffs[i, "max_low"] <- max(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
+  kcutoffs[i, "min_high"] <- min(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
+  kcutoffs[i, "max_high"] <- max(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
+
+  kcutoffs[i, "mean_low"] <- mean(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
+  kcutoffs[i, "mean_high"] <- mean(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
+
+  kcutoffs[i, "count_low"] <- length(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
+  kcutoffs[i, "count_high"] <- length(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
+
+}
+  
 #cutoff for seropositivity is greater than or equal to the min of the population with the higher mean
 
 
