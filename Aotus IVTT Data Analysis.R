@@ -47,8 +47,8 @@ library(multcompView, PMCMRplus, rcompanion)
 # if(!require(PMCMRplus)){install.packages("PMCMR")}
 # if(!require(rcompanion)){install.packages("rcompanion")}
 
-setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/120718 Monkey_IVTT")
-#"/Users/Katie/Desktop/R files from work/120718 Monkey_IVTT"
+setwd("/Users/Katie/Desktop/R files from work/120718 Monkey_IVTT")
+#"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/120718 Monkey_IVTT"
 
 load("Macaque_IVTT_AfterProcessing.RData")
 
@@ -625,4 +625,6 @@ for(k in 1:4){
   
   
 }
+
+### Area Under the Curve of Each Top 25 Antigen - comparing Inoculation 1 and 3. 
 
