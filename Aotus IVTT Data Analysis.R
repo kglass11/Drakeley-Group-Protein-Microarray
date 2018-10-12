@@ -626,46 +626,68 @@ for(k in 1:4){
   
 }
 
-### Area Under the Curve of Each Top 25 Antigen - comparing Inoculation 1 and 3. 
+### Area Under the Curve of Each Top 25 Antigen - comparing Inoculation 1 and 3.
 
-#copied AUC from Lou Macaque Isotypes Analysis
-#### Area under the curve for SysMalVac, each antigen separately 
+#only include the 4 monkeys which are the same at inoculation 1 and 3
+monks <- c("30014","32028","32047","25029")
 
-#isolate control or experimental data for all antigens and time points
-exp.auc <- filter(subLouness, sample_type == "experimental")
-con.auc <- filter(subLouness, sample_type == "control")
+#change the order of data in subtacos to be by day
+subtacosday <- subtacos[order(subtacos$DAY),]
+
+#isolate inoculation 1 and 3 data for all antigens and time points
+#make sure the values for each monkey are in order by day - yes they are finally!
+one.auc <- filter(subtacosday, INOC_LEVEL == "1", MONKEY %in% monks)
+three.auc <- filter(subtacosday, INOC_LEVEL == "3", MONKEY %in% monks, !DAY == "57")
+
+#make data frames to store the AUC values for each inoculation
+AUC1 <- as.data.frame(matrix(nrow=4, ncol = length(antnames)))
+colnames(AUC1) <- antnames
+rownames(AUC1) <- monks
+
+AUC3 <- as.data.frame(matrix(nrow=4, ncol = length(antnames)))
+colnames(AUC3) <- antnames
+rownames(AUC3) <- monks
+
+#make a matrix to store the p-values from the paired t-tests
+AUCpvals <- matrix(nrow = length(antnames), ncol = 1)
+rownames(AUCpvals) <- antnames
+colnames(AUCpvals) <- c("p.value")
 
 for(i in 1:length(antnames)){
   antnow <- antnames[i]
+  
   #isolate data for each animal and each antigen 
-  exp.auc1 <- exp.auc[exp.auc$Animal_id == "R07083",colnames(exp.auc) %in% antnow]
-  exp.auc2 <- exp.auc[exp.auc$Animal_id == "R07106",colnames(exp.auc) %in% antnow]
-  exp.auc3 <- exp.auc[exp.auc$Animal_id == "R07109",colnames(exp.auc) %in% antnow]
-  exp.auc4 <- exp.auc[exp.auc$Animal_id == "R08091",colnames(exp.auc) %in% antnow]
+  one.auc1 <- one.auc[one.auc$MONKEY == "30014",colnames(one.auc) %in% antnow]
+  one.auc2 <- one.auc[one.auc$MONKEY == "32028",colnames(one.auc) %in% antnow]
+  one.auc3 <- one.auc[one.auc$MONKEY == "32047",colnames(one.auc) %in% antnow]
+  one.auc4 <- one.auc[one.auc$MONKEY == "25029",colnames(one.auc) %in% antnow]
   
-  con.auc1 <- con.auc[con.auc$Animal_id == "R05006",colnames(con.auc) %in% antnow]
-  con.auc2 <- con.auc[con.auc$Animal_id == "R07114",colnames(con.auc) %in% antnow]
-  con.auc3 <- con.auc[con.auc$Animal_id == "R08016",colnames(con.auc) %in% antnow]
-  con.auc4 <- con.auc[con.auc$Animal_id == "R08096",colnames(con.auc) %in% antnow]
+  three.auc1 <- three.auc[three.auc$MONKEY == "30014",colnames(three.auc) %in% antnow]
+  three.auc2 <- three.auc[three.auc$MONKEY == "32028",colnames(three.auc) %in% antnow]
+  three.auc3 <- three.auc[three.auc$MONKEY == "32047",colnames(three.auc) %in% antnow]
+  three.auc4 <- three.auc[three.auc$MONKEY == "25029",colnames(three.auc) %in% antnow]
   
-  #use the trapz function, input x and y, get AUC, store in a vector for each animal and control or treatment
-  AUCdata <- as.data.frame(matrix(nrow=4, ncol=2))
-  colnames(AUCdata) <- c("control", "experimental")
+  #use the trapz function, input x and y, get AUC, store data
+  AUC1[1,i] <- trapz(x = c(-1,10,14,21,28), y = one.auc1)
+  AUC1[2,i] <- trapz(x = c(-1,10,14,21,28), y = one.auc2)
+  AUC1[3,i] <- trapz(x = c(-1,10,14,21,28), y = one.auc3)
+  AUC1[4,i] <- trapz(x = c(-1,10,13,21,28), y = one.auc4)
   
-  AUCdata[1,1] <- trapz(x = c(0:8), y = con.auc1)
-  AUCdata[2,1] <- trapz(x = c(0:8), y = con.auc2)
-  AUCdata[3,1] <- trapz(x = c(0:8), y = con.auc3)
-  AUCdata[4,1] <- trapz(x = c(0:8), y = con.auc4)
+  AUC3[1,i] <- trapz(x = c(-1,7,14,21,28), y = three.auc1)
+  AUC3[2,i] <- trapz(x = c(-1,7,14,21,28), y = three.auc2)
+  AUC3[3,i] <- trapz(x = c(-1,7,14,21,28), y = three.auc3)
+  AUC3[4,i] <- trapz(x = c(-1,7,14,21,28), y = three.auc4)
   
-  AUCdata[1,2] <- trapz(x = c(0:8), y = exp.auc1)
-  AUCdata[2,2] <- trapz(x = c(0:8), y = exp.auc2)
-  AUCdata[3,2] <- trapz(x = c(0:8), y = exp.auc3)
-  AUCdata[4,2] <- trapz(x = c(0:8), y = exp.auc4)
-  
+  #Then use a t test to compare inoculation 1 to 3
   print(antnow)
-  print(AUCdata)
+  AUCtest <- t.test(x = AUC3[,i], y = AUC1[,i], paired = TRUE)
+  print(AUCtest)
   
-  #Then use a t test or wilcoxan signed rank test to compare control vs. treatment.
-  print(t.test(AUCdata[,1], AUCdata[,2]))
+  #store p values from t-tests in the pvals matrix
+  AUCpvals[[i]] <- AUCtest$p.value
   
 }
+
+#export table of pvalues 
+write.csv(AUCpvals, file = "AotusIVTT_AUC_pvalues.csv")
+
