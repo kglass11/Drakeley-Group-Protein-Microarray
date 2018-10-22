@@ -428,6 +428,21 @@ print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth)) +
 
 graphics.off()
 
+#boxplot plus points - poster dimensions
+png(filename = paste0(study, "_Antigen_breadth_Box_Poster.tif"), width = 9.5, height = 3, units = "in", res = 1200)
+
+print(ggplot(SP_green, aes(x = DAY, y = Antigen_Breadth)) +
+        geom_boxplot(color = "black", outlier.shape = NA) + 
+        geom_beeswarm(cex = 3.5, color = "red", size = 0.95) +
+        facet_wrap(~ INOC_LEVEL, nrow = 1, scales = "free_x") +
+        theme_bw() + labs(x = "Day", y = "Number of Reactive Antigens") +  
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+        theme(axis.text = element_text(size = 10, color = "black")) +
+        theme(axis.title = element_text(size = 11, face = "bold")) +
+        theme(strip.background = element_rect(colour="black", fill="white", size=1, linetype="solid")))
+
+graphics.off()
+
 #boxplot no points
 png(filename = paste0(study, "_Antigen_breadth_Box_plain.tif"), width = 8, height = 3, units = "in", res = 1200)
 
