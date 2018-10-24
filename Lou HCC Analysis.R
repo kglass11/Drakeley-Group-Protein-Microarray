@@ -28,12 +28,14 @@ library(corrplot)
 library(ggbeeswarm)
 
 #set working directory
-#"/Users/Katie/Desktop/R files from work/Lou HCC/IgA"
-setwd("I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou")
+#"I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/230418 Human Pk case-control Qdot/IgA/Lou"
+setwd("/Users/Katie/Desktop/R files from work/Lou HCC/IgG")
 getwd()
 
 #Import data from IgG, IgA, or IgM - this script depends on importing many objects from the end of the processing scripts
-load(file = "Pk_HCC_analysis_IgA_V02.RData")
+#load(file = "Pk_HCC_analysis_IgA_V02.RData")
+load(file = "Pk_HCC_analysis_IgG.RData")
+
 
 #Add time point to the sample metadata
 sample_meta_f.df$day <- 0
@@ -223,13 +225,39 @@ SPpeople <- as.matrix(sort(rowSums(SP.Pk.Lou), decreasing = TRUE))
   
   ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black", scale = "width") + 
     geom_beeswarm(cex = 3.5) + 
-    theme_bw() + labs(x = "Day", y = "Antigen Breadth", title = iso) +  
+    theme_bw() + labs(x = "Day", y = "Number of Reactive Antigens", title = iso) +  
     theme(text = element_text(size=11)) +
     theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
     scale_y_continuous(breaks=c(0,2,4,6,8,10)) +
     theme(legend.position="none") +
     scale_x_discrete(labels=c("0", "7", "28"))
     
+  graphics.off()
+  
+  png(filename = paste0(study, "_antigen_breadth_poster.tif"), width = 15, height = 15, units = "cm", res = 1200)
+  
+  ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_violin(color = "black", scale = "width") + 
+    geom_beeswarm(cex = 3.5, size = 3) + 
+    theme_bw() + labs(x = "Day", y = "Number of Reactive Antigens", title = iso) +  
+    theme(text = element_text(size=24, color = "black", face = "bold"), axis.text = element_text(size = 20, color = "black", face = "bold")) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+    scale_y_continuous(breaks=c(0,2,4,6,8,10), limits = c(0,10)) +
+    theme(legend.position="none") +
+    scale_x_discrete(labels=c("0", "7", "28"))
+  
+  graphics.off()
+  
+  png(filename = paste0(study, "_antigen_breadth_poster_box.tif"), width = 15, height = 15, units = "cm", res = 1200)
+  
+  ggplot(AntB, aes(x=day, y=V1, color = day)) + geom_boxplot(color = "black", outlier.size = NULL) + 
+    geom_beeswarm(cex = 3.5, size = 3) + 
+    theme_bw() + labs(x = "Day", y = "Number of Reactive Antigens", title = iso) +  
+    theme(text = element_text(size=24, color = "black", face = "bold"), axis.text = element_text(size = 20, color = "black", face = "bold")) +
+    theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+    scale_y_continuous(breaks=c(0,2,4,6,8,10), limits = c(0,10)) +
+    theme(legend.position="none") +
+    scale_x_discrete(labels=c("0", "7", "28"))
+  
   graphics.off()
   
 ########### Antigen Specific, Correlation between Antibody Response and Parasite Count or Age #########
