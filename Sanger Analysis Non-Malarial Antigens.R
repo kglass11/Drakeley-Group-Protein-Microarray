@@ -68,6 +68,60 @@ max(NMdata) #8.524411
 #Transpose data so antigens are columns - it's now a matrix
 tNMdata <- t(NMdata)
 
+###### Dengue PCA - dimensions are dengue types 1 - 4 
+
+#isolate dengue data
+denguedata <- tNMdata[,grep("DEN", colnames(tNMdata))]
+
+#scaling is really important when variables are measured on different scales
+#try with and without scaling for dengue 
+denguePr <- prcomp(denguedata, scale = TRUE)
+denguePr
+
+#usually get one fewer components than variables entered, but here got 4 in 4 out
+summary(denguePr)
+
+#repeat without scaling
+denguePr2 <- prcomp(denguedata, scale = FALSE)
+denguePr2
+summary(denguePr2)
+
+#scree plot (sp?) shows variance(square of standard deviation) for each component
+plot(denguePr, type ="l")
+plot(denguePr2, type = "l")
+
+#biplot, which includes eigenvectors for each variable
+biplot(denguePr, scale = 0)
+biplot(denguePr2, scale = 0)
+
+#extract PCA output (item x in the list)
+str(denguePr2)
+
+#only get first two components
+denguedata2 <- cbind(denguedata, denguePr2$x[,1:2])
+
+denguemeta <- merge(denguedata2, sample_meta_f.df, by.x = "row.names", by.y = "sample_id_unique", all.x = TRUE)
+
+#plot with stat ellipse which shows 95% confidence interval - doesn't make sense in this case
+#could be interesting to do this with the age categories
+#ggplot(denguemeta, aes(x=PC1, y = PC2, color = Gender, fill=Gender)) + 
+ # stat_ellipse(geom = "polygon", col = "black", alpha = 0.5) +
+ # geom_point(shape = 21, color = "black")
+
+# plot scores - this is almost the same as the above plot
+#scores <- as.data.frame(denguePr2$x) 
+#qplot(x = PC1, y = PC2, data = scores, geom = "point", col = denguemeta$Gender) 
+
+# Loadings on PC1 (few variables) - plotting the eigenvectors
+#this is working but isn't very useful compared to a table
+loadings <- as.data.frame(denguePr2$rotation) 
+loadings <- tibble::rownames_to_column(loadings)
+ggplot(loadings, aes(x=rowname, y = PC1)) + geom_point()
+
+#correlations between original variables and principle components 
+PCAcor <- cor(denguedata2[,1:4], denguedata2[,5:6])
+
+
 #define functions that take results of mixture model to set cutoffs
 f<-function(x,prob,lambda,mu,sigma,k,k1){
   lista<-order(mu)
