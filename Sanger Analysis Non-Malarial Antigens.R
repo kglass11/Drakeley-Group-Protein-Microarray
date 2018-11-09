@@ -223,7 +223,7 @@ kcutoffs <- matrix(nrow = length(ag_list), ncol = 8)
  
 for(i in 1:length(ag_list)){
 
-  antigen <- antigen <- ag_list[i]
+  antigen <- ag_list[i]
   
   antibody <- as.numeric(c(tNMdata[,i]))
   antibody1<-sort(antibody)
@@ -268,6 +268,85 @@ for(i in 1:length(ag_list)){
   
 #cutoff for seropositivity is greater than or equal to the min of the population with the higher mean
 
+
+ #### Cutoff for dengue - using principle component 1 from non-scaled PCA
+ 
+## plot histogram 
+
+antibody <- as.numeric(c(denguedata2[,5]))
+antibody1<-sort(antibody)
+antigen <- "Dengue"
+
+#antibody1 <- antibody1[antibody1 >= -0.4]
+
+#FMM function
+fit.ab2<-normalmixEM(antibody1, k=2)
+print(paste(i, antigen))
+print(summary(fit.ab2))
+
+#cutoffSD method
+min_comp1 <- which(fit.ab2$mu == min(fit.ab2$mu))
+
+cutoffSD <- fit.ab2$mu[min_comp1] + xSD * sqrt(fit.ab2$sigma[min_comp1])
+
+cutoff2SD <- log2(2^(fit.ab2$mu[min_comp1]) + xSD * 2^(fit.ab2$sigma[min_comp1]))
+
+#cutoff probability method
+
+
+#plot histogram 
+png(filename = paste0(study,"_Histogram", antigen, "v1.tif"), width = 4, height = 4, units = "in", res = 600)
+par(mfrow=c(1,1))
+
+hist(antibody1,breaks = 40, xlab='Log2(MFI Ratio)',main='')
+title(antigen,adj=0.5)
+abline(v=fit.ab2$mu, col = "purple", lwd = 1)
+abline(v=cutoffSD, col = "blue", lwd = 1.5)
+legend("topleft",paste0("cutoff(2SD): ",round(cutoffSD,3)),lty=1,col="blue",cex=0.5,bty="n",y.intersp=1.1,x.intersp=0.2,seg.len=0.5,text.col="blue")
+
+dev.off()
+
+
+#4 Plot Density and QQPlots - Cutoff marked on Density Plot
+png(filename = paste0(study,"_Density_QQ_2SD", antigen, "v1.tif"), width = 8, height = 4, units = "in", res = 600)
+par(mfrow=c(1,2))
+
+plot(density(antibody1),xlab='Log2(MFI Ratio)',main='')
+title(antigen,adj=0.5)
+abline(v=fit.ab2$mu, col = "purple", lwd = 1)
+abline(v=cutoffSD, col = "blue", lwd = 1.5)
+legend("topleft",paste0("cutoff(2SD): ",round(cutoffSD,3)),lty=1,col="blue",cex=0.5,bty="n",y.intersp=1.1,x.intersp=0.2,seg.len=0.5,text.col="blue")
+
+qqnorm(antibody1,las=1,pch=21,bg='grey',cex=0.75)
+qqline(antibody1)
+
+dev.off()
+
+#plot histogram instead of density plot
+
+#try using kmeans clustering
+kclust <- kmeans(antibody1, centers = 2, nstart=10)
+kclust
+
+#prepare the clustering data
+clustdata <- as.data.frame(cbind(antibody1, kclust$cluster))
+colnames(clustdata) <- c("Ab_Response", "Cluster")
+clustdata$Cluster <- factor(clustdata$Cluster, levels = c("1", "2"))
+
+min_comp <- which(kclust$centers == min(kclust$centers))
+max_comp <- which(kclust$centers == max(kclust$centers))
+
+cut = min(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
+
+#plot the two clusters density plot
+png(filename = paste0(study,"_Kmeans", antigen, "v1.tif"), width = 4, height = 3, units = "in", res = 600)
+
+print(ggplot(clustdata, aes(Ab_Response, ..count.., color = Cluster)) + geom_density(adjust = 3/4) +
+        theme_bw() + xlab("Log2(MFI Ratio)") + ggtitle(paste(antigen, round(cut, digits = 3))) +
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+        geom_vline(xintercept = cut))
+
+graphics.off()
 
 
 #For this section, using normalized data with negative values set to 0 (norm4.matrix)
