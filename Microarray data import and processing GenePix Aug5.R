@@ -750,6 +750,12 @@ mtext(c(paste("R =", round(cor(data2$"429_MSP2 Dd2_2", data2$"441_buffer_2"), di
 
 graphics.off()
 
+#identify samples which have elevated buffer signals after meningitis
+#114 is the cutoff for IgM
+row.names(data1[which(data1$`87_buffer_1` > 114),])
+row.names(data1[which(data1$`88_buffer_1` > 114),])
+row.names(data1[which(data1$`89_buffer_1` > 114),])
+row.names(data1[which(data1$`90_buffer_1` > 114),])
 
 #### LOG TRANSFORMATION AND NORMALIZATION ###
 
@@ -1128,3 +1134,7 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   
 #Save R workspace so that can load prior to analysis 
   save.image(file= paste0(study,"_AfterProcessing.RData"))
+
+  
+  
+  
