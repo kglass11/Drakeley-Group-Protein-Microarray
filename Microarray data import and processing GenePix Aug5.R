@@ -1,6 +1,8 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #IgG or IgM
-  #Last updated August 7, 2018
+  #Last updated November 12, 2018
+
+#Updated because the new antibodies have IgG at 594 and IgM at 488
 
 ###Create a folder, into which you should copy this script, your .gpr files (named 'Slide 1.gpr', 'Slide 2.gpr' etc.), 
 # and your sample list, sample metadata, and target (antigen) metadata csv files.
@@ -53,7 +55,7 @@ workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgG_594"
 study <- "KenebaPi_IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample_list.csv"
+sample_file <- "Sample list.csv"
 
 #define file name for sample file + additional metadata (character vector)
 meta_file <- "pilot 2016 sample metadata.csv"
@@ -232,7 +234,7 @@ index_target <- as.numeric(length(annotation_targets.df$target_id_numeric))
 #The column identifying the median.df - the background in slides_all.df is 34 (here we ignore this column)
 
 #Foreground 
-if(iso == "IgG"){
+if(iso == "IgM"){
 
 fore.df <- annotation_targets.df
 for(i in 1:length(samples)){
@@ -251,7 +253,7 @@ for(i in 1:length(samples)){
 
 }
 
-if(iso == "IgM"){
+if(iso == "IgG"){
   
   fore.df <- annotation_targets.df
   for(i in 1:length(samples)){
