@@ -48,11 +48,11 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgG_594"
+workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgM_488"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "KenebaPi_IgG"
+study <- "KenebaPi_IgM"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
 sample_file <- "Sample list.csv"
@@ -70,7 +70,7 @@ reps <- 2
 index_block <- 32
 
 #define isotype
-iso <- "IgG"
+iso <- "IgM"
 
 ### Set the working directory for the folder where .gpr files are. Can check working
 #directory after with getwd()
@@ -681,6 +681,75 @@ annotation_target_b1b2 <- rbind(annotation_target_b1, annotation_target_b2)
 write.csv(cbind(cor_target_mean_b1b2, annotation_target_b1b2), file=paste0(study,"_target_mean_as_array.csv"))
 remove(cor_target_mean, cor_target_mean_b1, cor_target_mean_b2,cor_target_mean_b1b2, annotation_target_b1, annotation_target_b2, annotation_target_b1b2)
 
+## Investigating protein carryover - plot buffer spots vs above points
+data1 <- as.data.frame(t(cor2.matrix))
+
+## plot all points with lots of higher buffer spots
+png(filename = paste0(study, "_buffercorrelation.tif"), width = 10, height = 10, units = "in", res = 600)
+par(mfrow=c(3,3),mar = c(4, 4, 2, 0.5), oma = c(2, 2, 2, 2), bty = "o", cex.main = 1, cex.axis = 1.5, cex.lab = 1.5, xpd=NA)
+
+plot(data1$"75_Meningococcal A_1", data1$"87_buffer_1", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"75_Meningococcal A_1", data1$"87_buffer_1"), digits=4))), side=3, adj=0)
+
+plot(data1$"76_Meningococcal C_1", data1$"88_buffer_1", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"76_Meningococcal C_1", data1$"88_buffer_1"), digits=4))), side=3, adj=0)
+
+plot(data1$"77_Meningococcal W_1", data1$"89_buffer_1", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"77_Meningococcal W_1", data1$"89_buffer_1"), digits=4))), side=3, adj=0)
+
+plot(data1$"78_Meningococcal X_1", data1$"90_buffer_1", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"78_Meningococcal X_1", data1$"90_buffer_1"), digits=4))), side=3, adj=0)
+
+plot(data1$"327_Meningococcal A_2", data1$"339_buffer_2", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"327_Meningococcal A_2", data1$"339_buffer_2"), digits=4))), side=3, adj=0)
+
+plot(data1$"328_Meningococcal C_2", data1$"340_buffer_2", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"328_Meningococcal C_2", data1$"340_buffer_2"), digits=4))), side=3, adj=0)
+
+plot(data1$"329_Meningococcal W_2", data1$"341_buffer_2", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"329_Meningococcal W_2", data1$"341_buffer_2"), digits=4))), side=3, adj=0)
+
+plot(data1$"330_Meningococcal X_2", data1$"342_buffer_2", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"330_Meningococcal X_2", data1$"342_buffer_2"), digits=4))), side=3, adj=0)
+
+plot(data1$"331_Meningococcal Y_2", data1$"343_buffer_2", col="red", cex = 0.7)
+mtext(c(paste("R =", round(cor(data1$"331_Meningococcal Y_2", data1$"343_buffer_2"), digits=4))), side=3, adj=0)
+
+graphics.off()
+
+#similar plot for the post-IgG high std buffer spots
+data2 <- as.data.frame(t(cor.matrix))
+
+png(filename = paste0(study, "_buffercorrelationIgM.tif"), width = 6, height = 6, units = "in", res = 600)
+par(mfrow=c(2,2),mar = c(3, 3, 1, 0.5), oma = c(2, 1, 1, 1), mgp = c(1.5,0.5,0), bty = "o", cex.main = 1, cex.axis = 0.6, cex.lab = 0.7, xpd=NA)
+
+plot(data2$"223_IgM Std 1 (200ug/ml)_1", data2$"235_buffer_1", col="red", cex = 0.5)
+mtext(c(paste("R =", round(cor(data2$"223_IgM Std 1 (200ug/ml)_1", data2$"235_buffer_1"), digits=4))), side=3, adj=0)
+
+plot(data2$"224_IgM Std 2 (100ug/ml)_1", data2$"236_buffer_1", col="red", cex = 0.5)
+mtext(c(paste("R =", round(cor(data2$"224_IgM Std 2 (100ug/ml)_1", data2$"236_buffer_1"), digits=4))), side=3, adj=0)
+
+plot(data2$"475_IgM Std 1 (200ug/ml)_2", data2$"487_buffer_2", col="red", cex = 0.5)
+mtext(c(paste("R =", round(cor(data2$"475_IgM Std 1 (200ug/ml)_2", data2$"487_buffer_2"), digits=4))), side=3, adj=0)
+
+plot(data2$"476_IgM Std 2 (100ug/ml)_2", data2$"488_buffer_2", col="red", cex = 0.5)
+mtext(c(paste("R =", round(cor(data2$"476_IgM Std 2 (100ug/ml)_2", data2$"488_buffer_2"), digits=4))), side=3, adj=0)
+
+graphics.off()
+
+#plot for MSP2-Dd2 also
+
+png(filename = paste0(study, "_buffercorrelationMSP2_Dd2.tif"), width = 4.5, height = 3, units = "in", res = 600)
+par(mfrow=c(1,2),mar = c(1, 3, 1, 0.5), oma = c(2, 1, 1, 1), mgp = c(1.5,0.5,0), bty = "o", cex.main = 1, cex.axis = 0.6, cex.lab = 0.7, xpd=NA)
+
+plot(data2$"177_MSP2 Dd2_1", data2$"189_buffer_1", col="red", cex = 0.5)
+mtext(c(paste("R =", round(cor(data2$"177_MSP2 Dd2_1", data2$"189_buffer_1"), digits=4))), side=3, adj=0)
+
+plot(data2$"429_MSP2 Dd2_2", data2$"441_buffer_2", col="red", cex = 0.5)
+mtext(c(paste("R =", round(cor(data2$"429_MSP2 Dd2_2", data2$"441_buffer_2"), digits=4))), side=3, adj=0)
+
+graphics.off()
+
 
 #### LOG TRANSFORMATION AND NORMALIZATION ###
 
@@ -774,9 +843,9 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
 
   graphics.off()
 
-###Plot All standards together in ggplot2, but separately for rep1 and rep2 - for ALL THREE ISOTYPES
+###Plot All standards together in ggplot2, but separately for rep1 and rep2 - for ALL THREE std curves
   
-  Ig <- c("IgA", "IgG", "IgM")
+  Ig <- c("IgG Std", "IgM Std", "IgM Fc")
   
 for(i in 1:length(Ig)){
     
@@ -794,7 +863,7 @@ for(i in 1:length(Ig)){
   png(filename = paste0(study, "_stds_norm_1_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
   print(ggplot(std1melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep1 Normalized") +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep1 Normalized") + ylim(-1,10) + 
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
     theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
   
@@ -805,7 +874,7 @@ for(i in 1:length(Ig)){
   png(filename = paste0(study, "_stds_norm_2_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
   
   print(ggplot(std2melt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep2 Normalized") +
+    labs(x = "Sample", y = "Normalized Log2(MFI)", title = "Stds Rep2 Normalized") + ylim (-1,10) +
     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
     theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
   
@@ -1049,10 +1118,10 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   norm_sub4.df <- norm_sub3.df[,1:ncol(norm_sub.matrix)]
   
   #Make the dilution column of target_meta.df a character type
-  target_meta.df$Concentration <- as.character(target_meta.df$Concentration)
+  #target_meta.df$Concentration <- as.character(target_meta.df$Concentration)
   
   #Merge with target metadata to filter based on expression tag etc.
-  target.df <- merge(target_meta.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
+  target.df <- merge(target_meta2.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
   
   #Save final data frame to csv file
   write.csv(norm_sub4.df, paste0(study, "_finalafterprocessing.csv"))
