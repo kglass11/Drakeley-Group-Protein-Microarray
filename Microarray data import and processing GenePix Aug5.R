@@ -61,7 +61,7 @@ sample_file <- "Sample list.csv"
 meta_file <- "pilot 2016 sample metadata.csv"
 
 #define file name for antigen list file with additional info about targets.
-target_file <- "Target metadata.csv" 
+target_file <- "KenebaAntigenKeyv3.csv" 
 
 #number of technical replicates for the study (usually 1 or 2)
 reps <- 2
@@ -122,7 +122,7 @@ sample_meta1.df <- read.csv(meta_file, header=T, na.strings = " ", check.names =
 target_meta1.df <- read.csv(target_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
 
 #remove duplicates from target metadata
-target_meta.df <- distinct(target_meta.df)
+target_meta.df <- distinct(target_meta1.df)
 
 ###Processing sample list:
 ###Create a vector listing all of your samples, in the order they appear in your samples_list file
@@ -176,28 +176,6 @@ for(i in 1:nrow(slides_all.df)){
   slides_all.df$Sample[[i]] <- name
 }
 remove(i,block,slide,temp,name)
-
-#*** Old code for the same thing:
-###Assign your sample_ids to each row of the combined slide data (slides_all.df)
-#The order of data in your samples.df file is irrelevant, as long as each sample ID is correctly matched to its slide and block numbers
-
-# for(i in 1:dim(slides_all.df)[1]){
-#   
-#   print(i)
-#   row_ite<-slides_all.df[i,]
-#   block_ite<-row_ite$Block
-#   slide_ite<-row_ite$slide_no
-#   sample_info_1<-samples.df[which(samples.df$slide_no==slide_ite),]
-#   match<-block_ite%in%sample_info_1[,"block_rep_1"]
-#   if(match==TRUE){
-#     value<-which(block_ite==sample_info_1[,"block_rep_1"])
-#   }else{
-#     value<-which(block_ite==sample_info_1[,"block_rep_2"])
-#   }
-#   sample_info_2<-sample_info_1[value,"sample_id_unique"]
-#   slides_all.df$Sample[i]<-as.character(sample_info_2)
-# }
-# remove(i, sample_info_1, sample_info_2, match, row_ite, block_ite, slide_ite)
 
 ###Write slides_all.df to a file to keep as a csv in your directory
 write.csv(slides_all.df,file=paste0(study,"_slidesall_combinedGPR.csv"), row.names=T)
@@ -337,7 +315,7 @@ cor.5.matrix[high_targets_disinclude, ] <- NA
 ###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
 
 #Prepare target data frame for merging (get "unique" names from annotation targets) 
-target_meta2.df <- merge(target_meta.df[,1:6], annotation_targets.df, by = "Name")
+target_meta2.df <- merge(target_meta.df, annotation_targets.df, by = "Name")
 
 #merge target data frame with data
 bunny <- merge(target_meta2.df, cor.5.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
