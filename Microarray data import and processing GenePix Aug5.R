@@ -350,18 +350,18 @@ plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
 graphics.off()
 
 if (reps == 1){
-  GSTmean <- GST[,12:ncol(GST)]
+  GSTmean <- GST[,20:ncol(GST)]
 }
 
 if (reps == 2){
-  GSTmean <- colMeans(GST[,12:ncol(GST)])
+  GSTmean <- colMeans(GST[,20:ncol(GST)])
 }
 
 #subtract GST directly for each sample from all tagged targets
 #set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
 
 #might have to change column number here, might need to adjust below for NAs, or remove high targets disinclude?
-bundata <- bun[11:ncol(bun)]
+bundata <- bun[19:ncol(bun)]
 #bundata <- bundata[,!(colnames(bundata) %in% samples_exclude1)]
 
 subbedGST <- bundata
@@ -378,7 +378,7 @@ remove(i)
 no_tags.df <- filter(bunny, is.na(Expression_tag) | !(Expression_tag == "GST"))
 #no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
 row.names(no_tags.df) <- no_tags.df$target_id_unique
-no_tags.df <- no_tags.df[,12:ncol(no_tags.df)]
+no_tags.df <- no_tags.df[,20:ncol(no_tags.df)]
 
 #then rbind the GST and the CD4 data frames to that one. 
 cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
@@ -618,9 +618,9 @@ remove(i,j)
 removed_buffer_targets <- subset(removed_buffer_targets, !is.na(removed_buffer_targets))
 
 #All slides, INCLUDING "bad" spots (ALL buffer targets)
-png(filename = paste0(study, "_buffer_targets.tif"), width = 5, height = 4, units = "in", res = 600)
+png(filename = paste0(study, "_buffer_targets.tif"), width = 11, height = 4, units = "in", res = 600)
 par(mar = c(5, 3, 2.25, 0.5), oma = c(0, 0, 0, 0), bty = "o", 
-    mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.6, cex.lab = 1, xpd=NA, las=2)
+    mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.2, cex.lab = 1, xpd=NA, las=2)
 boxplot(t(cor.matrix[targets_buffer,]),
         cex=0.5,
         ylab="Corrected MFI (log scale)", log = "y")
