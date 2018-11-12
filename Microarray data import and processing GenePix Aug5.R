@@ -46,17 +46,17 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "I:/Drakeley Group/PROTEIN MICROARRAYS/Experiments/Elin MSC Project"
+workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgG_594"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "CHMI IgG"
+study <- "KenebaPi_IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "CHMI_microarray_samples.csv"
+sample_file <- "Sample_list.csv"
 
 #define file name for sample file + additional metadata (character vector)
-meta_file <- "Sample_metadata.csv"
+meta_file <- "pilot 2016 sample metadata.csv"
 
 #define file name for antigen list file with additional info about targets.
 target_file <- "Target metadata.csv" 
