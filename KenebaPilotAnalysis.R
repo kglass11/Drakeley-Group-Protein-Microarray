@@ -27,6 +27,14 @@ load(file = "KenebaPi_IgG_AfterProcessing.RData")
 
 #Plot all data for each antigen by each dilution
 
+antnames <- rownames(norm_sub4.df)
+
+tnormsub <- as.data.frame(t(norm_sub4.df))
+
+allmeta <- merge(sample_meta_f.df,tnormsub, all.y = TRUE, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE) 
+
+
+
 
 
 
