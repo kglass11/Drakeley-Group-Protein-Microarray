@@ -758,6 +758,134 @@ row.names(data1[which(data1$`88_buffer_1` > 395),])
 row.names(data1[which(data1$`89_buffer_1` > 395),])
 row.names(data1[which(data1$`90_buffer_1` > 395),])
 
+### Remove Buffer Outliers - this section copied from Sanger v2 data processing.R in the master branch.
+
+#plot all buffer values as a histogram or qplot to check normality - only normal after log2 transformation, not MFI
+png(filename = paste0(study, "_Buffer_hist.tif"), width = 5, height = 7.5, units = "in", res = 1200)
+par(mfrow=c(2,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+hist(c(cor3.matrix[targets_buffer,]), breaks = 25, col = "blue",
+     ylab="Frequency", xlab="Background corrected MFI", main = NULL)
+title(main="All Buffer, MFI", adj=0)
+
+hist(log2(c(cor3.matrix[targets_buffer,])), col = "darkblue", breaks = 25,
+     ylab="Frequency", xlab="Log2(MFI)", main = NULL)
+title(main="All Buffer, Log2(MFI)", adj=0)
+
+graphics.off()
+
+#isolate and transform buffer values
+Buffer <- cor3.matrix[targets_buffer,]
+Buflog <- log2(Buffer)
+
+#check the 1.5*IQR method instead? 
+#set rule = 1.5 initially - this was getting 6.15, way too low
+#The problem is the IQR is only 0.22 because the data is mostly all at the bottom end
+#So this method will not work. 
+maxIQR <- function(data, rule){
+  x <- quantile(data,0.75, na.rm=TRUE) + (IQR(data, na.rm=TRUE) * rule)
+  return(x)
+}
+
+outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 6.38 on the log2 data, which is way too low
+
+#Altered the scores function source code so that it will be able to deal with NAs 
+#verified to work for the z type, hypothetically for the other types as well.
+
+"scores" <-
+  function (x, type = c("z","t","chisq","iqr","mad"), prob = NA, lim = NA) 
+  {
+    if (is.matrix(x)) 
+      apply(x, 2, scores, type = type, prob = prob, lim = lim)
+    else if (is.data.frame(x)) 
+      as.data.frame(sapply(x, scores, type = type, prob = prob, lim = lim))
+    else {
+      n <- length(x)
+      s <- match.arg(type)
+      ty <- switch(s, z=0, t=1, chisq=2, iqr=3, mad=4)
+      
+      if (ty == 0) {
+        res <- (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)
+        if (is.na(prob)) res
+        else {
+          if (prob == 1) pnorm(res)
+          else	if (prob == 0) abs(res) > (n-1)/sqrt(n)
+          else abs(res) > qnorm(prob)
+        }
+      }
+      else if (ty == 1) {
+        t <- (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)
+        res <- (t*sqrt(n-2))/sqrt(n-1-t^2)
+        if (is.na(prob)) res
+        else {
+          if (prob == 1) pt(res,n-2)
+          else	if (prob == 0) abs(res) > (n-1)/sqrt(n)
+          else abs(res) > qt(prob,n-2)
+        }
+        
+      }
+      else if (ty == 2) {
+        res <- (x - mean(x, na.rm = TRUE))^2/var(x, na.rm = TRUE)
+        if (is.na(prob)) res
+        else {
+          if (prob == 1) pchisq(res,1)
+          else abs(res) > qchisq(prob,1)
+        }
+      }
+      else if (ty == 3) {
+        res <- x
+        Q1 <- quantile(x,0.25, na.rm = TRUE)
+        Q3 <- quantile(x,0.75, na.rm = TRUE)
+        res[x >= Q1 & res <= Q3] <- 0
+        res[x < Q1] <- (res[x < Q1]-Q1)/IQR(x)
+        res[x > Q3] <- (res[x > Q3]-Q3)/IQR(x)
+        if (is.na(lim)) res
+        else abs(res) > lim
+      }
+      else if (ty == 4) {
+        res <- (x - median(x, na.rm = TRUE))/mad(x, na.rm = TRUE)
+        if (is.na(prob)) res
+        else {
+          if (prob == 1) pnorm(res)
+          else	if (prob == 0) abs(res) > (n-1)/sqrt(n)
+          else abs(res) > qnorm(prob)
+        }
+      }
+      
+    }
+  }
+
+#calculate outliers for log2 transformed data, for all buffer data considered as one population
+#decided to go with prob = 0.95. I do not feel comfortable going lower, 
+#although this is a conservative cutoff based on the QC plots
+BUFoutliers <- scores(Buflog, type = "z", prob =0.95)
+
+#remove outliers (set to NA in original background corrected MFI data) 
+BUFrm995 <- as.matrix(Buffer)
+for(i in 1:length(BUFrm995)){
+  if(is.na(BUFoutliers[[i]])){ 
+    i = i+1 
+  }else if(BUFoutliers[[i]] == TRUE){
+    BUFrm995[[i]] <- NA
+  }
+}
+
+max(BUFrm995, na.rm = TRUE) #24855 for 0.995, 3899 for 0.95
+min(BUFrm995, na.rm = TRUE) #50 for 0.995, 50 for 0.95
+
+length(which(BUFoutliers == TRUE))/length(BUFoutliers)*100 # 4.6% for 0.995, 8.9% for 0.95
+
+#plot histogram again with outliers removed 
+png(filename = paste0(study, "_Buffer_hist_p.95.tif"), width = 5, height = 5, units = "in", res = 1200)
+par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
+
+hist(log2(c(BUFrm995)), breaks = 25, col = "blue",
+     ylab="Frequency", xlab="Log2(MFI)", main = NULL)
+title(main="Buffer without outliers, MFI", adj=0)
+
+graphics.off()
+
+
 #### LOG TRANSFORMATION AND NORMALIZATION ###
 
 ### Log transform the data (base 2)
