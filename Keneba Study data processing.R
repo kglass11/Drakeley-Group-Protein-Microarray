@@ -48,11 +48,11 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgM_488"
+workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgG_594"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "KenebaPi_IgM"
+study <- "KenebaPi_IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
 sample_file <- "Sample list.csv"
