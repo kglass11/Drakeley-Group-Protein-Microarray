@@ -24,7 +24,7 @@ setwd(workdir)
 #do the analysis for IgG and IgM one at a time. Load either one or the other.
 #make sure to include the study name in the filenames of all plots produced.
 
-load(file = "KenebaPi_IgGv2_AfterProcessing.RData")
+load(file = "KenebaPi_IgMv2_AfterProcessing.RData")
 
 ###### Serum Dilution
 
@@ -40,8 +40,8 @@ allmeta$sample_dilution <- as.factor(as.character(allmeta$sample_dilution))
 
 #separate test and controls
 
-testmeta <- filter(allmeta, sample_type == "test")
-controlmeta <- filter(allmeta, sample_type == "control")
+testmeta <- filter(allmeta, sample_type == "test" | sample_type == "test/control")
+controlmeta <- filter(allmeta, sample_type == "control" | sample_type == "test/control")
 
 #Plot all data for each antigen by each dilution as a connected line plot
 
@@ -76,19 +76,35 @@ print(ggplot(controlmelt,  aes(x=variable, y = value, fill = sample_dilution)) +
 
 graphics.off()
 
-#plot test samples in a line plot, separately for 1/4 of the antigens 
+#plot test samples in a line plot, separately for all antigens using facet_wrap
 
-png(filename = paste0(study, "_dilution_line_set1.tif"), width = 13, height = 13, units = "in", res = 1200)
+png(filename = paste0(study, "_dilution_line_set1.tif"), width = 13, height = 17, units = "in", res = 1200)
 
-print(ggplot(testmelt,  aes(x=sample_dilution, y = value, group = sample_dilution)) + geom_point(size = 0.2, color = "blue") +
-        geom_line() + facet_wrap(~as.factor(variable)) + theme(strip.text = element_text(size=6)) +
+print(ggplot(testmelt,  aes(x=sample_dilution, y = value)) + geom_point(size = 1.2, color = "blue") +
+        geom_line(aes(group = sample_id),size = 0.1) + facet_wrap(~as.factor(variable)) +
         theme_bw() + labs(x = "Dilution", y = "Log2(MFI Ratio)") + 
         theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
         theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 8, color = "black")) +
         theme(legend.title = element_text(size = 12)) + ylim(0,9) +
-        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)))
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
+        theme(strip.text = element_text(face="bold", size=6), strip.background = element_rect(colour="black", size=0.3)))
 
 graphics.off()
+
+#repeat same plot for controls 
+png(filename = paste0(study, "_dilution_line_refsera.tif"), width = 13, height = 17, units = "in", res = 1200)
+
+print(ggplot(controlmelt,  aes(x=sample_dilution, y = value)) + geom_point(size = 1.2, color = "red") +
+        geom_line(aes(group = sample_id),size = 0.1) + facet_wrap(~as.factor(variable)) +
+        theme_bw() + labs(x = "Dilution", y = "Log2(MFI Ratio)") + 
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+        theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 8, color = "black")) +
+        theme(legend.title = element_text(size = 12)) + ylim(0,9) +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
+        theme(strip.text = element_text(face="bold", size=6), strip.background = element_rect(colour="black", size=0.3)))
+
+graphics.off()
+
 
 
 
