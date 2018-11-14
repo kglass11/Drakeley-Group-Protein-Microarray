@@ -48,14 +48,14 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgG_594"
+workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgM_488"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "KenebaPi_IgGv2"
+study <- "KenebaPi_IgMv2"
 
 #define isotype
-iso <- "IgG"
+iso <- "IgM"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
 sample_file <- "Sample list.csv"
@@ -106,7 +106,7 @@ names(slides_list) <- slide_ids
 
 #change the column names for slide 4 to be the same as the others because 
 #they were messed up in genepix software when re-extracting the data
-colnames(slides_list[[4]]) <- colnames(slides_list[[3]])
+#colnames(slides_list[[4]]) <- colnames(slides_list[[3]])
 
 ###Bind all data from the slide data list (slides.list) into a single dataframe
 #you may get a warning after this step, invalid factor level, this is not a problem!
@@ -750,7 +750,7 @@ maxIQR <- function(data, rule){
   return(x)
 }
 
-outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 8.385736 on the log2 data (Keneba pilot), which is too low
+outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 8.385736 on the log2 data (Keneba pilot IgG) and 6.924607 IgM, which is too low
 
 #Altered the scores function source code so that it will be able to deal with NAs 
 #verified to work for the z type, hypothetically for the other types as well.
@@ -818,7 +818,7 @@ outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 8.385736 
   }
 
 #calculate outliers for log2 transformed data, for all buffer data considered as one population
-#decided to go with prob = 0.95. I do not feel comfortable going lower, 
+#decided to go with prob = 0.99 for Keneba Pilot 
 #although this is a conservative cutoff based on the QC plots
 BUFout <- scores(Buflog, type = "z", prob =0.99)
 
@@ -832,10 +832,14 @@ for(i in 1:length(BUFrm995)){
   }
 }
 
-max(BUFrm995, na.rm = TRUE) #651.7466 for 0.995, 546.5955 for 0.99, 414.7466 for 0.95
+max(BUFrm995, na.rm = TRUE) #651.7466 for 0.995, 546.5955 for 0.99, 414.7466 for 0.95 (IgG)
+#117 for 0.99 for IgM
 min(BUFrm995, na.rm = TRUE) #50 for 0.995, 50 for 0.99, 55 for 0.95
+#50 for 0.99 for IgM
 
+#what percentage of buffer values are removed?
 length(which(BUFout == TRUE))/length(BUFout)*100 # 1.5625% for 0.995, 2.205141% for 0.99, 6.857989% for 0.95
+#2.976941% for 0.99 for IgM 
 
 #plot histogram again with outliers removed 
 png(filename = paste0(study, "_Buffer_hist_p.99.tif"), width = 5, height = 5, units = "in", res = 1200)
@@ -1200,7 +1204,7 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   samples_control <- sample_meta.df$sample_id_unique[which(sample_meta.df$sample_type =="control")]
   
   #Define a list of targets to be removed from further analysis (controls)
-  rmsamp_all <- unique(c(targets_blank, targets_buffer, targets_ref, targets_std, high_targets_disinclude))
+  rmsamp_all <- unique(c(targets_blank, targets_buffer, targets_ref, targets_std))
   
   #Remove control protein targets - Don't remove control samples yet, need to do tag subtraction 
   #from those samples as well, and want them included in some exported data.
