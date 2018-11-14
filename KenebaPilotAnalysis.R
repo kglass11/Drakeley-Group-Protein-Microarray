@@ -41,16 +41,18 @@ allmeta$sample_dilution <- as.factor(as.character(allmeta$sample_dilution))
 #separate test and controls
 
 testmeta <- filter(allmeta, sample_type == "test")
+controlmeta <- filter(allmeta, sample_type == "control")
 
 #Plot all data for each antigen by each dilution as a connected line plot
 
 #melt data frame with measure variables as antnames
 testmelt <- melt(testmeta, measure.vars = antnames)
+controlmelt <- melt(controlmeta, measure.vars = antnames)
 
 #find the max value to use as the ylim of the plots so all are on same axes
 max(testmelt$value, na.rm = TRUE) #8.73
 
-#plot all data as a boxplot for each antigen all on one giant plot
+#plot all data as a boxplot for each antigen all on one giant plot - test samples only
 png(filename = paste0(study, "_dilution_box.tif"), width = 15, height = 6, units = "in", res = 1200)
 
 print(ggplot(testmelt,  aes(x=variable, y = value, fill = sample_dilution)) + geom_boxplot(outlier.size = 0.2) +
@@ -61,6 +63,34 @@ print(ggplot(testmelt,  aes(x=variable, y = value, fill = sample_dilution)) + ge
         theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)))
 
 graphics.off()
+
+#control samples only
+png(filename = paste0(study, "_dilution_box_refsera.tif"), width = 15, height = 6, units = "in", res = 1200)
+
+print(ggplot(controlmelt,  aes(x=variable, y = value, fill = sample_dilution)) + geom_boxplot(outlier.size = 0.2) +
+        theme_bw() + labs(x = "Antigen", y = "Log2(MFI Ratio)") + 
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+        theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 8, color = "black")) +
+        theme(legend.title = element_text(size = 12)) + ylim(0,9) +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)))
+
+graphics.off()
+
+#plot test samples in a line plot, separately for 1/4 of the antigens 
+
+png(filename = paste0(study, "_dilution_line_set1.tif"), width = 13, height = 13, units = "in", res = 1200)
+
+print(ggplot(testmelt,  aes(x=sample_dilution, y = value, group = sample_dilution)) + geom_point(size = 0.2, color = "blue") +
+        geom_line() + facet_wrap(~as.factor(variable)) + theme(strip.text = element_text(size=6)) +
+        theme_bw() + labs(x = "Dilution", y = "Log2(MFI Ratio)") + 
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+        theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 8, color = "black")) +
+        theme(legend.title = element_text(size = 12)) + ylim(0,9) +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)))
+
+graphics.off()
+
+
 
 #graphs that are antigen specific: 
 for(i in 1:length(antnames)){
