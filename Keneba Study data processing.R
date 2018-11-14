@@ -52,7 +52,10 @@ workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgG_594"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "KenebaPi_IgG"
+study <- "KenebaPi_IgGv2"
+
+#define isotype
+iso <- "IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
 sample_file <- "Sample list.csv"
@@ -69,8 +72,6 @@ reps <- 2
 #define number of blocks per slide
 index_block <- 32
 
-#define isotype
-iso <- "IgM"
 
 ### Set the working directory for the folder where .gpr files are. Can check working
 #directory after with getwd()
@@ -102,6 +103,10 @@ remove(i)
 
 ###Name your slides in this list, according to their file names
 names(slides_list) <- slide_ids
+
+#change the column names for slide 4 to be the same as the others because 
+#they were messed up in genepix software when re-extracting the data
+colnames(slides_list[[4]]) <- colnames(slides_list[[3]])
 
 ###Bind all data from the slide data list (slides.list) into a single dataframe
 #you may get a warning after this step, invalid factor level, this is not a problem!
@@ -269,56 +274,13 @@ targets_ref = c(grep("REF", annotation_targets.df$Name, ignore.case = TRUE))
 targets_std = c(grep("Std", annotation_targets.df$Name, ignore.case = TRUE))
 targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
 
-###Remove "bad" spots from subsequent analysis
-
-#First, we need to tell R which spots are the highest spots on the plate
-#the spots printed immediately after these can be made to have null MFIs
-#This call will create a vector identifying all ref spots, plus all std spots called "Std 1"
-high_targets <- c(targets_ref, grep("Std 1", row.names(annotation_targets.df)))
-high_targets_disinclude <-c()
-
-#subset high_targets to exclude high targets in the bottom of block 1
-#these were printed last in both cases (reps = 1 or reps = 2)
-high_targets1 <- high_targets[!between(high_targets, (index_target/2 - 12), (index_target/2))]
-
-#To identify the spots to disinclude, we need to identify the position of the next spot in the print run.
-#This is different for reps=1 or reps=2.
-
-# For singlicate printing, the printer prints from top to bottom, right to left, with a new pickup for block 1 with different 
-#targets than were just printed in block 2. 
-
-if (reps==1){
-  # If the high target is in block 2, then exclude high_target - index_target/2 
-  # If the high target is in block 1, then exclude high_target + index_target/2 + 12
-  high_targets_disinclude <- ifelse(high_targets1>=index_target/2, high_targets1-(index_target/2), high_targets1+(index_target/2+12))
-}
-
-# For duplicate printing, the printer prints from top to bottom, right to left, with only one pickup for both duplicate rows
-
-if (reps==2){
-  
-  #subset high_targets1 to exclude high targets within (index target - 12) because these were printed last.
-  high_targets2 <- high_targets1[!between(high_targets1,(index_target - 12), index_target)]
-  
-  #for either block 1 or block 2, exclude high target + 12
-  for (i in 1:length(high_targets2)){
-  high_targets_disinclude[i] <- high_targets2[i] + 12
-  }
-  high_targets_disinclude <- subset(high_targets_disinclude, !is.na(high_targets_disinclude))
-}
-remove(i)
-
-###Convert the spots to be disincluded to NAs in background corrected data
-cor.5.matrix <- cor.matrix
-cor.5.matrix[high_targets_disinclude, ] <- NA
-
 ###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
 
 #Prepare target data frame for merging (get "unique" names from annotation targets) 
 target_meta2.df <- merge(target_meta.df, annotation_targets.df, by = "Name")
 
 #merge target data frame with data
-bunny <- merge(target_meta2.df, cor.5.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
+bunny <- merge(target_meta2.df, cor.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
 #subset based on GST tag
 
 #depending on column name with tag upper or lowercase, use either of the next two lines
@@ -344,25 +306,23 @@ graphics.off()
 
 png(filename = paste0(study, "_GST.tif"), width = 5, height = 3.5, units = "in", res = 1200)
 par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(2.1,4.1,2.1,2.1))
-plot(c(as.matrix(GST)), pch='*', col = "blue", main = "GST",
+plot(c(GSTmelt$value), pch='*', col = "blue", main = "GST",
      ylab="Background Corrected MFI", xlab="GST spot", cex.main=1, cex.lab=1, cex.axis=0.7)
 
 graphics.off()
 
 if (reps == 1){
-  GSTmean <- GST[,20:ncol(GST)]
+  GSTmean <- GST[,(ncol(target_meta2.df)+1):ncol(GST)]
 }
 
 if (reps == 2){
-  GSTmean <- colMeans(GST[,20:ncol(GST)])
+  GSTmean <- colMeans(GST[,(ncol(target_meta2.df)+1):ncol(GST)])
 }
 
 #subtract GST directly for each sample from all tagged targets
 #set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
 
-#might have to change column number here, might need to adjust below for NAs, or remove high targets disinclude?
-bundata <- bun[19:ncol(bun)]
-#bundata <- bundata[,!(colnames(bundata) %in% samples_exclude1)]
+bundata <- bun[ncol(target_meta2.df):ncol(bun)]
 
 subbedGST <- bundata
 for(i in 1:ncol(subbedGST))
@@ -378,7 +338,7 @@ remove(i)
 no_tags.df <- filter(bunny, is.na(Expression_tag) | !(Expression_tag == "GST"))
 #no_tags.df <- filter(bunny, is.na(Expression_Tag) | !(Expression_Tag == "GST"))
 row.names(no_tags.df) <- no_tags.df$target_id_unique
-no_tags.df <- no_tags.df[,20:ncol(no_tags.df)]
+no_tags.df <- no_tags.df[,(ncol(target_meta2.df)+1):ncol(no_tags.df)]
 
 #then rbind the GST and the CD4 data frames to that one. 
 cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
@@ -504,6 +464,10 @@ remove(temp)
 graphics.off()
 
 ### 2. Buffer
+# **** Because we are no longer excluding buffer spots printed after certain targets, the different cor matrix used
+#      and the different values for means, SD, etc are all the same. However, I have left both for ease of use 
+#      because some values are used later in different plots and calculations
+
 #Though some slides/pads may have high background, background correction may adjust this and make the data useable.
 #The only way of identifying if this is true is by looking at the control spots by slide and pad.
 #If the same samples have high controls, the background correction was not enough.
@@ -516,7 +480,6 @@ graphics.off()
 #***Samples which have deviant buffer means will be automatically excluded from further analysis
 #***Buffer targets which are deviant across all pads and slides will be automatically excluded from further analysis
 
-#Buffer assessment EXCLUDING "bad" spots: 
 #Mean median corrected MFI for all data points
 cor_buffer_mean <- mean(cor2.matrix[targets_buffer,], na.rm = TRUE)
 #SD median corrected MFI for all data points
@@ -526,7 +489,7 @@ cor_cutoff <- cor_buffer_mean+(3*cor_buffer_sd)
 
 ###Identify deviant samples/slides/pads
 
-# EXCLUDING "bad" spots - Generate a vector of mean buffer intensity for EACH sample (corrected person magnitude) 
+# Generate a vector of mean buffer intensity for EACH sample (corrected person magnitude) 
 cor_buffer_sample_mean <- colMeans(cor2.matrix[targets_buffer,], na.rm = TRUE)
 #Vectors to identify normal and deviant samples
 cor_normal <- which(cor_buffer_sample_mean<=cor_cutoff)
@@ -536,11 +499,11 @@ cor_sample_deviant <- samples.df[cor_deviant,]
 cor_sample_deviant
 write.csv(cor_sample_deviant, file = paste0(study,"_deviant_sample_buffer.csv"))
 
-#Coefficient of variation for buffer datapoints (EXCLUDING "bad" spots), and exlcuding deviant samples
+#Coefficient of variation for buffer datapoints and exlcuding deviant samples
 cor_buffer_cov <- cor_buffer_sd/cor_buffer_mean
 cor_buffer_cov_normal <- sd(cor2.matrix[targets_buffer, cor_normal], na.rm = TRUE)/mean(cor2.matrix[targets_buffer, cor_normal], na.rm = TRUE)
 
-#Plot CoV of buffer by sample - EXCLUDING "bad" spots
+#Plot CoV of buffer by sample
 cor_buffer_cov_sample <- c()
 
 png(filename = paste0(study,"_cov_buffer.tif"), width = 5, height = 4, units = "in", res = 600)
@@ -587,18 +550,17 @@ abline(h = cor_all_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
 abline(h = cor_buffer_all_mean, col = "red", lwd = 0.7, xpd=FALSE)
 title(ylab="Corrected MFI (log scale)", line=2.7)
 
-mtext(c(paste("INCLUDING Bad Buffer Spots / EXCLUDING Bad Buffer Spots:")), side=1, cex=0.8, line=2, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("Mean overall corrected buffer MFI:", round(cor_buffer_all_mean, digits=3), "/", round(cor_buffer_mean, digits=3))), side=1, cex=0.8, line=3.5, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("SD overall corrected buffer MFI:", round(cor_buffer_all_sd, digits=3), "/", round(cor_buffer_sd, digits=3))), side=1, cex=0.8, line=5, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("Cut-off overall corrected buffer MFI:", round(cor_all_cutoff, digits=3), "/", round(cor_cutoff, digits=3))), side=1, cex=0.8, line=6.5, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("CoV overall corrected buffer MFI:", round(cor_buffer_cov_all, digits=3), "/", round(cor_buffer_cov, digits=3))), side=1, cex=0.8, line=8, outer=TRUE, xpd=NA, adj=0)
-mtext(c(paste("CoV overall corrected buffer MFI (excl. deviant samples):", round(cor_buffer_cov_all_normal, digits=3), "/", round(cor_buffer_cov_normal, digits=3))), side=1, cex=0.8, line=9.5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("Mean overall corrected buffer MFI:", round(cor_buffer_all_mean, digits=3))), side=1, cex=0.8, line=3.5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("SD overall corrected buffer MFI:", round(cor_buffer_all_sd, digits=3))), side=1, cex=0.8, line=5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("Cut-off overall corrected buffer MFI:", round(cor_all_cutoff, digits=3))), side=1, cex=0.8, line=6.5, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("CoV overall corrected buffer MFI:", round(cor_buffer_cov_all, digits=3))), side=1, cex=0.8, line=8, outer=TRUE, xpd=NA, adj=0)
+mtext(c(paste("CoV overall corrected buffer MFI (excl. deviant samples):", round(cor_buffer_cov_all_normal, digits=3))), side=1, cex=0.8, line=9.5, outer=TRUE, xpd=NA, adj=0)
 
 graphics.off()
 
 ###Identify deviant buffer targets across all pads
 
-#EXCLUDING "bad" spots - Mean corrected MFI for every sample for EACH target (background protein magnitude)
+#Mean corrected MFI for every sample for EACH target (background protein magnitude)
 cor_target_mean <- rowMeans(cor2.matrix)
 #Are any corrected buffer targets universally deviant, accross all pads?
 deviant_buffer_targets <- Reduce(intersect, list(targets_buffer, which(cor_target_mean>cor_cutoff)))
@@ -606,11 +568,11 @@ cor_buffer_deviant.df <- annotation_targets.df[deviant_buffer_targets,]
 cor_buffer_deviant.df
 write.csv(cor_buffer_deviant.df, file = paste0(study,"_deviant_buffer_targets.csv"))
 
-#list of disincluded buffer targets ("bad" spots)
+#list of buffer targets removed because they were deviant (mean > cutoff)
 removed_buffer_targets <- c()
 for (i in 1:length(targets_buffer)){
-  for(j in 1:length(high_targets_disinclude))
-    if (targets_buffer[i] == high_targets_disinclude[j]){
+  for(j in 1:nrow(cor_buffer_deviant.df))
+    if (targets_buffer[i] == cor_buffer_deviant.df[j,1]){
       removed_buffer_targets[j] <- targets_buffer[i]
     }
 }
@@ -626,7 +588,7 @@ boxplot(t(cor.matrix[targets_buffer,]),
         ylab="Corrected MFI (log scale)", log = "y")
 abline(h = cor_cutoff, col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
 
-mtext(paste("Excluded buffer targets:", paste(removed_buffer_targets, collapse = ",")), las = 1)
+mtext(paste("Deviant buffer targets:", paste(removed_buffer_targets, collapse = ",")), las = 1)
 
 graphics.off()
 
@@ -635,7 +597,7 @@ graphics.off()
 png(filename = paste0(study, "_buffer_spots_slide.tif"), width = 5, height = 4, units = "in", res = 600)
 par(mfrow=c(2,3), mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=2)
-for (i in 1:index_slide){
+for (i in 1:6){
   boxplot(t(cor.matrix[targets_buffer,samples.df$slide_no==i]),
           ylab="Corrected MFI",
           ylim=c(0,2000),
@@ -661,7 +623,8 @@ for(i in 1:nrow(cor_sample_deviant)){
 #Automatically set to NA the buffer targets deviant across all arrays
 #KG - It would be good to test this on data that has deviant buffer targets, so far they are all 0.
 #KG - Actually this might be pointless as we have already calculated the values for normalization and that is the use of the buffers
-cor3.matrix[deviant_buffer_targets,] <- NA
+#KG - Not doing this because deviant buffer spots will be removed by the outlier method instead
+#cor3.matrix[deviant_buffer_targets,] <- NA
 
 ### Mean values for each target ordered by position within the arrays (not log-transformed or normalized data)
 #KG - I think we might want this somehwere else in the script using a more processed matrix
