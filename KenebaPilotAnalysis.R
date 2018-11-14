@@ -24,7 +24,7 @@ setwd(workdir)
 #do the analysis for IgG and IgM one at a time. Load either one or the other.
 #make sure to include the study name in the filenames of all plots produced.
 
-load(file = "KenebaPi_IgMv2_AfterProcessing.RData")
+load(file = "KenebaPi_IgGv2_AfterProcessing.RData")
 
 ###### Serum Dilution
 

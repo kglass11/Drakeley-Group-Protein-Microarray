@@ -48,14 +48,14 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgM_488"
+workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgG_594"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "KenebaPi_IgMv2"
+study <- "KenebaPi_IgGv2"
 
 #define isotype
-iso <- "IgM"
+iso <- "IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
 sample_file <- "Sample list.csv"
@@ -106,7 +106,7 @@ names(slides_list) <- slide_ids
 
 #change the column names for slide 4 to be the same as the others because 
 #they were messed up in genepix software when re-extracting the data
-#colnames(slides_list[[4]]) <- colnames(slides_list[[3]])
+colnames(slides_list[[4]]) <- colnames(slides_list[[3]])
 
 ###Bind all data from the slide data list (slides.list) into a single dataframe
 #you may get a warning after this step, invalid factor level, this is not a problem!
