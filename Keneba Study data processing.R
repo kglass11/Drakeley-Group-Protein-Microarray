@@ -621,10 +621,10 @@ for(i in 1:nrow(cor_sample_deviant)){
 }
 
 #Automatically set to NA the buffer targets deviant across all arrays
-#KG - It would be good to test this on data that has deviant buffer targets, so far they are all 0.
-#KG - Actually this might be pointless as we have already calculated the values for normalization and that is the use of the buffers
-#KG - Not doing this because deviant buffer spots will be removed by the outlier method instead
-#cor3.matrix[deviant_buffer_targets,] <- NA
+# Do this even though we are also removing outliers because this 
+# indicates a systematic issue with that spot which means it's data should 
+# not be counted because it could skew the mean used for buffer normalization
+cor3.matrix[deviant_buffer_targets,] <- NA
 
 ### Mean values for each target ordered by position within the arrays (not log-transformed or normalized data)
 #KG - I think we might want this somehwere else in the script using a more processed matrix
@@ -750,13 +750,12 @@ maxIQR <- function(data, rule){
   return(x)
 }
 
-outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 6.38 on the log2 data, which is way too low
+outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 8.385736 on the log2 data (Keneba pilot), which is too low
 
 #Altered the scores function source code so that it will be able to deal with NAs 
 #verified to work for the z type, hypothetically for the other types as well.
 
-"scores" <-
-  function (x, type = c("z","t","chisq","iqr","mad"), prob = NA, lim = NA) 
+"scores" <- function (x, type = c("z","t","chisq","iqr","mad"), prob = NA, lim = NA) 
   {
     if (is.matrix(x)) 
       apply(x, 2, scores, type = type, prob = prob, lim = lim)
@@ -821,25 +820,25 @@ outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 6.38 on t
 #calculate outliers for log2 transformed data, for all buffer data considered as one population
 #decided to go with prob = 0.95. I do not feel comfortable going lower, 
 #although this is a conservative cutoff based on the QC plots
-BUFoutliers <- scores(Buflog, type = "z", prob =0.95)
+BUFout <- scores(Buflog, type = "z", prob =0.99)
 
 #remove outliers (set to NA in original background corrected MFI data) 
 BUFrm995 <- as.matrix(Buffer)
 for(i in 1:length(BUFrm995)){
-  if(is.na(BUFoutliers[[i]])){ 
+  if(is.na(BUFout[[i]])){ 
     i = i+1 
-  }else if(BUFoutliers[[i]] == TRUE){
+  }else if(BUFout[[i]] == TRUE){
     BUFrm995[[i]] <- NA
   }
 }
 
-max(BUFrm995, na.rm = TRUE) #24855 for 0.995, 3899 for 0.95
-min(BUFrm995, na.rm = TRUE) #50 for 0.995, 50 for 0.95
+max(BUFrm995, na.rm = TRUE) #651.7466 for 0.995, 546.5955 for 0.99, 414.7466 for 0.95
+min(BUFrm995, na.rm = TRUE) #50 for 0.995, 50 for 0.99, 55 for 0.95
 
-length(which(BUFoutliers == TRUE))/length(BUFoutliers)*100 # 4.6% for 0.995, 8.9% for 0.95
+length(which(BUFout == TRUE))/length(BUFout)*100 # 1.5625% for 0.995, 2.205141% for 0.99, 6.857989% for 0.95
 
 #plot histogram again with outliers removed 
-png(filename = paste0(study, "_Buffer_hist_p.95.tif"), width = 5, height = 5, units = "in", res = 1200)
+png(filename = paste0(study, "_Buffer_hist_p.99.tif"), width = 5, height = 5, units = "in", res = 1200)
 par(mfrow=c(1,1), oma=c(3,1,1,1),mar=c(4.1,4.1,3.1,2.1))
 
 hist(log2(c(BUFrm995)), breaks = 25, col = "blue",
