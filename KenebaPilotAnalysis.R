@@ -38,6 +38,9 @@ allmeta <- merge(sample_meta_f.df,tnormsub, all.y = TRUE, by.x = "sample_id_uniq
 #make sample_dilution a factor
 allmeta$sample_dilution <- as.factor(as.character(allmeta$sample_dilution))
 
+#make number_thaws a factor
+allmeta$number_thaws <- as.factor(as.character(allmeta$number_thaws))
+
 #separate test and controls
 
 testmeta <- filter(allmeta, sample_type == "test" | sample_type == "test/control")
@@ -106,18 +109,54 @@ print(ggplot(controlmelt,  aes(x=sample_dilution, y = value)) + geom_point(size 
 graphics.off()
 
 
+######## Number of freeze/thaws
+
+levels(testmelt$number_thaws)
+
+thaws <- filter(testmelt, number_thaws == "1" | number_thaws == "3")
+
+#plot test samples in a line plot, separately for all antigens using facet_wrap
+
+png(filename = paste0(study, "_n.thaws_line.tif"), width = 13, height = 17, units = "in", res = 1200)
+
+print(ggplot(thaws,  aes(x=sample_dilution, y = value, color = sample_id, shape = number_thaws)) + geom_point(size = 1.2) +
+        geom_line(aes(group = interaction(number_thaws, sample_id)),size = 0.2) + facet_wrap(~as.factor(variable)) +
+        theme_bw() + labs(x = "Dilution", y = "Log2(MFI Ratio)") + 
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+        theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 8, color = "black")) +
+        theme(legend.title = element_text(size = 12)) + ylim(0,9) +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
+        theme(strip.text = element_text(face="bold", size=6), strip.background = element_rect(colour="black", size=0.3)))
+
+graphics.off()
+
+#repeat same plot for controls 
+png(filename = paste0(study, "_dilution_line_refsera.tif"), width = 13, height = 17, units = "in", res = 1200)
+
+print(ggplot(controlmelt,  aes(x=sample_dilution, y = value)) + geom_point(size = 1.2, color = "red") +
+        geom_line(aes(group = sample_id),size = 0.1) + facet_wrap(~as.factor(variable)) +
+        theme_bw() + labs(x = "Dilution", y = "Log2(MFI Ratio)") + 
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+        theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 8, color = "black")) +
+        theme(legend.title = element_text(size = 12)) + ylim(0,9) +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
+        theme(strip.text = element_text(face="bold", size=6), strip.background = element_rect(colour="black", size=0.3)))
+
+graphics.off()
+
+
+
 
 
 #graphs that are antigen specific: 
-for(i in 1:length(antnames)){
-  
-  antigen = antnames[i]
-  
-  #isolate data for the antigen
-  ant1 <- filter(testmelt, variable == antigen)
-  
-  
-}
+# for(i in 1:length(antnames)){
+#   
+#   antigen = antnames[i]
+#   
+#   #isolate data for the antigen
+#   ant1 <- filter(testmelt, variable == antigen)
+#   
+# }
 
 
 
