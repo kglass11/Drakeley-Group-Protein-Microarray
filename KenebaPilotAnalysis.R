@@ -130,21 +130,55 @@ print(ggplot(thaws,  aes(x=sample_dilution, y = value, color = sample_id, shape 
 
 graphics.off()
 
-#repeat same plot for controls 
-png(filename = paste0(study, "_dilution_line_refsera.tif"), width = 13, height = 17, units = "in", res = 1200)
+### are we maxing out for any antigens?? 
 
-print(ggplot(controlmelt,  aes(x=sample_dilution, y = value)) + geom_point(size = 1.2, color = "red") +
-        geom_line(aes(group = sample_id),size = 0.1) + facet_wrap(~as.factor(variable)) +
-        theme_bw() + labs(x = "Dilution", y = "Log2(MFI Ratio)") + 
-        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
-        theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 8, color = "black")) +
-        theme(legend.title = element_text(size = 12)) + ylim(0,9) +
-        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
-        theme(strip.text = element_text(face="bold", size=6), strip.background = element_rect(colour="black", size=0.3)))
+2^max(log.cor.matrix, na.rm = TRUE)
+#62603 for IgG, same as max(cor.matrix)
+#44625 for IgM, same as max(cor.matrix)
 
-graphics.off()
+#only 23 data points total for IgG data have data greater than 60,000
+#out of 64512
+length(which(cor.matrix > 60000))
 
+#which antigens are they? All ref spots except one IgG high std. 
+which(cor.matrix > 60000, arr.ind = TRUE)
 
+#                             row col
+# 12_REF_1                    12   9
+# 504_REF_2                  504   9
+# 12_REF_1                    12  10
+# 252_REF_1                  252  10
+# 504_REF_2                  504  10
+# 504_REF_2                  504  11
+# 493_REF_2                  493  25
+# 264_REF_2                  264  26
+# 252_REF_1                  252  35
+# 12_REF_1                    12  37
+# 241_REF_1                  241  37
+# 469_IgG Std 1 (200ug/ml)_2 469  37
+# 504_REF_2                  504  37
+# 12_REF_1                    12  44
+# 264_REF_2                  264  44
+# 12_REF_1                    12  46
+# 12_REF_1                    12  48
+# 12_REF_1                    12  53
+# 252_REF_1                  252  53
+# 504_REF_2                  504  53
+# 12_REF_1                    12  77
+# 12_REF_1                    12 102
+# 252_REF_1                  252 102
+
+#### test linearity of serum dilutions?
+
+two <- filter(allmeta, sample_dilution == "200")
+four <- filter(allmeta, sample_dilution == "400")
+eight <- filter(allmeta, sample_dilution == "800")
+
+#plot the corrected factors
+
+## calculate slope of the line from dilution 200 to 800??
+  #that would be the most quantitative way to tell 
+  #slope should be -1
 
 
 
