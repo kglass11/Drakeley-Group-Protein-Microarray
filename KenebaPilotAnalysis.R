@@ -114,8 +114,12 @@ tol18rainbow=c("#771155", "#AA4488", "#CC99BB", "#114477", "#4477AA", "#77AADD",
 # ...and finally, the Paul Tol 21-color salute
 tol21rainbow= c("#771155", "#AA4488", "#CC99BB", "#114477", "#4477AA", "#77AADD", "#117777", "#44AAAA", "#77CCCC", "#117744", "#44AA77", "#88CCAA", "#777711", "#AAAA44", "#DDDD77", "#774411", "#AA7744", "#DDAA77", "#771122", "#AA4455", "#DD7788")
 
+shadesOfGrey <- colorRampPalette(c("grey4", "grey24","grey50", "grey100"))
+shadesOfGrey(5)
 
+colors26 <- c(tol21rainbow, shadesOfGrey(5))
 
+#same plot with colors for each ref serum
 png(filename = paste0(study, "_dilution_line_refsera_colors.tif"), width = 13, height = 17, units = "in", res = 1200)
 
 print(ggplot(controlmelt,  aes(x=sample_dilution, y = value, color = sample_id)) + geom_point(size = 1.2) +
@@ -130,6 +134,21 @@ print(ggplot(controlmelt,  aes(x=sample_dilution, y = value, color = sample_id))
 
 graphics.off()
 
+#same plot with colors for each keneba sample - using to choose a sample to be repeated a few times.
+#same plot with colors for each ref serum
+png(filename = paste0(study, "_dilution_line_keneba_colors.tif"), width = 13, height = 17, units = "in", res = 1200)
+
+print(ggplot(testmelt,  aes(x=sample_dilution, y = value, color = sample_id)) + geom_point(size = 1.2) +
+        geom_line(aes(group = sample_id),size = 0.1) + facet_wrap(~as.factor(variable)) +
+        theme_bw() + labs(x = "Dilution", y = "Log2(MFI Ratio)") + 
+        scale_colour_manual(values = colors26) +
+        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+        theme(axis.text = element_text(size = 10, color = "black"), legend.text = element_text(size = 8, color = "black")) +
+        theme(legend.title = element_text(size = 12)) + ylim(0,9) +
+        theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1, size = 6)) +
+        theme(strip.text = element_text(face="bold", size=6), strip.background = element_rect(colour="black", size=0.3)))
+
+graphics.off()
 
 ######## Number of freeze/thaws
 
