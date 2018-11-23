@@ -163,6 +163,9 @@ ggplot(ittaclusterH, aes(x=ittaclusterH[,2], y = ittaclusterH$TT, color = ittacl
   stat_ellipse(geom = "polygon", col = "black", alpha = 0.5) +
   geom_point(shape = 21, color = "black")
 
+#heatmap - didn't work as is, need to get the dendrogram object out
+heatmap.2(fitH)
+
 #do other clustering methods, then add all the clusters to ittaclusterH
 
 #then merge with metadata to see if clusters relate to anything
