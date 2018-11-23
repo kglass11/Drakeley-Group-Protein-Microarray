@@ -120,6 +120,7 @@ graphics.off()
 ################### Clustering of all samples with all antigens ###########################
 
 ### All data, including negative values
+# ? Include a couple malarial antigens as well? Haven't yet, but good idea
 
 ### Add dengue PC1 instead of dengue 1-4
 
@@ -134,9 +135,34 @@ rmant2 <- c("Tg", "DENV1-NS1","DENV2-NS1","Pertussis JNIH-5 [0.1] *","Pertussis 
             "DENV3-NS1","DENV4-NS1","Pertussis JNIH-3 [10] *","Pertussis JNIH-5 [1] *")
 ittacluster <- ittacluster[,!colnames(ittacluster) %in% rmant2]
 
+#for now, not scaling the data, but could also compare with and without scaling
+
+#### Hierarchical clustering
+#need to supply a distance matrix, which is the distance of every point to every other point
+d <- dist(ittacluster)
+
+#usually need to try different algorithms, ward.D2 pre-selected dunno why though
+fitH <- hclust(d, "ward.D2")
+plot(fitH)
+rect.hclust(fitH, k = 3, border = "red")
+
+hclusters <- cutree(fitH, k = 4)
+hclusters
+plot(ittacluster, col = hclusters)
+#this plot doesn't look good. how to visualize this?? Maybe a heat map lol
+#need to see if the clusters mean anything --> do they group with age etc
 
 
-# ? Include a couple malarial antigens as well?
+
+ittaclusterH <- cbind(hclusters, ittacluster)
+
+#do other clustering methods, then add all the clusters to ittaclusterH
+
+#then merge with metadata to see if clusters relate to anything
+
+
+
+
 
 
 
