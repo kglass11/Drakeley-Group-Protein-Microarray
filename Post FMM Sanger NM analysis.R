@@ -11,7 +11,7 @@ rm(list=ls())
 #"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens/Sanger NM V2"
 #"I:/Drakeley Group/Protein microarrays/Experiments/100817 Sanger/Sanger Non-malarial Antigens"
 #
-setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger NM V2")
+setwd("/Users/Katie/Desktop/R files from work/100817 Sanger/Sanger NM v3")
 getwd()
 
 require("gtools")
@@ -116,6 +116,37 @@ abline(h=1.3977643) #cutoff for HSV2
 abline(v=1.4123652) #cutoff for HSV1
 
 graphics.off()
+
+################### Clustering of all samples with all antigens ###########################
+
+### All data, including negative values
+
+### Add dengue PC1 instead of dengue 1-4
+
+ittacluster <- cbind(denguedata2[,5], itta)
+
+#column 1 = dengue PCA PC1
+
+### remove repeated antigens and dengue 1-4
+colnames(ittacluster)
+
+rmant2 <- c("Tg", "DENV1-NS1","DENV2-NS1","Pertussis JNIH-5 [0.1] *","Pertussis JNIH-5 [10] *",
+            "DENV3-NS1","DENV4-NS1","Pertussis JNIH-3 [10] *","Pertussis JNIH-5 [1] *")
+ittacluster <- ittacluster[,!colnames(ittacluster) %in% rmant2]
+
+
+
+# ? Include a couple malarial antigens as well?
+
+
+
+
+
+
+
+
+
+
 
 
 ##### isolate seropositive data!! :) 
