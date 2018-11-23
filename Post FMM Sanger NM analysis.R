@@ -124,18 +124,20 @@ graphics.off()
 
 ### Add dengue PC1 instead of dengue 1-4
 
-ittacluster <- cbind(denguedata2[,5], itta)
+ittacluster1 <- cbind(denguedata2[,5], itta)
 
 #column 1 = dengue PCA PC1
 
 ### remove repeated antigens and dengue 1-4
-colnames(ittacluster)
+colnames(ittacluster1)
 
 rmant2 <- c("Tg", "DENV1-NS1","DENV2-NS1","Pertussis JNIH-5 [0.1] *","Pertussis JNIH-5 [10] *",
             "DENV3-NS1","DENV4-NS1","Pertussis JNIH-3 [10] *","Pertussis JNIH-5 [1] *")
-ittacluster <- ittacluster[,!colnames(ittacluster) %in% rmant2]
+ittacluster1 <- ittacluster1[,!colnames(ittacluster1) %in% rmant2]
 
-#for now, not scaling the data, but could also compare with and without scaling
+#scale the data because principle component not on same scale 
+#this definitely changed the cluster analysis
+ittacluster <- scale(ittacluster1)
 
 #### Hierarchical clustering
 #need to supply a distance matrix, which is the distance of every point to every other point
@@ -144,17 +146,22 @@ d <- dist(ittacluster)
 #usually need to try different algorithms, ward.D2 pre-selected dunno why though
 fitH <- hclust(d, "ward.D2")
 plot(fitH)
-rect.hclust(fitH, k = 3, border = "red")
+rect.hclust(fitH, k = 5, border = "red")
 
-hclusters <- cutree(fitH, k = 4)
+hclusters <- cutree(fitH, k = 5)
 hclusters
-plot(ittacluster, col = hclusters)
-#this plot doesn't look good. how to visualize this?? Maybe a heat map lol
+#plot(ittacluster, col = hclusters)
+#this plot doesn't look good and stalls R. how to visualize this?? Maybe a heat map lol
 #need to see if the clusters mean anything --> do they group with age etc
 
+ittaclusterH <- as.data.frame(cbind(hclusters, ittacluster))
 
+ittaclusterH$hclusters <- as.factor(ittaclusterH$hclusters)
 
-ittaclusterH <- cbind(hclusters, ittacluster)
+#plot with stat ellipse which shows 95% confidence interval
+ggplot(ittaclusterH, aes(x=ittaclusterH[,2], y = ittaclusterH$TT, color = ittaclusterH$hclusters, fill = ittaclusterH$hclusters)) + 
+  stat_ellipse(geom = "polygon", col = "black", alpha = 0.5) +
+  geom_point(shape = 21, color = "black")
 
 #do other clustering methods, then add all the clusters to ittaclusterH
 
@@ -162,7 +169,7 @@ ittaclusterH <- cbind(hclusters, ittacluster)
 
 
 
-
+length(ittaclusterH$hclusters)
 
 
 
