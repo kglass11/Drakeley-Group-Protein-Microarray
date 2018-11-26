@@ -137,7 +137,7 @@ ittacluster1 <- ittacluster1[,!colnames(ittacluster1) %in% rmant2]
 
 #scale the data because principle component not on same scale 
 #this definitely changed the cluster analysis
-ittacluster <- scale(ittacluster1)
+ittacluster <- as.data.frame(scale(ittacluster1))
 
 #### Hierarchical clustering
 #need to supply a distance matrix, which is the distance of every point to every other point
@@ -150,21 +150,29 @@ rect.hclust(fitH, k = 5, border = "red")
 
 hclusters <- cutree(fitH, k = 5)
 hclusters
-#plot(ittacluster, col = hclusters)
-#this plot doesn't look good and stalls R. how to visualize this?? Maybe a heat map lol
+
 #need to see if the clusters mean anything --> do they group with age etc
+
+#save this as a large plot and see if any antigens show the clusters well
+png(filename = paste0(study, "HclustPlotScatter.tif"), width = 17, height = 13, units = "in", res = 600)
+plot(ittacluster, col = hclusters)
+
+graphics.off()
+#nothing really jumping out clusters are all super overlapping - try a heatmap
 
 ittaclusterH <- as.data.frame(cbind(hclusters, ittacluster))
 
 ittaclusterH$hclusters <- as.factor(ittaclusterH$hclusters)
 
 #plot with stat ellipse which shows 95% confidence interval
-ggplot(ittaclusterH, aes(x=ittaclusterH[,2], y = ittaclusterH$TT, color = ittaclusterH$hclusters, fill = ittaclusterH$hclusters)) + 
+ggplot(ittaclusterH, aes(x=ittaclusterH[,2], y = ittaclusterH$PgP3, color = ittaclusterH$hclusters, fill = ittaclusterH$hclusters)) + 
   stat_ellipse(geom = "polygon", col = "black", alpha = 0.5) +
   geom_point(shape = 21, color = "black")
 
 #heatmap - didn't work as is, need to get the dendrogram object out
-heatmap.2(fitH)
+heatmap.2(as.matrix(ittacluster), scale = "none", )
+
+
 
 #do other clustering methods, then add all the clusters to ittaclusterH
 
