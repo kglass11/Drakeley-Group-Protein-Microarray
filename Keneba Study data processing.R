@@ -1,6 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #IgG or IgM
-  #Last updated November 12, 2018 for Keneba Pilot Study
+  #Last updated December 3, 2018 for Keneba Big Study
 
 #Updated because the new antibodies have IgG at 594 and IgM at 488
 
@@ -48,26 +48,26 @@ library(outliers)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
-workdir <- "/Users/Katie/Desktop/R files from work/Keneba pilot results/IgM_488"
+workdir <- "/Users/Katie/Desktop/R files from work/Keneba main results"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "KenebaPi_IgMv2"
+study <- "Keneba_IgG"
 
 #define isotype
-iso <- "IgM"
+iso <- "IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
-sample_file <- "Sample list.csv"
+sample_file <- "Keneba main sample list.csv"
 
 #define file name for sample file + additional metadata (character vector)
-meta_file <- "pilot 2016 sample metadata.csv"
+meta_file <- "Keneba Sample Metadata.csv"
 
 #define file name for antigen list file with additional info about targets.
-target_file <- "KenebaAntigenKeyv3.csv" 
+target_file <- "KenebaAntigenKeyv4.csv" 
 
 #number of technical replicates for the study (usually 1 or 2)
-reps <- 2
+reps <- 4
 
 #define number of blocks per slide
 index_block <- 32
@@ -104,9 +104,10 @@ remove(i)
 ###Name your slides in this list, according to their file names
 names(slides_list) <- slide_ids
 
+#This part was for Keneba pilot study: 
 #change the column names for slide 4 to be the same as the others because 
 #they were messed up in genepix software when re-extracting the data
-colnames(slides_list[[4]]) <- colnames(slides_list[[3]])
+#colnames(slides_list[[4]]) <- colnames(slides_list[[3]])
 
 ###Bind all data from the slide data list (slides.list) into a single dataframe
 #you may get a warning after this step, invalid factor level, this is not a problem!
