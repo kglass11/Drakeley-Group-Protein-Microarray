@@ -1,6 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #IgG or IgM
-  #Last updated December 3, 2018 for Keneba Big Study
+  #Last updated December 4, 2018 for Keneba Big Study
 
 #Updated because the new antibodies have IgG at 594 and IgM at 488
 
@@ -145,19 +145,28 @@ samples.df$sample_id_unique <- samples_unique
 #Remove one of the duplicates where the whole row is duplicated (i.e. same thing listed twice)
 sample_meta2.df <- distinct(sample_meta1.df)
 
+#do separately for each year because there are duplicate entries for every year
+sample_meta_2012 <- filter(sample_meta2.df, year == "2012")
+sample_meta_2016 <- filter(sample_meta2.df, year == "2016")
 #Export a table of duplicate entries that do not match (i.e. there is a problem with epi data) 
-duplicate_metadata <- sample_meta2.df[(duplicated(sample_meta2.df$sample_id)| duplicated(sample_meta2.df$sample_id, fromLast=TRUE)),]
-write.csv(duplicate_metadata, file = paste0(study, "_duplicate_metadata.csv"))
+duplicate_metadata <- sample_meta_2012[(duplicated(sample_meta_2012$sample_id)| duplicated(sample_meta_2012$sample_id, fromLast=TRUE)),]
+write.csv(duplicate_metadata, file = paste0(study, "_duplicate_metadata2012.csv"))
 
+duplicate_metadata2016 <- sample_meta_2016[(duplicated(sample_meta_2016$sample_id)| duplicated(sample_meta_2016$sample_id, fromLast=TRUE)),]
+write.csv(duplicate_metadata2016, file = paste0(study, "_duplicate_metadata2016.csv"))
+
+## there is no duplicate metadata with mismatched info!!! skip the following
 #Remove duplicate entries automatically (both duplicates)
-sample_meta3.df <- sample_meta2.df[!(duplicated(sample_meta2.df$sample_id) | duplicated(sample_meta2.df$sample_id, fromLast=TRUE)),]
+#sample_meta3.df <- sample_meta2.df[!(duplicated(sample_meta2.df$sample_id) | duplicated(sample_meta2.df$sample_id, fromLast=TRUE)),]
 
 #Set exclude = "yes" in sample list file for duplicates that don't match in metadata
-dup <- unique(duplicate_metadata$sample_id)
-for(i in 1:length(dup)){
-  samples.df$exclude[which(samples.df$sample_id == dup[i])] <- "yes"
-}
-remove(i)
+#dup <- unique(duplicate_metadata$sample_id)
+#for(i in 1:length(dup)){
+#  samples.df$exclude[which(samples.df$sample_id == dup[i])] <- "yes"
+#}
+#remove(i)
+
+sample_meta3.df <- sample_meta2.df
 
 ### Merge the sample list file and the sample metadata file to include the appropriate metadata
 #The duplicate metadata will now be listed as NA, with exclude = yes
