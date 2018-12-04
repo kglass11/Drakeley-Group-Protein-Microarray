@@ -328,9 +328,10 @@ if (reps == 1){
   GSTmean <- GST[,(ncol(target_meta2.df)+1):ncol(GST)]
 }
 
-if (reps == 2){
+if (reps == 2 | reps == 4){
   GSTmean <- colMeans(GST[,(ncol(target_meta2.df)+1):ncol(GST)])
 }
+
 
 #subtract GST directly for each sample from all tagged targets
 #set negative values to 50, which is the minimum of the background corrected data (cor.matrix)
