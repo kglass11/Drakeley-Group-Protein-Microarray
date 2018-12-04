@@ -119,7 +119,7 @@ for(i in 1:length(slides_list)) {
 remove(i)
 
 ###Read in list of sample IDs
-samples.df <- read.csv(sample_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
+samples1.df <- read.csv(sample_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
 
 ###Read in sample metadata file
 sample_meta1.df <- read.csv(meta_file, header=T, na.strings = " ", check.names = FALSE, stringsAsFactors = FALSE)
@@ -131,6 +131,10 @@ target_meta1.df <- read.csv(target_file, header=T, na.strings = " ", check.names
 target_meta.df <- distinct(target_meta1.df)
 
 ###Processing sample list:
+
+##remove extra NAs in the imported sample list 
+samples.df <- samples1.df[!is.na(samples1.df$slide_no),]
+
 ###Create a vector listing all of your samples, in the order they appear in your samples_list file
 #In our samples_list files, the sample ID is always in column two - which is why that column is picked out here
 samples <- as.character(samples.df[1:nrow(samples.df), 2])
@@ -170,8 +174,7 @@ sample_meta3.df <- sample_meta2.df
 
 ### Merge the sample list file and the sample metadata file to include the appropriate metadata
 #The duplicate metadata will now be listed as NA, with exclude = yes
-
-sample_meta.df <- merge(samples.df, sample_meta3.df, by = "sample_id", all.x = TRUE)
+sample_meta.df <- merge(samples.df, sample_meta3.df, by = c("sample_id", "year"), all.x = TRUE, sort = FALSE)
 
 ###Create vectors indicating the number of slides, blocks, and samples
 #Slide and sample number are determined automatically from the data you input, whereas block number is manual in this instance
