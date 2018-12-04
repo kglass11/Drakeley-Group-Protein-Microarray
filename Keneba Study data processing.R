@@ -596,7 +596,7 @@ removed_buffer_targets <- subset(removed_buffer_targets, !is.na(removed_buffer_t
 #All slides, INCLUDING "bad" spots (ALL buffer targets)
 png(filename = paste0(study, "_buffer_targets.tif"), width = 11, height = 4, units = "in", res = 600)
 par(mar = c(5, 3, 2.25, 0.5), oma = c(0, 0, 0, 0), bty = "o", 
-    mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.2, cex.lab = 1, xpd=NA, las=2)
+    mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.6, cex.lab = 1, xpd=NA, las=2)
 boxplot(t(cor.matrix[targets_buffer,]),
         cex=0.5,
         ylab="Corrected MFI (log scale)", log = "y")
@@ -611,7 +611,7 @@ graphics.off()
 png(filename = paste0(study, "_buffer_spots_slide.tif"), width = 5, height = 4, units = "in", res = 600)
 par(mfrow=c(2,3), mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
     mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=2)
-for (i in 1:6){
+for (i in c(1, 20, 40, 60, 80, 98)){
   boxplot(t(cor.matrix[targets_buffer,samples.df$slide_no==i]),
           ylab="Corrected MFI",
           ylim=c(0,2000),
@@ -657,83 +657,6 @@ annotation_target_b1b2 <- rbind(annotation_target_b1, annotation_target_b2)
 #Write csv, which can be presented as a heatmap
 write.csv(cbind(cor_target_mean_b1b2, annotation_target_b1b2), file=paste0(study,"_target_mean_as_array.csv"))
 remove(cor_target_mean, cor_target_mean_b1, cor_target_mean_b2,cor_target_mean_b1b2, annotation_target_b1, annotation_target_b2, annotation_target_b1b2)
-
-## Investigating protein carryover - plot buffer spots vs above points
-data1 <- as.data.frame(t(cor2.matrix))
-
-## plot all points with lots of higher buffer spots
-png(filename = paste0(study, "_buffercorrelation.tif"), width = 10, height = 10, units = "in", res = 600)
-par(mfrow=c(3,3),mar = c(4, 4, 2, 0.5), oma = c(2, 2, 2, 2), bty = "o", cex.main = 1, cex.axis = 1.5, cex.lab = 1.5, xpd=NA)
-
-plot(data1$"75_Meningococcal A_1", data1$"87_buffer_1", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"75_Meningococcal A_1", data1$"87_buffer_1"), digits=4))), side=3, adj=0)
-
-plot(data1$"76_Meningococcal C_1", data1$"88_buffer_1", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"76_Meningococcal C_1", data1$"88_buffer_1"), digits=4))), side=3, adj=0)
-
-plot(data1$"77_Meningococcal W_1", data1$"89_buffer_1", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"77_Meningococcal W_1", data1$"89_buffer_1"), digits=4))), side=3, adj=0)
-
-plot(data1$"78_Meningococcal X_1", data1$"90_buffer_1", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"78_Meningococcal X_1", data1$"90_buffer_1"), digits=4))), side=3, adj=0)
-
-plot(data1$"327_Meningococcal A_2", data1$"339_buffer_2", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"327_Meningococcal A_2", data1$"339_buffer_2"), digits=4))), side=3, adj=0)
-
-plot(data1$"328_Meningococcal C_2", data1$"340_buffer_2", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"328_Meningococcal C_2", data1$"340_buffer_2"), digits=4))), side=3, adj=0)
-
-plot(data1$"329_Meningococcal W_2", data1$"341_buffer_2", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"329_Meningococcal W_2", data1$"341_buffer_2"), digits=4))), side=3, adj=0)
-
-plot(data1$"330_Meningococcal X_2", data1$"342_buffer_2", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"330_Meningococcal X_2", data1$"342_buffer_2"), digits=4))), side=3, adj=0)
-
-plot(data1$"331_Meningococcal Y_2", data1$"343_buffer_2", col="red", cex = 0.7)
-mtext(c(paste("R =", round(cor(data1$"331_Meningococcal Y_2", data1$"343_buffer_2"), digits=4))), side=3, adj=0)
-
-graphics.off()
-
-#similar plot for the post-IgG high std buffer spots
-data2 <- as.data.frame(t(cor.matrix))
-
-png(filename = paste0(study, "_buffercorrelationIgM.tif"), width = 6, height = 6, units = "in", res = 600)
-par(mfrow=c(2,2),mar = c(3, 3, 1, 0.5), oma = c(2, 1, 1, 1), mgp = c(1.5,0.5,0), bty = "o", cex.main = 1, cex.axis = 0.6, cex.lab = 0.7, xpd=NA)
-
-plot(data2$"223_IgM Std 1 (200ug/ml)_1", data2$"235_buffer_1", col="red", cex = 0.5)
-mtext(c(paste("R =", round(cor(data2$"223_IgM Std 1 (200ug/ml)_1", data2$"235_buffer_1"), digits=4))), side=3, adj=0)
-
-plot(data2$"224_IgM Std 2 (100ug/ml)_1", data2$"236_buffer_1", col="red", cex = 0.5)
-mtext(c(paste("R =", round(cor(data2$"224_IgM Std 2 (100ug/ml)_1", data2$"236_buffer_1"), digits=4))), side=3, adj=0)
-
-plot(data2$"475_IgM Std 1 (200ug/ml)_2", data2$"487_buffer_2", col="red", cex = 0.5)
-mtext(c(paste("R =", round(cor(data2$"475_IgM Std 1 (200ug/ml)_2", data2$"487_buffer_2"), digits=4))), side=3, adj=0)
-
-plot(data2$"476_IgM Std 2 (100ug/ml)_2", data2$"488_buffer_2", col="red", cex = 0.5)
-mtext(c(paste("R =", round(cor(data2$"476_IgM Std 2 (100ug/ml)_2", data2$"488_buffer_2"), digits=4))), side=3, adj=0)
-
-graphics.off()
-
-#plot for MSP2-Dd2 also
-
-png(filename = paste0(study, "_buffercorrelationMSP2_Dd2.tif"), width = 4.5, height = 3, units = "in", res = 600)
-par(mfrow=c(1,2),mar = c(1, 3, 1, 0.5), oma = c(2, 1, 1, 1), mgp = c(1.5,0.5,0), bty = "o", cex.main = 1, cex.axis = 0.6, cex.lab = 0.7, xpd=NA)
-
-plot(data2$"177_MSP2 Dd2_1", data2$"189_buffer_1", col="red", cex = 0.5)
-mtext(c(paste("R =", round(cor(data2$"177_MSP2 Dd2_1", data2$"189_buffer_1"), digits=4))), side=3, adj=0)
-
-plot(data2$"429_MSP2 Dd2_2", data2$"441_buffer_2", col="red", cex = 0.5)
-mtext(c(paste("R =", round(cor(data2$"429_MSP2 Dd2_2", data2$"441_buffer_2"), digits=4))), side=3, adj=0)
-
-graphics.off()
-
-#identify samples which have elevated buffer signals after meningitis
-#114 is the cutoff for IgM
-#395 is cutoff for IgG
-row.names(data1[which(data1$`87_buffer_1` > 395),])
-row.names(data1[which(data1$`88_buffer_1` > 395),])
-row.names(data1[which(data1$`89_buffer_1` > 395),])
-row.names(data1[which(data1$`90_buffer_1` > 395),])
 
 ### Remove Buffer Outliers - this section copied from Sanger v2 data processing.R in the master branch.
 
@@ -846,13 +769,13 @@ for(i in 1:length(BUFrm995)){
   }
 }
 
-max(BUFrm995, na.rm = TRUE) #651.7466 for 0.995, 546.5955 for 0.99, 414.7466 for 0.95 (IgG)
+max(BUFrm995, na.rm = TRUE) #843 for 0.99 (IgG main study)
 #117 for 0.99 for IgM
-min(BUFrm995, na.rm = TRUE) #50 for 0.995, 50 for 0.99, 55 for 0.95
+min(BUFrm995, na.rm = TRUE) #50 for 0.99 (IgG main study)
 #50 for 0.99 for IgM
 
 #what percentage of buffer values are removed?
-length(which(BUFout == TRUE))/length(BUFout)*100 # 1.5625% for 0.995, 2.205141% for 0.99, 6.857989% for 0.95
+length(which(BUFout == TRUE))/length(BUFout)*100 # 2.439413% for 0.99 IgG main study
 #2.976941% for 0.99 for IgM 
 
 #plot histogram again with outliers removed 
