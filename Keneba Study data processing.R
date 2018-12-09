@@ -968,6 +968,10 @@ for(i in 1:length(Ig)){
   
   }
   
+#Do this plot again with one plot each isotype, for the mean of all the standard reps
+#TBD
+
+  
 ### Set negative normalized log values to zero. This will be used for some analyses. 
 # For other analyses, including sending data to Nuno, the data will be input without setting values to 0. 
 # From now on, the norm.matrix has negative values, and norm2.matrix does not. 
@@ -1004,6 +1008,34 @@ if (reps == 2)
   normaverage.matrix <- log2((2^rep1 + 2^rep2)/2)
   
 }
+
+### Average quadruplicates
+if (reps == 4)
+{
+  n = nrow(norm.matrix)/2
+  block1 <- norm.matrix[1:n,]
+  block2 <- norm.matrix[(n+1):(n*2),]
+  
+  #calling both the reps in block 1 reps 1 and 2 (144 total spots per replicate)
+  #the first 12 are rep 1, second 12 rep 2, etc so make a number sequence
+  rep1num <- c(1, (1+ cumsum(rep(c(1,1,1,1,1,1,1,1,1,1,1,13), 12))))
+  rep1 <- block1[rep1num[1:144],]
+  
+  rep2num <- c(13, (13 + cumsum(rep(c(1,1,1,1,1,1,1,1,1,1,1,13), 12))))
+  rep2 <- block1[rep2num[1:144],]
+  
+  #the reps in block 2 are reps 3 and 4
+  rep3 <- block2[rep1num[1:144],]
+  rep4 <- block2[rep2num[1:144],]
+  
+  normaverage.matrix <- matrix(nrow = nrow(rep1), ncol = ncol(norm.matrix))
+  colnames(normaverage.matrix) = colnames(norm.matrix)
+  rownames(normaverage.matrix) = rownames(rep1)
+  
+  normaverage.matrix <- log2((2^rep1 + 2^rep2 + 2^rep3 + 2^rep4)/4)
+  
+}
+
 
 ### Check for deviant technical replicates, automatically exclude (set to NA)
 # Use a modified Patrick's formula for ELISA called Katie's formula for microarray ;) to compare replicates within one array
