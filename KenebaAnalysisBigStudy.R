@@ -34,6 +34,19 @@ NKC821Ygr2 <- NKC821Ydata[which(rowMeans(NKC821Ydata, na.rm = TRUE) > 1),]
 CV.4 <- apply(NKC821Ygr2, 1, sd, na.rm = TRUE) / rowMeans(NKC821Ygr2, na.rm = TRUE)
 avgCV.4 <- mean(CV.4, na.rm = TRUE ) * 100 #27.8% CV IgG
 
+#trying to see what's up with that sample -- look at the replicates
+#everything fine with those - all 4 replicates are bad for that sample and correlate very closely
+NKC821YdataALL <- norm.matrix[,sample_rep]
+
+#look at buffer means for normalization - that one is only slightly higher
+#range 6.58 - 6.95, doesn't explain the massive difference in signal 
+log_buffer_sample_mean[grep("NKC821Y", names(log_buffer_sample_mean))]
+
+# check if there was weirdly high background / if the problem was there in the raw data
+#the problem is present in the original data (fore) and there is no high background
+NKC821Yback <- back.matrix[,grep("NKC821Y", colnames(back.matrix))]
+NKC821Yfor <- fore.matrix[,grep("NKC821Y", colnames(fore.matrix))]
+
 ####### IgG vs IgM standard reactivity 
 
 IgG_high_mean <- mean(normaverage.matrix[grep("IgG Std 1", rownames(normaverage.matrix)),], na.rm = TRUE)
