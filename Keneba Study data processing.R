@@ -54,10 +54,10 @@ workdir <- "/Users/Katie/Desktop/R files from work/Keneba main results"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "Keneba_IgG.2"
+study <- "Keneba_IgM"
 
 #define isotype
-iso <- "IgG"
+iso <- "IgM"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
 sample_file <- "Keneba main sample list.csv"
@@ -202,6 +202,8 @@ write.csv(slides_all.df,file=paste0(study,"_slidesall_combinedGPR.csv"), row.nam
 
 ###Save slides_all.df as an R object to be loaded later so that you don't have to redo that part
 save(slides_all.df, file=paste0(study,"_slides_all.df"))
+
+#load("Keneba_IgG_slides_all.df")
      
 #If you are going to load slides_all.df to save time, run in the command line:
 #load(paste0(study,"_slides_all.df"))
@@ -642,10 +644,13 @@ for(i in 1:nrow(cor_sample_deviant)){
 # not be counted because it could skew the mean used for buffer normalization
 cor3.matrix[deviant_buffer_targets,] <- NA
 
-#for Keneba study, remove the 4 systematically different buffer spots
+#IgG only!!! for Keneba study, remove the 4 systematically different buffer spots
 #due to unknown problem with printing after menX
+
+if (iso == "IgG"){
 sysdeviants <- c("102_buffer_1", "114_buffer_1", "390_buffer_2", "402_buffer_2")
 cor3.matrix[sysdeviants,] <- NA
+}
 
 ### Mean values for each target ordered by position within the arrays (not log-transformed or normalized data)
 #KG - I think we might want this somehwere else in the script using a more processed matrix
@@ -777,14 +782,14 @@ for(i in 1:length(BUFrm995)){
 }
 
 max(BUFrm995, na.rm = TRUE) #843 for 0.99 (IgG main study v1), 401.1728 (IgG main study v2)
-#117 for 0.99 for IgM
+#287 for 0.99 for IgM (main study)
 min(BUFrm995, na.rm = TRUE) #50 for 0.99 (IgG main study v1 and v2)
-#50 for 0.99 for IgM
+#50 for 0.99 for IgM (main study)
 
 #what percentage of buffer values are removed?
 length(which(BUFout == TRUE))/length(BUFout)*100 # 2.439413% for 0.99 IgG main study v1
 #2.063138 for IgG main study v2
-#2.976941% for 0.99 for IgM 
+#1.907951% for 0.99 for IgM main study
 
 #plot histogram again with outliers removed 
 png(filename = paste0(study, "_Buffer_hist_p.99.tif"), width = 5, height = 5, units = "in", res = 1200)

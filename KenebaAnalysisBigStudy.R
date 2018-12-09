@@ -13,13 +13,13 @@ sample_rep <- grep("NKC821Y", colnames(normaverage.matrix))
 NKC821Ydata <- normaverage.matrix[,sample_rep]
 
 CV <- apply(NKC821Ydata, 1, sd, na.rm = TRUE) / rowMeans(NKC821Ydata, na.rm = TRUE)
-avgCV <- mean(CV, na.rm = TRUE ) * 100 #48.5% IgG
+avgCV <- mean(CV, na.rm = TRUE ) * 100 #48.5% IgG, 40.7 IgM
 
 # there is one replicate where something is wrong -- > if we remove that one: 
 NKC821Ydata.2 <- NKC821Ydata[,-3]
 
 CV.2 <- apply(NKC821Ydata.2, 1, sd, na.rm = TRUE) / rowMeans(NKC821Ydata.2, na.rm = TRUE)
-avgCV.2 <- mean(CV.2, na.rm = TRUE ) * 100 #getting a negative number lol
+avgCV.2 <- mean(CV.2, na.rm = TRUE ) * 100 #getting a negative number lol, 8.88% for IgM
 
 # it doesn't make sense to get CV of negative numbers or spots where everything is close to 0.
 
@@ -27,12 +27,12 @@ avgCV.2 <- mean(CV.2, na.rm = TRUE ) * 100 #getting a negative number lol
 #this is getting 60 spots total out of 144
 NKC821Ygr1 <- NKC821Ydata.2[which(rowMeans(NKC821Ydata.2, na.rm = TRUE) > 1),]
 CV.3 <- apply(NKC821Ygr1, 1, sd, na.rm = TRUE) / rowMeans(NKC821Ygr1, na.rm = TRUE)
-avgCV.3 <- mean(CV.3, na.rm = TRUE ) * 100 #14.3% CV IgG
+avgCV.3 <- mean(CV.3, na.rm = TRUE ) * 100 #14.3% CV IgG, 11.7% for IgM
 
 # repeat without removing the deviant sample. 
 NKC821Ygr2 <- NKC821Ydata[which(rowMeans(NKC821Ydata, na.rm = TRUE) > 1),]
 CV.4 <- apply(NKC821Ygr2, 1, sd, na.rm = TRUE) / rowMeans(NKC821Ygr2, na.rm = TRUE)
-avgCV.4 <- mean(CV.4, na.rm = TRUE ) * 100 #27.8% CV IgG
+avgCV.4 <- mean(CV.4, na.rm = TRUE ) * 100 #27.8% CV IgG, 16.5% for IgM
 
 #trying to see what's up with that sample -- look at the replicates
 #everything fine with those - all 4 replicates are bad for that sample and correlate very closely
