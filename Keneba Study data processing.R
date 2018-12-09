@@ -52,7 +52,7 @@ workdir <- "/Users/Katie/Desktop/R files from work/Keneba main results"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "Keneba_IgG"
+study <- "Keneba_IgG.2"
 
 #define isotype
 iso <- "IgG"
@@ -640,6 +640,11 @@ for(i in 1:nrow(cor_sample_deviant)){
 # not be counted because it could skew the mean used for buffer normalization
 cor3.matrix[deviant_buffer_targets,] <- NA
 
+#for Keneba study, remove the 4 systematically different buffer spots
+#due to unknown problem with printing after menX
+sysdeviants <- c("102_buffer_1", "114_buffer_1", "390_buffer_2", "402_buffer_2")
+cor3.matrix[sysdeviants,] <- NA
+
 ### Mean values for each target ordered by position within the arrays (not log-transformed or normalized data)
 #KG - I think we might want this somehwere else in the script using a more processed matrix
 
@@ -769,13 +774,14 @@ for(i in 1:length(BUFrm995)){
   }
 }
 
-max(BUFrm995, na.rm = TRUE) #843 for 0.99 (IgG main study)
+max(BUFrm995, na.rm = TRUE) #843 for 0.99 (IgG main study v1), 401.1728 (IgG main study v2)
 #117 for 0.99 for IgM
-min(BUFrm995, na.rm = TRUE) #50 for 0.99 (IgG main study)
+min(BUFrm995, na.rm = TRUE) #50 for 0.99 (IgG main study v1 and v2)
 #50 for 0.99 for IgM
 
 #what percentage of buffer values are removed?
-length(which(BUFout == TRUE))/length(BUFout)*100 # 2.439413% for 0.99 IgG main study
+length(which(BUFout == TRUE))/length(BUFout)*100 # 2.439413% for 0.99 IgG main study v1
+#2.063138 for IgG main study v2
 #2.976941% for 0.99 for IgM 
 
 #plot histogram again with outliers removed 
