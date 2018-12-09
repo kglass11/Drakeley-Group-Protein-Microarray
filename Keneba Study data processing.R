@@ -45,6 +45,8 @@ library(gcookbook)
 library(dplyr)
 library(reshape2)
 library(outliers)
+library(corrgram)
+library(corrplot)
 
 ### Define variables based on your study that will be used later in the script
 # define working directory character vector, example "I:/Drakeley Group/Protein microarrays/Experiments/030417 Ghanaian samples/RepeatProcessingMay21KG"
@@ -1062,6 +1064,8 @@ if (reps == 2)
   
   ## Calculate correlation coefficient (default is pearson). Deviants are still included.
   repR <- cor(c(rep1), c(rep2), use = "complete.obs")
+  repR34 <- cor(c(rep3), c(rep4), use = "complete.obs")
+  
   print(repR)
   
   ## Plot replicate 1 v. replicate 2 for each protein or each person and calculate correlation coefficient.
@@ -1074,7 +1078,33 @@ if (reps == 2)
   
   graphics.off()
   
-  }
+  ## Plot replicate 3 v. replicate 4 for each protein or each person and calculate correlation coefficient.
+  png(filename = paste0(study, "_replicatescorrelation34.tif"), width = 5, height = 4, units = "in", res = 600)
+  par(mar = c(4, 3, 1, 0.5), oma = c(1, 1, 1, 1), bty = "o", 
+      mgp = c(2, 0.5, 0), cex.main = 1, cex.axis = 0.5, cex.lab = 0.7, xpd=NA, las=1)
+  
+  plot(rep3, rep4, col="red", cex = 0.1)
+  mtext(c(paste("Pearson correlation coefficient:", round(repR34, digits=4))), side=3, adj=0)
+  
+  graphics.off()
+  
+}
+
+### correlation plot of all the reps vs each other
+#make a matrix of all the data
+
+if (reps == 4){
+  repsmat <- cbind(c(rep1), c(rep2), c(rep3), c(rep4))
+  colnames(repsmat) <- c("Rep 1", "Rep 2", "Rep 3", "Rep 4")
+  
+  png(filename = paste0(study, "_Rep_Correlogram.tif"), width = 7, height = 6.5, units = "in", res = 1200)
+  
+  corrplot.mixed(cor(repsmat, use = "complete.obs"), tl.col="black", tl.pos = "lt")
+  
+  graphics.off()
+  
+}
+
 
 ### Average duplicates - Negative values set to 0s, if the data has technical replicates in the form of 2 blocks / subarray
 
