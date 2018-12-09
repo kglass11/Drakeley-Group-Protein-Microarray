@@ -814,8 +814,8 @@ write.csv(t(log.cor.matrix), file = paste0(study,"_log_data.csv"))
 ### Normalization
 
 ###Create sample specific buffer means for normalisation
-cor2_buffer_sample_mean <- colMeans(cor3.matrix[targets_buffer,], na.rm = TRUE)
-cor2_buffer_sample_sd <- apply(cor3.matrix[targets_buffer,], 2, sd, na.rm = TRUE)
+cor2_buffer_sample_mean <- colMeans(cor4.matrix[targets_buffer,], na.rm = TRUE)
+cor2_buffer_sample_sd <- apply(cor4.matrix[targets_buffer,], 2, sd, na.rm = TRUE)
 #log2 transform sample buffer mean
 log_buffer_sample_mean <- log2(cor2_buffer_sample_mean)
 
@@ -848,11 +848,19 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
     std_3_pre <- isostd_pre[c(3),]
     }
 
-  if (reps == 2 | reps == 4){
+  if (reps == 2){
     std_3_norm <- isostd_norm[c(3,9),]
     std_3_norm <- log2(apply((2^std_3_norm), 2, mean))
   
     std_3_pre <- isostd_pre[c(3,9),]
+    std_3_pre <- log2(apply((2^std_3_pre), 2, mean))
+  }
+  
+  if (reps == 4){
+    std_3_norm <- isostd_norm[c(3,9,15,21),]
+    std_3_norm <- log2(apply((2^std_3_norm), 2, mean))
+    
+    std_3_pre <- isostd_pre[c(3,9,15,21),]
     std_3_pre <- log2(apply((2^std_3_pre), 2, mean))
   }
 
