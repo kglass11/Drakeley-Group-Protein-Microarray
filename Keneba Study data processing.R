@@ -757,7 +757,7 @@ outliers <- maxIQR(Buflog, 3) #this is getting a result of a cutoff of 8.385736 
 #calculate outliers for log2 transformed data, for all buffer data considered as one population
 #decided to go with prob = 0.99 for Keneba Pilot 
 #although this is a conservative cutoff based on the QC plots
-BUFout <- scores(Buflog, type = "z", prob =0.99)
+BUFout <- scores(Buflog, type = "z", prob = 0.99)
 
 #remove outliers (set to NA in original background corrected MFI data) 
 BUFrm995 <- as.matrix(Buffer)
@@ -788,11 +788,19 @@ title(main="Buffer without outliers, MFI", adj=0)
 
 graphics.off()
 
+#in the main cor matrix, put in buffer matrix with outliers removed
+nobuffer <- cor3.matrix[-targets_buffer,]
+newbuffers <- rbind(nobuffer, BUFrm995)
+
+#need to put the matrix back in the same order as before (by target_id_unique) because of calling out buffer etc.
+sortedcorbuf <- merge(annotation_targets.df, newbuffers, by = "row.names", sort = FALSE)
+cor4.matrix <- as.matrix(sortedcorbuf[,8:ncol(sortedcorbuf)])
+row.names(cor4.matrix) <- row.names(annotation_targets.df)
 
 #### LOG TRANSFORMATION AND NORMALIZATION ###
 
 ### Log transform the data (base 2)
-log.cor.matrix <- log2(cor3.matrix)
+log.cor.matrix <- log2(cor4.matrix)
 
 #export this matrix to compare normalized vs. not normalized data.
 write.csv(t(log.cor.matrix), file = paste0(study,"_log_data.csv"))
@@ -834,7 +842,7 @@ write.csv(t(norm.matrix), file = paste0(study,"_normalized_log_data.csv"))
     std_3_pre <- isostd_pre[c(3),]
     }
 
-  if (reps == 2){
+  if (reps == 2 | reps == 4){
     std_3_norm <- isostd_norm[c(3,9),]
     std_3_norm <- log2(apply((2^std_3_norm), 2, mean))
   
