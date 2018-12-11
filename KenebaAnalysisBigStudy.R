@@ -23,6 +23,13 @@ avgCV.2 <- mean(CV.2, na.rm = TRUE ) * 100 #getting a negative number lol, 8.88%
 
 # it doesn't make sense to get CV of negative numbers or spots where everything is close to 0.
 
+#samples switch possible - check adding data for possibly switched sample
+NKC821Ydata.3 <- cbind(normavgdata$NKC152V_129, NKC821Ydata.2)
+NKC821Ygr30 <- NKC821Ydata.3[which(rowMeans(NKC821Ydata.3, na.rm = TRUE) > 1),]
+CV.30 <- apply(NKC821Ygr30, 1, sd, na.rm = TRUE) / rowMeans(NKC821Ygr30, na.rm = TRUE)
+avgCV.30 <- mean(CV.30, na.rm = TRUE ) * 100 #14.3% CV IgG, 11.7% for IgM
+
+
 #so let's only use the CV where the mean is > = to 1 (double buffer values)
 #this is getting 60 spots total out of 144
 NKC821Ygr1 <- NKC821Ydata.2[which(rowMeans(NKC821Ydata.2, na.rm = TRUE) > 1),]
