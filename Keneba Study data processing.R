@@ -54,10 +54,10 @@ workdir <- "/Users/Katie/Desktop/R files from work/Keneba main results"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "Keneba_IgG_v3"
+study <- "Keneba_IgM_v3"
 
 #define isotype
-iso <- "IgG"
+iso <- "IgM"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
 sample_file <- "Keneba main sample list.csv"
@@ -1045,6 +1045,7 @@ if (reps == 2)
     write.csv(normaverage.matrix, paste0(study, "_average_norm_log_data.csv"))
   }
   remove(j,k)
+}
   
   if(reps==4){
     quadrulemat <- normaverage.matrix
