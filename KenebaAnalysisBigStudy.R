@@ -21,7 +21,7 @@ avgCV <- mean(CV, na.rm = TRUE ) * 100
 #this is getting 60 spots total out of 144
 NKC821Ygr1 <- NKC821Ydata[which(rowMeans(NKC821Ydata, na.rm = TRUE) > 1),]
 CV.3 <- apply(NKC821Ygr1, 1, sd, na.rm = TRUE) / rowMeans(NKC821Ygr1, na.rm = TRUE)
-avgCV.3 <- mean(CV.3, na.rm = TRUE ) * 100 #12.15% CV IgG, 11.7% for IgM
+avgCV.3 <- mean(CV.3, na.rm = TRUE ) * 100 #12.15% CV IgG, 11.38% for IgM
 
 ####### IgG vs IgM standard reactivity 
 
@@ -38,8 +38,8 @@ if(iso == "IgG"){
 
 if(iso == "IgM"){
   stdratio <- IgM_high_mean/IgG_high_mean
-  eratio <- 2^stdratio
+  eratio <- 2^stdratio #250270178
   stdratioFc <- IgMfc_high_mean/IgG_high_mean
-  eratioFc <- 2^stdratioFc
+  eratioFc <- 2^stdratioFc #110338167
 }
 
