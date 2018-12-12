@@ -1,6 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #IgG or IgM
-  #Last updated December 4, 2018 for Keneba Big Study
+  #Last updated December 11, 2018 for Keneba Big Study
 
 #Updated because the new antibodies have IgG at 594 and IgM at 488
 
@@ -54,10 +54,10 @@ workdir <- "/Users/Katie/Desktop/R files from work/Keneba main results"
 
 # define a shorthand name for your study which will be appended in the file name of all exported files
 #include isotype in the study name!
-study <- "Keneba_IgM"
+study <- "Keneba_IgG_v3"
 
 #define isotype
-iso <- "IgM"
+iso <- "IgG"
 
 #define file name for sample IDs character vector, example "Analysis sample list 2.csv"
 sample_file <- "Keneba main sample list.csv"
@@ -203,7 +203,7 @@ write.csv(slides_all.df,file=paste0(study,"_slidesall_combinedGPR.csv"), row.nam
 ###Save slides_all.df as an R object to be loaded later so that you don't have to redo that part
 save(slides_all.df, file=paste0(study,"_slides_all.df"))
 
-#load("Keneba_IgG_slides_all.df")
+#load("Keneba_IgG_v3_slides_all.df")
      
 #If you are going to load slides_all.df to save time, run in the command line:
 #load(paste0(study,"_slides_all.df"))
@@ -1048,7 +1048,6 @@ if (reps == 4)
 # Use a modified Patrick's formula for ELISA called Katie's formula for microarray ;) to compare replicates within one array
   # if rep1 or rep2 is more than 2 times rep2 or rep1, respectively, exclude that pair
   # only apply the test if the values for both rep1 and rep2 are above 2 (on log2 scale)
-  # Also, can redo this using the subsetted matrices (rep1 and rep2) and it should be shorter
 if (reps == 2)
 { 
   for (k in 1:ncol(rep1))
@@ -1062,15 +1061,50 @@ if (reps == 2)
         normaverage.matrix[j,k] <- NA
       }
     }
+    
+    write.csv(normaverage.matrix, paste0(study, "_average_norm_log_data.csv"))
   }
   remove(j,k)
   
-  write.csv(normaverage.matrix, paste0(study, "_average_norm_log_data.csv")) 
+  if(reps==4){
+    quadrulemat <- normaverage.matrix
+    
+    for (k in 1:ncol(rep1))
+    {
+      for(j in 1:nrow(rep1)) 
+      {
+        #criteria for applying the rule - right now only whole sample or all 4 reps would be set as NA
+        if(is.na(rep1[j,k]) | is.na(rep2[j,k]) | is.na(rep3[j,k]) | is.na(rep4[j,k]) | 
+           (rep1[j,k]<2 & rep2[j,k]<2 & rep3[j,k]<2 & rep4[j,k]<2) == TRUE){
+          j+1
+          #if at least two of the replicates are more than one away, NA the whole sample/target combo
+       } else if(((abs(rep1[j,k] - normaverage.matrix[j,k]) > 1) + 
+                  (abs(rep2[j,k] - normaverage.matrix[j,k]) > 1) +
+                  (abs(rep3[j,k] - normaverage.matrix[j,k]) > 1) + 
+                  (abs(rep4[j,k] - normaverage.matrix[j,k]) > 1)) > 1){
+                
+                quadrulemat[j,k] <- NA
+                
+          #if only one of the replicates is more than one away, average the other three instead
+         } else if (((abs(rep1[j,k] - normaverage.matrix[j,k]) > 1) + 
+                     (abs(rep2[j,k] - normaverage.matrix[j,k]) > 1) +
+                     (abs(rep3[j,k] - normaverage.matrix[j,k]) > 1) + 
+                     (abs(rep4[j,k] - normaverage.matrix[j,k]) > 1)) == 1){
+           #figure out which one of the 4 is deviant, then average the other three
+           if(abs(rep1[j,k] - normaverage.matrix[j,k]) > 1){quadrulemat[j,k] <- log2((2^rep2[j,k] + 2^rep3[j,k] + 2^rep4[j,k])/3)
+           } else if (abs(rep2[j,k] - normaverage.matrix[j,k]) > 1){quadrulemat[j,k] <- log2((2^rep1[j,k] + 2^rep3[j,k] + 2^rep4[j,k])/3)
+           } else if (abs(rep3[j,k] - normaverage.matrix[j,k]) > 1){quadrulemat[j,k] <- log2((2^rep1[j,k] + 2^rep2[j,k] + 2^rep4[j,k])/3)
+           } else if (abs(rep4[j,k] - normaverage.matrix[j,k]) > 1){quadrulemat[j,k] <- log2((2^rep1[j,k] + 2^rep2[j,k] + 2^rep3[j,k])/3)}
+         }
+      }
+    }
+    write.csv(quadrulemat, paste0(study, "_average_norm_log_data.csv"))
+  }
   
   ## Calculate correlation coefficient (default is pearson). Deviants are still included.
+  if(reps == 2 | reps == 4){
   repR <- cor(c(rep1), c(rep2), use = "complete.obs")
   repR34 <- cor(c(rep3), c(rep4), use = "complete.obs")
-  
   print(repR)
   
   ## Plot replicate 1 v. replicate 2 for each protein or each person and calculate correlation coefficient.
@@ -1106,6 +1140,12 @@ if (reps == 4){
   
   corrplot.mixed(cor(repsmat, use = "complete.obs"), tl.col="black", tl.pos = "lt")
   
+  graphics.off()
+  
+  png(filename = paste0(study, "_Rep_Correlogram_Scatter.tif"), width = 7, height = 6.5, units = "in", res = 1200)
+  corrgram(repsmat, order=NULL, lower.panel=panel.pts,
+           upper.panel=NULL, text.panel=panel.txt,
+           main="Quadruplicates Scatter Plot")
   graphics.off()
   
 }
