@@ -1193,31 +1193,31 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   trans.norm.df <- tibble::rownames_to_column(trans.norm.df, var = "sample_id_unique")
   
   #Export file
-  write.csv(trans.norm.df, file = paste0(study, "_final_processed_data.csv"))
+  write.csv(trans.norm.df, file = paste0(study, "_final_processed_data_inc_negs.csv"))
 
 #Target metadata for every target - nothing has changed about this since the beginning
   #Export file
-  write.csv(target_meta.df, file = paste0(study, "_target_metadata.csv"))
+  write.csv(target_meta2.df, file = paste0(study, "_target_metadata.csv"))
 
 #Prepare final data with GST subtracted, control targets removed - For Negs set to 0 ONLY! (norm4.matrix)
   #Assign sample type names, to identify control and test samples (logical)
   samples_test <- sample_meta.df$sample_id_unique[which(sample_meta.df$sample_type =="test")]
   samples_control <- sample_meta.df$sample_id_unique[which(sample_meta.df$sample_type =="control")]
   
-  #Define a list of targets to be removed from further analysis (controls)
-  rmsamp_all <- unique(c(targets_blank, targets_buffer, targets_ref, targets_std))
-  
   #Remove control protein targets - Don't remove control samples yet, need to do tag subtraction 
   #from those samples as well, and want them included in some exported data.
   #Do remove samples that should be excluded
-  norm_sub.matrix <- norm4.matrix[-rmsamp_all,(!colnames(norm4.matrix) %in% samples_exclude)]
   
-  #Replace current target names with original target names now that control targets are removed
-  #might be useful to merge this instead with the target dataframe?
-  norm_sub3.df <- merge(norm_sub.matrix, annotation_targets.df, by ="row.names", sort = FALSE)
+  #could have used target_meta2.df here, which is already merged with annotation targets!!
+  norm_sub3.df <- merge(norm4.matrix, target_meta.df, by ="row.names", sort = FALSE)
   norm_sub3.df <- tibble::column_to_rownames(norm_sub3.df, var="Row.names")
-  row.names(norm_sub3.df) <- norm_sub3.df$Name
-  norm_sub4.df <- norm_sub3.df[,1:ncol(norm_sub.matrix)]
+  norm_sub3.df <- merge(norm_sub3.df, target_meta.df, by = "Name", sort = FALSE)
+  
+  norm_sub4.df <- filter(norm_sub3.df, !Category == "control")
+  norm_sub4.df <- tibble::column_to_rownames(norm_sub4.df, var = "Name")
+  
+  norm_sub4.df <- norm_sub4.df[,1:ncol(norm4.matrix)]
+  norm_sub4.df <- norm_sub4.df[,(!colnames(norm4.matrix) %in% samples_exclude)]
   
   #Make the dilution column of target_meta.df a character type
   #target_meta.df$Concentration <- as.character(target_meta.df$Concentration)
@@ -1226,7 +1226,7 @@ samples_exclude <- sample_meta.df$sample_id_unique[which(sample_meta.df$exclude 
   target.df <- merge(target_meta2.df, norm_sub4.df, by.x = "Name", by.y ="row.names", all.y = TRUE, sort = FALSE)
   
   #Save final data frame to csv file
-  write.csv(norm_sub4.df, paste0(study, "_finalafterprocessing.csv"))
+  write.csv(norm_sub4.df, paste0(study, "_finalafterprocessing_0s.csv"))
   
 #Save R workspace so that can load prior to analysis 
   save.image(file= paste0(study,"_AfterProcessing.RData"))
