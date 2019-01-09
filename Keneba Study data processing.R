@@ -80,6 +80,11 @@ index_block <- 32
 setwd(workdir)
 getwd()
 
+
+### Load everything from previous processing 
+load("Keneba_IgG_v3_AfterProcessing.RData")
+
+
 #####################################
 ###READING IN YOUR MICROARRAY DATA###
 #####################################
@@ -974,6 +979,18 @@ for(i in 1:length(Ig)){
   graphics.off()
   
   }
+  
+#investigate which standards have high IgM std 1 in IgG channel
+  type = Ig[2]
+  
+  normIgM <- stds_norm[grep(type, row.names(stds_norm)),]
+  
+  IgMhigh <- as.data.frame(which(normIgM > 3.7, arr.ind = TRUE))
+  
+  normIgMt <- as.data.frame(t(normIgM))
+  normIgMt <- tibble::rownames_to_column(normIgMt)
+  
+  IgMhigh$sample <- normIgMt[c(IgMhigh$col),1]
   
 #Do this plot again with one plot each isotype, for the mean of all the standard reps
 #TBD
