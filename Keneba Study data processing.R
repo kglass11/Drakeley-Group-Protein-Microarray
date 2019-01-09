@@ -980,17 +980,27 @@ for(i in 1:length(Ig)){
   
   }
   
-#investigate which standards have high IgM std 1 in IgG channel
+#investigate which samples have high IgM std 1 in IgG channel
   type = Ig[2]
   
   normIgM <- stds_norm[grep(type, row.names(stds_norm)),]
   
-  IgMhigh <- as.data.frame(which(normIgM > 3.7, arr.ind = TRUE))
+  IgMhigh <- as.data.frame(which(normIgM > 3.8, arr.ind = TRUE))
   
   normIgMt <- as.data.frame(t(normIgM))
   normIgMt <- tibble::rownames_to_column(normIgMt)
   
   IgMhigh$sample <- normIgMt[c(IgMhigh$col),1]
+  
+#investigate which sample has the high GST signal. Signal is 6610 MFI in IgG channel
+  GSThigh <- GSTmelt[which(GSTmelt$value > 1000),]
+  
+#make a list of samples to pull out of samples.df and export for slide image check
+  samplescheck <- c(IgMhigh$sample, as.character(GSThigh$variable))
+  
+  samplescheck.df <- samples.df[(samples.df$sample_id_unique %in% samplescheck),]
+  
+  write.csv(samplescheck.df, file = "checkslides.csv")
   
 #Do this plot again with one plot each isotype, for the mean of all the standard reps
 #TBD
