@@ -333,12 +333,25 @@ plot(c(GSTmelt$value), pch='*', col = "blue", main = "GST",
 
 graphics.off()
 
+#There is a sample which has debris causing an artificially high GST signal in one replicate
+#set this value to NA
+#investigate which sample has the high GST signal. Signal is 6610 MFI in IgG channel
+GSThigh <- GSTmelt[which(GSTmelt$value > 1000),]
+
+#subset the GST data frame to data only for calculating means
+GSTdata <- GST[,(ncol(target_meta2.df)+1):ncol(GST)]
+rownames(GSTdata) <- GST[,1]
+
+#get array indices for high GST and set to NA
+GSThighloc <- which(GSTdata > 1000, arr.ind = TRUE)
+GSTdata[GSThighloc] <- NA
+
 if (reps == 1){
   GSTmean <- GST[,(ncol(target_meta2.df)+1):ncol(GST)]
 }
 
 if (reps == 2 | reps == 4){
-  GSTmean <- colMeans(GST[,(ncol(target_meta2.df)+1):ncol(GST)])
+  GSTmean <- colMeans(GSTdata, na.rm = TRUE)
 }
 
 
@@ -991,9 +1004,6 @@ for(i in 1:length(Ig)){
   normIgMt <- tibble::rownames_to_column(normIgMt)
   
   IgMhigh$sample <- normIgMt[c(IgMhigh$col),1]
-  
-#investigate which sample has the high GST signal. Signal is 6610 MFI in IgG channel
-  GSThigh <- GSTmelt[which(GSTmelt$value > 1000),]
   
 #make a list of samples to pull out of samples.df and export for slide image check
   samplescheck <- c(IgMhigh$sample, as.character(GSThigh$variable))
