@@ -81,7 +81,7 @@ setwd(workdir)
 getwd()
 
 ### Load everything from previous processing 
-load("Keneba_IgG_v3_AfterProcessing.RData")
+load("Keneba_IgM_v3_AfterProcessing.RData")
 
 
 #####################################
@@ -334,7 +334,9 @@ graphics.off()
 
 #There is a sample which has debris causing an artificially high GST signal in one replicate
 #set this value to NA
-#investigate which sample has the high GST signal. Signal is 6610 MFI in IgG channel
+#investigate which sample has the high GST signal. 
+#Signal is 6610 MFI in IgG channel and 35319 in IgM channel for the same sample. 
+#in IgM channel, there is another isolated replicate at 1274, exclude that one as well.
 GSThigh <- GSTmelt[which(GSTmelt$value > 1000),]
 
 #subset the GST data frame to data only for calculating means
@@ -345,6 +347,9 @@ rownames(GSTdata) <- GST[,1]
 GSThighloc <- which(GSTdata > 1000, arr.ind = TRUE)
 GSTdata[GSThighloc] <- NA
 
+which(is.na(GSTdata))
+
+#take means of GST remaining replicates
 if (reps == 1){
   GSTmean <- GST[,(ncol(target_meta2.df)+1):ncol(GST)]
 }
