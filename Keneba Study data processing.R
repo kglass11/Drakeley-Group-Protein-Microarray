@@ -1,6 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #IgG or IgM
-  #Last updated December 11, 2018 for Keneba Big Study
+  #Last updated Jan 15, 2019 for Keneba Big Study
 
 #Updated because the new antibodies have IgG at 594 and IgM at 488
 
@@ -79,7 +79,6 @@ index_block <- 32
 #directory after with getwd()
 setwd(workdir)
 getwd()
-
 
 ### Load everything from previous processing 
 load("Keneba_IgG_v3_AfterProcessing.RData")
@@ -376,7 +375,7 @@ no_tags.df <- filter(bunny, is.na(Expression_tag) | !(Expression_tag == "GST"))
 row.names(no_tags.df) <- no_tags.df$target_id_unique
 no_tags.df <- no_tags.df[,(ncol(target_meta2.df)+1):ncol(no_tags.df)]
 
-#then rbind the GST and the CD4 data frames to that one. 
+#then rbind the GST data frame to that one. 
 cor1.matrix <- as.matrix(rbind(no_tags.df, subbedGST))
 
 #need to put the matrix back in the same order as before (by target_id_unique) because of calling out buffer etc.
@@ -1012,11 +1011,6 @@ for(i in 1:length(Ig)){
   
   write.csv(samplescheck.df, file = "checkslides.csv")
   
-#Do this plot again with one plot each isotype, for the mean of all the standard reps
-#TBD
-
-  
-
 ### Average duplicates - INCLUDING negative values, if the data has technical replicates in the form of 2 blocks / subarray
 
 if (reps == 2)
@@ -1119,6 +1113,30 @@ if (reps == 2)
     write.csv(quadrulemat, paste0(study, "_average_norm_log_data.csv"))
   }
   
+#Repeat the standard plots with one plot each isotype, for the mean of all the standard reps
+  #use quadrulemat, so that the disqualified replicates will not be included. 
+  #normalized data only, prior to setting negative data to zero
+for(i in 1:length(Ig)){
+    
+    type = Ig[i]
+    
+    new_stds <- c(grep("Std", row.names(quadrulemat), ignore.case = TRUE))
+    stds_norm_avg <- quadrulemat[new_stds,]
+    norm_avg <- stds_norm_avg[grep(type, row.names(stds_norm_avg)),]
+    
+    stdmelt <- melt(norm_avg, varnames = c("Std", "Sample"))
+    
+    png(filename = paste0(study, "_stds_norm_avg_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
+    
+    print(ggplot(stdmelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
+            labs(x = "Sample", y = "Normalized Log2(MFI)", title = paste("Mean Normalized", type)) + ylim(-1,10) + 
+            theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+            theme(legend.position="bottom") +
+            theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
+    
+    graphics.off()
+}  
+  
   ## Calculate correlation coefficient (default is pearson). Deviants are still included.
 if(reps == 2){
   repR <- cor(c(rep1), c(rep2), use = "complete.obs")
@@ -1134,7 +1152,7 @@ if(reps == 2){
   graphics.off()
   
 }
-
+  
 ### correlation plot of all the reps vs each other
 #make a matrix of all the data
 
