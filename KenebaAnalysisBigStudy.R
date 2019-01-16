@@ -20,6 +20,8 @@ library(outliers)
 library(corrgram)
 library(corrplot)
 
+library(gridExtra)
+
 
 
 #####################################
@@ -73,6 +75,8 @@ if(iso == "IgM"){
   rownames(subtacos) <- testdata$sample_id_unique
   
   #Are there any other samples we should remove?!?! what about the 9 duplicates, which one do we use?
+  #yes remove these! Only save the first one? or replace with a mean?
+  
   
   #prepare data so that only antigens of interest are included
   subtacosT <- as.data.frame(t(subtacos))
@@ -85,35 +89,48 @@ if(iso == "IgM"){
   row.names(burritos1) <- burritos$Name
   
   burritosT <- as.data.frame(t(burritos1))
+  allburritos <- merge(sample_meta_f.df, burritosT, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
 
 #plot histograms of all data for each antigen separately
   antnames <- colnames(burritosT)
   
   burritomelt <- melt(burritosT)
+  allburritomelt <- melt(allburritos, measure.vars = antnames)
+  
+  setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/Histograms")
   
   for(i in 1:length(antnames)){
     
     antigen = antnames[i]
     
-    ant1 <- filter(burritomelt, variable == antigen)
+    ant1 <- filter(allburritomelt, variable == antigen)
     
-    png(filename = paste0(study, "_", antigen,"_histogram.tif"), width = 3.5, height = 3, units = "in", res = 1200)
+    plot1 <- ggplot(ant1, aes(x = value)) + geom_histogram(bins = 50, color="black", fill="light blue") + 
+                     theme_bw() + 
+                     theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+                     labs(x = "Normalized Log2(MFI Ratio)", y = "Count", title = antigen)
     
-    print(ggplot(ant1, aes(x = value)) + geom_histogram(bins = 75, aes(y = (..count..)/sum(..count..)), color="black", fill="light blue") + 
-            labs(x = "Normalized Log2(MFI)", y = "Percentage of Samples") + scale_y_continuous(labels = scales::percent))
-          
+    plot2 <- ggplot(ant1, aes(x = value, color = Country, fill = Country)) + geom_density(adjust = 3/4, alpha=.25) +
+                     theme_bw() + 
+                     theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+                     labs(x = "Normalized Log2(MFI Ratio)", y = "Density", title = antigen)
+    
+    png(filename = paste0(study, "_", antigen,"_histogram_density.tif"), width = 10, height = 3.5, units = "in", res = 1200)
+    
+    print(grid.arrange(plot1, plot2, ncol = 2, nrow = 1))
+    
     graphics.off()
     
-    png(filename = paste0(study, "_", antigen,"_histogram2.tif"), width = 3.5, height = 3, units = "in", res = 1200)
+    #alternative histogram with percentage displayed on y axis 
+    #png(filename = paste0(study, "_", antigen,"_histogram_percent.tif"), width = 3.5, height = 3, units = "in", res = 1200)
     
-    print(ggplot(ant1, aes(x = value)) + geom_histogram(bins = 60, color="black", fill="light blue") + 
-            labs(x = "Normalized Log2(MFI)", y = "Count"))
+    #print(ggplot(ant1, aes(x = value)) + geom_histogram(bins = 75, aes(y = (..count..)/sum(..count..)), color="black", fill="light blue") + 
+    #labs(x = "Normalized Log2(MFI Ratio)", y = "Percentage of Samples") + scale_y_continuous(labels = scales::percent))
     
-    graphics.off()
+    #graphics.off()
     
   }
 
-#plot density plot with the Gambia and the PHE samples in different colors
 
 #part of Lou macaque script below 
 for(i in 1:length(antnames)){
