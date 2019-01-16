@@ -76,17 +76,24 @@ if(iso == "IgM"){
   
   #Are there any other samples we should remove?!?! what about the 9 duplicates, which one do we use?
   #yes remove these! Only save the first one? or replace with a mean?
+  NKC821Ynum <- grep("NKC821Y", rownames(subtacos))
+  NKC821Ysamp <- subtacos[NKC821Ynum]
   
+  NKC821Ymean <- colMeans(NKC821Ysamp, na.rm = TRUE)
+  
+  subtacos1 <- subtacos[-NKC821Ynum[2:9],]
+  subtacos1[1,] <- NKC821Ymean
   
   #prepare data so that only antigens of interest are included
-  subtacosT <- as.data.frame(t(subtacos))
+  subtacosT <- as.data.frame(t(subtacos1))
   targetdata <- merge(target_meta2.df, subtacosT, by.x = "target_id_unique", by.y ="row.names")
   
   burritos <- filter(targetdata, Category == "non_malarial" | Category == "malarial")
   
   #use original antigen names
+  #but make antigen names compatible with file export and other stuff in R.
   burritos1 <- burritos[,(ncol(target_meta2.df)+1):ncol(burritos)]
-  row.names(burritos1) <- burritos$Name
+  row.names(burritos1) <- make.names(burritos$Name)
   
   burritosT <- as.data.frame(t(burritos1))
   allburritos <- merge(sample_meta_f.df, burritosT, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
@@ -130,7 +137,24 @@ if(iso == "IgM"){
     #graphics.off()
     
   }
-
+  
+  
+####### Correlations of all data between All antigens 
+  
+  setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
+  
+  #separate into malarial and non-malarial
+  mal <- filter(targetdata, Category == "malarial")
+  nonmal <- filter(targetdata, Category == "non_malarial")
+  
+  #non-malarial correlations
+  
+  
+  #malarial correlations
+  
+  
+  #one with luminex antigens only
+  
 
 #part of Lou macaque script below 
 for(i in 1:length(antnames)){
