@@ -21,6 +21,7 @@ library(corrgram)
 library(corrplot)
 
 library(gridExtra)
+library(ggbeeswarm)
 
 
 
@@ -147,15 +148,62 @@ if(iso == "IgM"){
   mal <- filter(targetdata, Category == "malarial")
   nonmal <- filter(targetdata, Category == "non_malarial")
   
-  #non-malarial correlations
+  ###non-malarial correlations
+    nonmal1 <- nonmal[,(ncol(target_meta2.df)+1):ncol(nonmal)]
+    row.names(nonmal1) <- make.names(nonmal$Name) 
+    nonmalT <- as.data.frame(t(nonmal1))
   
+    #run correlation significance test with pearson's method
+    nonmalcorp <- cor.mtest(nonmalT, conf.level = .95, na.rm = TRUE)
   
-  #malarial correlations
+    #Plot with significance showing - x over NOT significant
+    png(filename = paste0("Sig_nonmal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
   
+    print(corrplot.mixed(cor(nonmalT, use = "complete.obs"), p.mat = as.matrix(nonmalcorp$p), sig.level = .05, tl.col="black", order = "FPC", 
+                       tl.pos = "lt", tl.cex = 0.5, number.cex = 0.5))
   
-  #one with luminex antigens only
+    graphics.off()
   
+    #Plot without significance in alphabetical order
+    png(filename = paste0("nonmal_Correlogram.tif"), width = 14, height = 15, units = "in", res = 1200)
+  
+    print(corrplot.mixed(cor(nonmalT, use = "complete.obs"), tl.col="black", order = "alphabet", 
+                       tl.pos = "lt", tl.cex = 0.6, number.cex = 0.4))
+  
+    graphics.off()
+  
+  ###malarial correlations
+    mal1 <- mal[,(ncol(target_meta2.df)+1):ncol(mal)]
+    row.names(mal1) <- make.names(mal$Name) 
+    malT <- as.data.frame(t(mal1))
+  
+    #run correlation significance test with pearson's method
+    restime <- cor.mtest(malT, conf.level = .95, na.rm = TRUE)
+  
+    #Plot with significance showing - x over NOT significant
+    png(filename = paste0("Sig_mal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
+  
+    print(corrplot.mixed(cor(malT, use = "complete.obs"), p.mat = as.matrix(restime$p), sig.level = .05, tl.col="black", order = "FPC", 
+                       tl.pos = "lt", tl.cex = 0.5, number.cex = 0.5))
+  
+    graphics.off()
+  
+    #Plot without significance in alphabetical order
+    png(filename = paste0("Mal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
+  
+    print(corrplot.mixed(cor(malT, use = "complete.obs"), tl.col="black", order = "alphabet", 
+                       tl.pos = "lt", tl.cex = 0.6, number.cex = 0.5))
+  
+    graphics.off()
+  
+  ###one with luminex antigens only?
 
+  
+#save the output of the analysis so far
+  save.image(file = "KenebaAnalysisv1.RData")
+  
+  
+  
 #part of Lou macaque script below 
 for(i in 1:length(antnames)){
   
