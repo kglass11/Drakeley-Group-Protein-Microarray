@@ -5,7 +5,7 @@
 setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
 
 #load IgG or IgM 
-load("Keneba_IgG_v3_AfterProcessing.RData")
+load("Keneba_IgM_v3_AfterProcessing.RData")
 
 #load packages
 library(contrast)
@@ -45,7 +45,7 @@ library(ggbeeswarm)
   #this is getting 60 spots total out of 144
   NKC821Ygr1 <- NKC821Ydata[which(rowMeans(NKC821Ydata, na.rm = TRUE) > 1),]
   CV.3 <- apply(NKC821Ygr1, 1, sd, na.rm = TRUE) / rowMeans(NKC821Ygr1, na.rm = TRUE)
-  avgCV.3 <- mean(CV.3, na.rm = TRUE ) * 100 #12.155% CV IgG, 11.38% for IgM
+  avgCV.3 <- mean(CV.3, na.rm = TRUE ) * 100 #12.1552% CV IgG, 11.37715% for IgM
 
 ####### IgG vs IgM standard reactivity 
 
