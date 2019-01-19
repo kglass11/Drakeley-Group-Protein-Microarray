@@ -1,6 +1,6 @@
 ###Combined script for reading in and processing microarray data to prepare for analysis
   #IgG or IgM
-  #Last updated Jan 15, 2019 for Keneba Big Study
+  #Last updated Jan 19, 2019 for Keneba Big Study
 
 #Updated because the new antibodies have IgG at 594 and IgM at 488
 
@@ -66,7 +66,7 @@ sample_file <- "Keneba main sample list.csv"
 meta_file <- "Keneba Sample Metadata.csv"
 
 #define file name for antigen list file with additional info about targets.
-target_file <- "KenebaAntigenKeyv4.csv" 
+target_file <- "KenebaAntigenKeyv5.csv" 
 
 #number of technical replicates for the study (usually 1 or 2)
 reps <- 4
@@ -82,6 +82,9 @@ getwd()
 
 ### Load everything from previous processing 
 load("Keneba_IgM_v3_AfterProcessing.RData")
+
+#define file name for antigen list file with additional info about targets.
+target_file <- "KenebaAntigenKeyv5.csv" 
 
 
 #####################################
@@ -298,7 +301,7 @@ targets_allcontrol = c(targets_blank, targets_buffer, targets_ref, targets_std)
 ###GST subtraction!!! Do this with background corrected MFI before log transforming or anything.
 
 #Prepare target data frame for merging (get "unique" names from annotation targets) 
-target_meta2.df <- merge(target_meta.df, annotation_targets.df, by = "Name")
+target_meta2.df <- merge(annotation_targets.df, target_meta.df, by = "Name")
 
 #merge target data frame with data
 bunny <- merge(target_meta2.df, cor.matrix, by.y = "row.names", by.x = "target_id_unique", sort = FALSE, all.y = TRUE)
