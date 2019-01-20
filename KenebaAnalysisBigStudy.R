@@ -5,7 +5,7 @@
 setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
 
 #load IgG or IgM 
-load("Keneba_IgM_v3_AfterProcessing.RData")
+load("Keneba_IgG_v3_AfterProcessing.RData")
 
 #load packages
 library(contrast)
@@ -157,7 +157,7 @@ if(iso == "IgM"){
     nonmalcorp <- cor.mtest(nonmalT, conf.level = .95, na.rm = TRUE)
   
     #Plot with significance showing - x over NOT significant
-    png(filename = paste0("Sig_nonmal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
+    png(filename = paste0(study, "_Sig_nonmal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
   
     print(corrplot.mixed(cor(nonmalT, use = "complete.obs"), p.mat = as.matrix(nonmalcorp$p), sig.level = .05, tl.col="black", order = "FPC", 
                        tl.pos = "lt", tl.cex = 0.5, number.cex = 0.5))
@@ -165,7 +165,7 @@ if(iso == "IgM"){
     graphics.off()
   
     #Plot without significance in alphabetical order
-    png(filename = paste0("nonmal_Correlogram.tif"), width = 14, height = 15, units = "in", res = 1200)
+    png(filename = paste0(study,"_nonmal_Correlogram.tif"), width = 14, height = 15, units = "in", res = 1200)
   
     print(corrplot.mixed(cor(nonmalT, use = "complete.obs"), tl.col="black", order = "alphabet", 
                        tl.pos = "lt", tl.cex = 0.6, number.cex = 0.4))
@@ -181,7 +181,7 @@ if(iso == "IgM"){
     restime <- cor.mtest(malT, conf.level = .95, na.rm = TRUE)
   
     #Plot with significance showing - x over NOT significant
-    png(filename = paste0("Sig_mal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
+    png(filename = paste0(study, "_Sig_mal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
   
     print(corrplot.mixed(cor(malT, use = "complete.obs"), p.mat = as.matrix(restime$p), sig.level = .05, tl.col="black", order = "FPC", 
                        tl.pos = "lt", tl.cex = 0.5, number.cex = 0.5))
@@ -189,7 +189,7 @@ if(iso == "IgM"){
     graphics.off()
   
     #Plot without significance in alphabetical order
-    png(filename = paste0("Mal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
+    png(filename = paste0(study, "_Mal_Correlogram.tif"), width = 10, height = 9.5, units = "in", res = 1200)
   
     print(corrplot.mixed(cor(malT, use = "complete.obs"), tl.col="black", order = "alphabet", 
                        tl.pos = "lt", tl.cex = 0.6, number.cex = 0.5))
@@ -200,7 +200,7 @@ if(iso == "IgM"){
 
   
 #save the output of the analysis so far
-  save.image(file = "KenebaAnalysisv1.RData")
+  save.image(file = "KenebaAnalysis_IgM_v1.RData")
   
   
   
