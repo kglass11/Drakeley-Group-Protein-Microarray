@@ -1,0 +1,107 @@
+---
+title: "Keneba Big Study - Seropositivity Cutoffs - One Positive Population"
+output:
+  pdf_document: default
+  html_notebook: default
+  word_document: default
+---
+
+First set working directory in the console:  
+setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/KenebaSPcutoffs")
+
+For all antigens, establish seropositive, negative, and possibly indeterminate populations.
+
+Select which category the antigen belongs to based on histogram and understanding of the antigen/pathogen.
+1.	Single population – seronegative 
+**2.	Single population – seropositive** 
+3.	Two populations
+
+For single populations, remove tails and use mean +/- xSD of normal distribution to set cutoff.
+
+For dual populations, use FMM or k-means clustering to determine populations, then use probability classification function to place samples into negative, positive, or indeterminate groups.
+
+```{r setup}
+library(gcookbook)
+library(dplyr)
+
+load("KenebaAnalysis_IgG_v1.RData")
+targetupdate <- read.csv("KenebaAntigenKeyv6.csv")
+```
+
+1. Identify seropositive populations and set cutoffs.  
+IgG first - listed as "pos" in antigen key v6.  
+```{r}
+burritos2 <- burritos[,(ncol(target_meta2.df)+1):ncol(burritos)]
+rownames(burritos2) <- burritos$Name
+
+burritos3 <- merge(targetupdate, burritos2, by.y = "row.names", by.x = "Name")
+
+posants <- filter(burritos3, SP_group_IgG == "pos")
+rownames(posants) <- make.names(posants$Name)
+posantnames <- sort(as.character(row.names(posants)))
+```
+
+Set up stuff which will be used for all antigens.
+```{r}
+poscutoffs <- as.data.frame(matrix(ncol= 4, nrow = length(posantnames))) 
+colnames(poscutoffs) <- c("Name", "minus2SD", "minus3SD", "minus4SD")
+
+tails <- as.data.frame(matrix(ncol = 3, nrow = length(posantnames)))
+colnames(tails) <- c("Name","ltail", "rtail")
+tails$Name <- posantnames
+```
+
+Go through positive antigens one by one and   
+1. Identify positive population (remove tails) based on histogram.  
+2. Assuming normal distribution, calculate cutoff as mean minus 2, 3, 4 times SD.  
+3. Plot histogram showing all data, cutoffs (2, 3, and 4SD), and normal distribution curve for subsetted data added.  
+```{r}
+
+#Manually set set limits of data based on histogram for all antigens by 
+#exporting the tails data frame as a csv file and typing into it, then 
+#reading it back in. Make sure not to overwrite it when knitting this document. 
+#write.csv(tails, file = "positivetails.csv")
+
+tailsdone <- read.csv("positivetails.csv")
+
+#In a for loop, calculate cutoffs for all antigens and plot distribution 
+#and cutoffs on histogram
+
+for(i in 1:length(posantnames)){
+#Select antigen
+antigen <- posantnames[i]
+
+#set left and right tail cutoffs
+ltail <- tailsdone[i,2]
+rtail <- tailsdone[i,3]
+
+#subset data for this antigen
+singleant <- c(as.matrix(posants[i, (ncol(targetupdate)+1):ncol(posants)]))
+subant <- singleant[singleant <= rtail & singleant >= ltail]
+
+#Assuming normal distribution, calculate cutoffs 
+poscutoffs[i,1] <- antigen
+poscutoffs[i,2] <- mean(subant, na.rm = TRUE) - 2*sd(subant, na.rm = TRUE)
+poscutoffs[i,3] <- mean(subant, na.rm = TRUE) - 3*sd(subant, na.rm = TRUE)
+poscutoffs[i,4] <- mean(subant, na.rm = TRUE) - 4*sd(subant, na.rm = TRUE)
+
+#Plot data 
+#plot_x <- seq(ltail,rtail,by = 0.1)
+
+print({hist(singleant, prob = TRUE, breaks=50, main = antigen, 
+  xlab="Normalized Log2(MFI Ratio)", cex.main=0.9, cex.lab=0.8, 
+  cex.axis = 0.8, xlim=c(-1,8),  ylim=c(0,0.7))
+curve(dnorm(x, mean(subant, na.rm = TRUE), sd(subant, na.rm = TRUE)), 
+  add=TRUE, col="darkblue", lwd=2)
+abline(v = poscutoffs[i,2:4], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)})
+
+}
+
+#Display all of the cutoffs
+poscutoffs
+
+#save the cutoffs in an R object to be imported later 
+save(poscutoffs, file=paste0(study,"_poscutoffs"))
+
+```
+
