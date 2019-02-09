@@ -206,20 +206,89 @@ if(iso == "IgM"){
     #There are 3 different data frames to import, negative, positive, and multiple populations.
     negcutoffs <- load("Keneba_IgG_v3_negcutoffs")
     poscutoffs <- load("Keneba_IgG_v3_poscutoffs")
-    multcutoffs <- load("Keneba_IgG_v3_multcutoffs")
-    
     #the loading above is not working, need to go back to original files
     #maybe just export .csv files :/
+    
+    multcutoffs <- read.csv("Keneba_IgG_v3_multcutoffs.csv")
+    multcutoffs <- multcutoffs[,2:ncol(multcutoffs)]
     
 ####### Correlations vs ELISA data and Sensitivity and Specificity Calculations
     
     #read in data from .csv files prepared from the excel files Martin sent.
     Martin2012data <- read.csv(file = "2012elisaNKcelldataMartin.csv")
     
-    #
+    #isolate data from our study which has the matching sample IDs from 2012
+    elisasubmelt <- allburritomelt[allburritomelt$year == "2012" & allburritomelt$sample_id %in% Martin2012data$sample_id,]
     
-  
-#save the output of the analysis so far
+    #Note: there are 191 rows in Martin's data, but only 178 have sample IDs, and only 167
+    #of the sample IDs are matching our 2012 sample IDs.... :/
+    
+    #merge our data with Martin's data by sample_id and year (even though all 2012)
+    elisaALLmelt <- merge(elisasubmelt, Martin2012data, by = c("sample_id", "year"))
+    
+    #actually we wanted our data not melted for the scatter plots
+    elisaALL <- merge(allburritos, Martin2012data, by = c("sample_id", "year"))
+    
+    #Correlation scatter plots using ggplot2, red lines indicate seropositivity, 
+    #dashed red line indicates the negative cutoff for RPPA
+    #the linear regression line unfortunately removes the 0s, because they are non-finite values on log scale
+    
+#Tetanus Toxoid
+    png(filename = paste0(study, "_TT_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
+    
+    ggplot(elisaALL, aes(x = TT.IU.ml, y = TT )) + geom_point(color = "darkblue", size = 0.7) + 
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "TT ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "TT",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "TT",2], color = "red", linetype = "dashed", size=0.5)+
+      geom_vline(xintercept=0.01, color = "red", size=0.5) +
+      scale_x_continuous(trans='log2') +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm"))
+      #geom_smooth(method=lm, se=FALSE)
+    
+    graphics.off()
+    
+#EBV - Nuclear Antigen 1 - 20 negative or 0 values in ELISA data were removed
+    
+    png(filename = paste0(study, "_EBV.EBNA.1_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
+    
+    ggplot(elisaALL, aes(x = as.numeric(as.character(EBNA.Titre)), y = EBV.EBNA.1 )) + geom_point(color = "darkblue", size = 0.7) + 
+      scale_x_continuous(trans='log2') +
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "EBV.EBNA.1 ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "EBV.EBNA.1",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "EBV.EBNA.1",2], color = "red", linetype = "dashed", size=0.5)+
+      geom_vline(xintercept=23, color = "red", size=0.5) +
+      geom_vline(xintercept=20, color = "red", linetype = "dashed", size=0.5) +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm"))
+    #geom_smooth(method=lm, se=FALSE)
+    
+    graphics.off()
+    
+#CMV - trying CMVpp150 first 
+    
+    png(filename = paste0(study, "_CMV.pp150_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
+    
+    ggplot(elisaALL, aes(x = as.numeric(as.character(HCMV.IgG.Titre)), y = CMV.pp150 )) + geom_point(color = "darkblue", size = 0.7) + 
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "CMV.pp150 ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.pp150",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.pp150",2], color = "red", linetype = "dashed", size=0.5)+
+      #geom_vline(xintercept=?, color = "red", size=0.5) +
+      #geom_vline(xintercept=?, color = "red", linetype = "dashed", size=0.5) +
+      scale_x_continuous(trans='log2') +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm"))
+    #geom_smooth(method=lm, se=FALSE)
+    
+    graphics.off()
+     
+    
+    
+    
+####### Save the output of the analysis so far
   #save.image(file = "KenebaAnalysis_IgM_v1.RData")
   #save.image(file = "KenebaAnalysis_IgG_v1.RData")
   save.image(file = "KenebaAnalysis_IgG_v2.RData")
