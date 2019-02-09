@@ -67,7 +67,7 @@ if(iso == "IgM"){
   eratioFc <- 2^stdratioFc #110338167
 }
 
-######Histograms of all the data for each antigen (includes negative values)
+###### Prepare the data!!!! Include correct samples etc
 
   #prepare data so that only test samples are included (Keneba and PHE)
   alldata <- merge(sample_meta_f.df, trans.norm.df, by = "sample_id_unique", all.y = TRUE, sort = FALSE)
@@ -99,6 +99,8 @@ if(iso == "IgM"){
   burritosT <- as.data.frame(t(burritos1))
   allburritos <- merge(sample_meta_f.df, burritosT, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
 
+######Histograms of all the data for each antigen (includes negative values)  
+  
 #plot histograms of all data for each antigen separately
   antnames <- colnames(burritosT)
   
@@ -196,13 +198,39 @@ if(iso == "IgM"){
   
     graphics.off()
   
-  ###one with luminex antigens only?
-
+  ###one with luminex Pf antigens only?
+    
+####### Read in and finalize seropositivity cutoffs for all antigens 
+    
+    #This information is coming from the R notebook files. 
+    #There are 3 different data frames to import, negative, positive, and multiple populations.
+    negcutoffs <- load("Keneba_IgG_v3_negcutoffs")
+    poscutoffs <- load("Keneba_IgG_v3_poscutoffs")
+    multcutoffs <- load("Keneba_IgG_v3_multcutoffs")
+    
+    #the loading above is not working, need to go back to original files
+    #maybe just export .csv files :/
+    
+####### Correlations vs ELISA data and Sensitivity and Specificity Calculations
+    
+    #read in data from .csv files prepared from the excel files Martin sent.
+    Martin2012data <- read.csv(file = "2012elisaNKcelldataMartin.csv")
+    
+    #
+    
   
 #save the output of the analysis so far
-  save.image(file = "KenebaAnalysis_IgM_v1.RData")
-  
-  
+  #save.image(file = "KenebaAnalysis_IgM_v1.RData")
+  #save.image(file = "KenebaAnalysis_IgG_v1.RData")
+  save.image(file = "KenebaAnalysis_IgG_v2.RData")
+    
+    
+    
+    
+    
+    
+    
+    
   
 #part of Lou macaque script below 
 for(i in 1:length(antnames)){
