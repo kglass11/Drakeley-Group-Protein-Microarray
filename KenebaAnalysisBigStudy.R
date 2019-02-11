@@ -22,6 +22,7 @@ library(corrplot)
 
 library(gridExtra)
 library(ggbeeswarm)
+library(ggpubr)
 
 
 
@@ -212,7 +213,7 @@ if(iso == "IgM"){
     multcutoffs <- read.csv("Keneba_IgG_v3_multcutoffs.csv")
     multcutoffs <- multcutoffs[,2:ncol(multcutoffs)]
     
-####### Correlations vs ELISA data and Sensitivity and Specificity Calculations
+####### ELISA data - Correlations vs RPPA and Sensitivity and Specificity Calculations
     
     #read in data from .csv files prepared from the excel files Martin sent.
     Martin2012data <- read.csv(file = "2012elisaNKcelldataMartin.csv")
@@ -251,9 +252,11 @@ if(iso == "IgM"){
     
 #EBV - Nuclear Antigen 1 - 20 negative or 0 values in ELISA data were removed
     
+    elisaALL$EBNA.Titre <- as.numeric(as.character(elisaALL$EBNA.Titre))
+    
     png(filename = paste0(study, "_EBV.EBNA.1_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
     
-    ggplot(elisaALL, aes(x = as.numeric(as.character(EBNA.Titre)), y = EBV.EBNA.1 )) + geom_point(color = "darkblue", size = 0.7) + 
+    ggplot(elisaALL, aes(x = EBNA.Titre, y = EBV.EBNA.1 )) + geom_point(color = "darkblue", size = 0.7) + 
       scale_x_continuous(trans='log2') +
       theme_bw() + 
       theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
@@ -284,8 +287,45 @@ if(iso == "IgM"){
     #geom_smooth(method=lm, se=FALSE)
     
     graphics.off()
-     
     
+#HBV - surface antigen 
+    
+    # import the .csv file, this antigen has data from 2012 and 2016 samples
+    HBVelisaMartin <- read.csv("HBVelisaMartin.csv")
+    
+    # merge with allburritos to get data for matching samples only
+    elisaHBV <- merge(HBVelisaMartin, allburritos, by = c("sample_id", "year"))
+    elisaHBV$Anti.HBs.IU.L. <- as.numeric(as.character(elisaHBV$Anti.HBs.IU.L.))
+    
+    #plot! 
+    
+    png(filename = paste0(study, "_HBV.sAg_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
+    
+    sp <- ggplot(elisaHBV, aes(x = Anti.HBs.IU.L., y = HBV.sAg)) + geom_point(color = "darkblue", size = 0.7) + 
+      scale_x_continuous(trans='log2') +
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "HBV.sAg ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",2], color = "red", linetype = "dashed", size=0.5)+
+      geom_vline(xintercept=10.1, color = "red", size=0.5) +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
+      geom_smooth(method=lm, na.rm=TRUE)
+      
+    sp + stat_cor(method = "pearson", label.x = 3, label.y = 30)
+    
+    graphics.off()
+    
+
+    
+    
+    
+    #code below not working - source STHDA correlation analysis, correlation of two variables
+    #uses package ggpubr
+    
+    ggscatter(elisaALL, x = EBNA.Titre, y = EBV.EBNA.1, 
+              add = "reg.line", conf.int = TRUE, 
+              cor.coef = TRUE, cor.method = "pearson")    
     
     
 ####### Save the output of the analysis so far
