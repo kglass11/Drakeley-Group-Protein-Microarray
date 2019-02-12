@@ -7,6 +7,13 @@ setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysi
 #load IgG or IgM 
 load("Keneba_IgG_v3_AfterProcessing.RData")
 
+#install latest version of ggpubr from github - this did not work
+#gave an error "lazy-load database '/Users/Katie/Library/R/3.5/library/ggpubr/R/ggpubr.rdb' is corrupt"
+#if(!require(devtools)) install.packages("devtools")
+#devtools::install_github("kassambara/ggpubr")
+
+install.packages("ggpubr")
+
 #load packages
 library(contrast)
 library(beeswarm)
@@ -233,9 +240,10 @@ if(iso == "IgM"){
     #Correlation scatter plots using ggplot2, red lines indicate seropositivity, 
     #dashed red line indicates the negative cutoff for RPPA
     #the linear regression line unfortunately removes the 0s, because they are non-finite values on log scale
+    #this is an issue for tetanus toxoid
     
 #Tetanus Toxoid
-    png(filename = paste0(study, "_TT_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
+    png(filename = paste0(study, "_TT_RPPAvELISA.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
     
     ggplot(elisaALL, aes(x = TT.IU.ml, y = TT )) + geom_point(color = "darkblue", size = 0.7) + 
       theme_bw() + 
@@ -246,47 +254,110 @@ if(iso == "IgM"){
       geom_vline(xintercept=0.01, color = "red", size=0.5) +
       scale_x_continuous(trans='log2') +
       theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm"))
-      #geom_smooth(method=lm, se=FALSE)
     
     graphics.off()
     
-#EBV - Nuclear Antigen 1 - 20 negative or 0 values in ELISA data were removed
+    #repeat plot with regression line, 95% confidence intervals, pearson's R, and p value of correlation test
+    png(filename = paste0(study, "_TT_RPPAvELISA_regline.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
+    
+    sp <- ggplot(elisaALL, aes(x = TT.IU.ml, y = TT )) + geom_point(color = "darkblue", size = 0.7) + 
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "TT ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "TT",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "TT",2], color = "red", linetype = "dashed", size=0.5)+
+      geom_vline(xintercept=0.01, color = "red", size=0.5) +
+      scale_x_continuous(trans='log2') +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
+      geom_smooth(method=lm)
+    
+    sp + stat_cor(method = "pearson", label.x = -6, label.y = 8)
+    
+    graphics.off()
+    
+#EBV - Nuclear Antigen 1 - 20 negative or 0 values in ELISA data were removed because they cannot be log transformed
     
     elisaALL$EBNA.Titre <- as.numeric(as.character(elisaALL$EBNA.Titre))
     
-    png(filename = paste0(study, "_EBV.EBNA.1_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
+    png(filename = paste0(study, "_EBV.EBNA.1_RPPAvELISA.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
     
     ggplot(elisaALL, aes(x = EBNA.Titre, y = EBV.EBNA.1 )) + geom_point(color = "darkblue", size = 0.7) + 
       scale_x_continuous(trans='log2') +
       theme_bw() + 
       theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
-      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "EBV.EBNA.1 ELISA vs RPPA") +
+      labs(x = "ELISA - Log2(Titer)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "EBV.EBNA.1 ELISA vs RPPA") +
       geom_hline(yintercept=multcutoffs[multcutoffs$Name == "EBV.EBNA.1",3], color = "red", size=0.5)+
       geom_hline(yintercept=multcutoffs[multcutoffs$Name == "EBV.EBNA.1",2], color = "red", linetype = "dashed", size=0.5)+
       geom_vline(xintercept=23, color = "red", size=0.5) +
       geom_vline(xintercept=20, color = "red", linetype = "dashed", size=0.5) +
+      ylim(0,10) +
       theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm"))
-    #geom_smooth(method=lm, se=FALSE)
     
     graphics.off()
     
+    #repeat plot with regression line, 95% confidence intervals, pearson's R, and p value of correlation test
+    png(filename = paste0(study, "_EBV.EBNA.1_RPPAvELISA_regline.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
+    
+    sp <- ggplot(elisaALL, aes(x = EBNA.Titre, y = EBV.EBNA.1 )) + geom_point(color = "darkblue", size = 0.7) + 
+      scale_x_continuous(trans='log2') +
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA Log2(Titer)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "EBV.EBNA.1 ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "EBV.EBNA.1",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "EBV.EBNA.1",2], color = "red", linetype = "dashed", size=0.5)+
+      geom_vline(xintercept=23, color = "red", size=0.5) +
+      geom_vline(xintercept=20, color = "red", linetype = "dashed", size=0.5) +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
+      ylim(0,10) +
+      geom_smooth(method=lm)
+      
+    sp + stat_cor(method = "pearson")
+    
+    graphics.off()
+    
+    #note - when I added ylim(0,8) which puts the axes for the EBNA plot
+    #to be the same as the other plots, it is somehow changing the pearson's correlation 
+    #and rather than removing 20 rows containing non-finite or missing values
+    #it is causing it to remove 54 values, because there are values higher than 8
+    #which were being removed. I have set the axis to 10 to fix this problem.
+    
+    
 #CMV - trying CMVpp150 first 
     
-    png(filename = paste0(study, "_CMV.pp150_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
+    png(filename = paste0(study, "_CMV.pp150_RPPAvELISA.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
     
     ggplot(elisaALL, aes(x = as.numeric(as.character(HCMV.IgG.Titre)), y = CMV.pp150 )) + geom_point(color = "darkblue", size = 0.7) + 
       theme_bw() + 
       theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
-      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "CMV.pp150 ELISA vs RPPA") +
+      labs(x = "ELISA - Log2(Titer)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "CMV.pp150 ELISA vs RPPA") +
       geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.pp150",3], color = "red", size=0.5)+
       geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.pp150",2], color = "red", linetype = "dashed", size=0.5)+
       #geom_vline(xintercept=?, color = "red", size=0.5) +
       #geom_vline(xintercept=?, color = "red", linetype = "dashed", size=0.5) +
       scale_x_continuous(trans='log2') +
       theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm"))
-    #geom_smooth(method=lm, se=FALSE)
     
     graphics.off()
+    
+    #repeat plot with regression line, 95% confidence intervals, pearson's R, and p value of correlation test
+    png(filename = paste0(study, "_CMV.pp150_RPPAvELISA_regline.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
+    
+    sp <- ggplot(elisaALL, aes(x = as.numeric(as.character(HCMV.IgG.Titre)), y = CMV.pp150 )) + geom_point(color = "darkblue", size = 0.7) + 
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(Titer)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "CMV.pp150 ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.pp150",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.pp150",2], color = "red", linetype = "dashed", size=0.5)+
+      #geom_vline(xintercept=?, color = "red", size=0.5) +
+      #geom_vline(xintercept=?, color = "red", linetype = "dashed", size=0.5) +
+      scale_x_continuous(trans='log2') +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
+      geom_smooth(method=lm)
+    
+    sp + stat_cor(method = "pearson")
+    
+    graphics.off()
+    
     
 #HBV - surface antigen 
     
@@ -297,9 +368,24 @@ if(iso == "IgM"){
     elisaHBV <- merge(HBVelisaMartin, allburritos, by = c("sample_id", "year"))
     elisaHBV$Anti.HBs.IU.L. <- as.numeric(as.character(elisaHBV$Anti.HBs.IU.L.))
     
-    #plot! 
+    #plot!
     
-    png(filename = paste0(study, "_HBV.sAg_RPPAvELISA.tif"), width = 3.6, height = 3.6, units = "in", res = 1200)
+    png(filename = paste0(study, "_HBV.sAg_RPPAvELISA.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
+    
+    ggplot(elisaHBV, aes(x = Anti.HBs.IU.L., y = HBV.sAg)) + geom_point(color = "darkblue", size = 0.7) + 
+      scale_x_continuous(trans='log2') +
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "HBV.sAg ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",2], color = "red", linetype = "dashed", size=0.5)+
+      geom_vline(xintercept=10.1, color = "red", size=0.5) +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm"))
+    
+    graphics.off()
+    
+    #repeat plot with regression line, 95% confidence intervals, pearson's R, and p value of correlation test
+    png(filename = paste0(study, "_HBV.sAg_RPPAvELISA_regline.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
     
     sp <- ggplot(elisaHBV, aes(x = Anti.HBs.IU.L., y = HBV.sAg)) + geom_point(color = "darkblue", size = 0.7) + 
       scale_x_continuous(trans='log2') +
@@ -312,7 +398,7 @@ if(iso == "IgM"){
       theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
       geom_smooth(method=lm, na.rm=TRUE)
       
-    sp + stat_cor(method = "pearson", label.x = 3, label.y = 30)
+    sp + stat_cor(method = "pearson", label.x = 3.5, label.y =8)
     
     graphics.off()
     
