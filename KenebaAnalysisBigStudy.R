@@ -498,8 +498,37 @@ if(iso == "IgM"){
     hepBpos.sample[,y] #the values for the positive sample 382M are 3.269630 4.516825 (2012, 2016 respectively)
     
     
+    #We also have data in the main spreadsheet from Martin called "Anti-Hbs Titre" 
+    #Only the reactive samples are shown. Let's try and see if this correlates better for some reason.
+    #in case the data is not matching or something. - Update - it is matching.
     
+    png(filename = paste0(study, "SUBSET_HBV.sAg_RPPAvELISA_regline.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
     
+    sp <- ggplot(elisaALL, aes(x = as.numeric(as.character(anti.HBs.titre)), y = HBV.sAg )) + geom_point(color = "darkblue", size = 0.7) + 
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(Titer)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "HBV.sAg ELISA (subset) vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",2], color = "red", linetype = "dashed", size=0.5)+
+      #geom_vline(xintercept=?, color = "red", size=0.5) +
+      #geom_vline(xintercept=?, color = "red", linetype = "dashed", size=0.5) +
+      scale_x_continuous(trans='log2') +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
+      geom_smooth(method=lm)
+    
+    sp + stat_cor(method = "pearson")
+    
+    graphics.off()
+    
+####### ELISA data sensitivity and specificity calculations
+    
+    #set up data frame for sensitivity and specificity calculations
+    sens.spec <- as.data.frame(matrix(nrow = 5, ncol = 8))
+    colnames(sens.spec) <- c("Antigen", "True_Positives", "True_Negatives", "False_Positives", "False_Negatives", "Sensitivity", "Specificity", "Agreement")
+    
+    #make a data frame of seropositivity (1) and seronegativity (0) for all antigens
+    #What do to about the indeterminate values?? I think just don't count them...
+    #set indeterminates to NA
   
     
     
