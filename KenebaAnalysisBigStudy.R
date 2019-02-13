@@ -436,16 +436,71 @@ if(iso == "IgM"){
     
     graphics.off()
     
-
+    #compare to original data immediately after background correction to see if anything happened during processing
+    originalcor <- t(cor.matrix)
+    
+    origmeta <- merge(sample_meta_f.df, originalcor, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
+    HBVoriginal <- merge(HBVelisaMartin, origmeta, by = c("sample_id", "year"))
+    
+    HBVoriginal$Anti.HBs.IU.L. <- as.numeric(as.character(HBVoriginal$Anti.HBs.IU.L.))
+    
+    png(filename = paste0(study, "_BackCOR_DATA_HBV.sAg_RPPAvELISA_regline.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
+    
+    sp <- ggplot(HBVoriginal, aes(x = Anti.HBs.IU.L., y = HBVoriginal$"64_HBV-sAg_1")) + geom_point(color = "darkblue", size = 0.7) + 
+      scale_x_continuous(trans='log2') +
+      scale_y_continuous(trans='log2') +
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Log2(Background corrected MFI)", title = "HBV.sAg ELISA vs RPPA raw data") +
+      #geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",3], color = "red", size=0.5)+
+      #geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",2], color = "red", linetype = "dashed", size=0.5)+
+      geom_vline(xintercept=10.1, color = "red", size=0.5) +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
+      geom_smooth(method=lm, na.rm=TRUE)
+    
+    sp + stat_cor(method = "pearson")
+    
+    graphics.off()
+    
+    #do the same steps for foreground data only - the most raw data possible
+    originalcor2 <- t(fore.matrix)
+    
+    origmeta2 <- merge(sample_meta_f.df, originalcor2, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
+    HBVoriginal2 <- merge(HBVelisaMartin, origmeta2, by = c("sample_id", "year"))
+    
+    HBVoriginal2$Anti.HBs.IU.L. <- as.numeric(as.character(HBVoriginal2$Anti.HBs.IU.L.))
+    
+    png(filename = paste0(study, "_RAW_DATA_HBV.sAg_RPPAvELISA_regline.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
+    
+    sp <- ggplot(HBVoriginal2, aes(x = Anti.HBs.IU.L., y = HBVoriginal2$"64_HBV-sAg_1")) + geom_point(color = "darkblue", size = 0.7) + 
+      scale_x_continuous(trans='log2') +
+      scale_y_continuous(trans='log2') +
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(IU/mL)" , y = " RPPA - Log2(Background corrected MFI)", title = "HBV.sAg ELISA vs RPPA raw data") +
+      #geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",3], color = "red", size=0.5)+
+      #geom_hline(yintercept=multcutoffs[multcutoffs$Name == "HBV.sAg",2], color = "red", linetype = "dashed", size=0.5)+
+      geom_vline(xintercept=10.1, color = "red", size=0.5) +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
+      geom_smooth(method=lm, na.rm=TRUE)
+    
+    sp + stat_cor(method = "pearson")
+    
+    graphics.off()
+    
+    #find the values for HBV, Normalized Log2(MFI Ratio) for the positive controls 
+    hepBstd <- alldata[grep("HepB_std", alldata$sample_id_unique, ignore.case = TRUE),]
+    x <- grep("HBV", c(colnames(hepBstd)), ignore.case = TRUE)
+    hepBstd[,x] #the value for the hepBstd is 4.422146
+    
+    hepBpos.sample <- alldata[grep("382M", alldata$sample_id_unique, ignore.case = TRUE),]
+    y <- grep("HBV", c(colnames(hepBpos.sample)), ignore.case = TRUE)
+    hepBpos.sample[,y] #the values for the positive sample 382M are 3.269630 4.516825 (2012, 2016 respectively)
     
     
     
-    #code below not working - source STHDA correlation analysis, correlation of two variables
-    #uses package ggpubr
     
-    ggscatter(elisaALL, x = EBNA.Titre, y = EBV.EBNA.1, 
-              add = "reg.line", conf.int = TRUE, 
-              cor.coef = TRUE, cor.method = "pearson")    
+  
     
     
 ####### Save the output of the analysis so far
