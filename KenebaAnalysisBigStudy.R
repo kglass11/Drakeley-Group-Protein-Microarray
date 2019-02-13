@@ -358,6 +358,40 @@ if(iso == "IgM"){
     
     graphics.off()
     
+#CMV again - grade III antigen 
+    png(filename = paste0(study, "_CMV.GradeIII_RPPAvELISA.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
+    
+    ggplot(elisaALL, aes(x = as.numeric(as.character(HCMV.IgG.Titre)), y = CMV.GradeIII )) + geom_point(color = "darkblue", size = 0.7) + 
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(Titer)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "CMV.GradeIII ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.GradeIII",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.GradeIII",2], color = "red", linetype = "dashed", size=0.5)+
+      #geom_vline(xintercept=?, color = "red", size=0.5) +
+      #geom_vline(xintercept=?, color = "red", linetype = "dashed", size=0.5) +
+      scale_x_continuous(trans='log2') +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm"))
+    
+    graphics.off()
+    
+    #repeat plot with regression line, 95% confidence intervals, pearson's R, and p value of correlation test
+    png(filename = paste0(study, "_CMV.GradeIII_RPPAvELISA_regline.tif"), width = 3.8, height = 3.6, units = "in", res = 1200)
+    
+    sp <- ggplot(elisaALL, aes(x = as.numeric(as.character(HCMV.IgG.Titre)), y = CMV.GradeIII )) + geom_point(color = "darkblue", size = 0.7) + 
+      theme_bw() + 
+      theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
+      labs(x = "ELISA - Log2(Titer)" , y = " RPPA - Normalized Log2(MFI Ratio)", title = "CMV.GradeIII ELISA vs RPPA") +
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.GradeIII",3], color = "red", size=0.5)+
+      geom_hline(yintercept=multcutoffs[multcutoffs$Name == "CMV.GradeIII",2], color = "red", linetype = "dashed", size=0.5)+
+      #geom_vline(xintercept=?, color = "red", size=0.5) +
+      #geom_vline(xintercept=?, color = "red", linetype = "dashed", size=0.5) +
+      scale_x_continuous(trans='log2') +
+      theme(plot.margin = margin(0.5, 0.7, 0.5, 0.5, "cm")) +
+      geom_smooth(method=lm)
+    
+    sp + stat_cor(method = "pearson")
+    
+    graphics.off()
     
 #HBV - surface antigen 
     
