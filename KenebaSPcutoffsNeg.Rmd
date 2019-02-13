@@ -100,8 +100,12 @@ abline(v = negcutoffs[i,2:4], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)})
 #Display all of the cutoffs
 negcutoffs
 
-#save the cutoffs in an R object to be imported later 
+#save the cutoffs in an R object to be imported later - this isn't working in R notebook
 save(negcutoffs, file=paste0(study,"_negcutoffs"))
+
+#save to .csv file instead
+write.csv(negcutoffs, file=paste0(study,"_negcutoffs.csv"))
+
 
 ```
 

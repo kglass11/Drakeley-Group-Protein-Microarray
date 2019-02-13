@@ -1,23 +1,35 @@
 ---
-title: "Keneba Big Study - Seropositivity Cutoffs - Two Populations"
+title: "Keneba Big Study - Seropositivity Cutoffs - Two or Three Populations - IgG"
 output:
   pdf_document: default
   html_notebook: default
   word_document: default
 ---
   
-First set working directory in the console:  
-setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/KenebaSPcutoffs")
-  
 For all antigens, establish seropositive, negative, and possibly indeterminate populations.  
-  
+    
 Select which category the antigen belongs to based on histogram and understanding of the antigen/pathogen.  
 1.	Single population – seronegative   
 2.	Single population – seropositive  
-**3.	Two populations**  
+**3.	Two (or three) populations**  
+  
+**For multiple populations, run 2 component (or 3 component) finite mixture model(FMM) using normalmixEM function, part of mixtools package to determine populations. Then use probability classification function to assign cutoffs for seronegativity and seropositivity as the point where the probability of being in the negative or positive population reaches 0.9. The samples in between these cutoffs are indeterminate.**
 
-For dual populations, use FMM or k-means clustering to determine populations, then use probability classification function to place samples into negative, positive, or indeterminate groups.  
-
+This method is previously published by our group: Current mathematical models for analyzing anti-malarial antibody data with an eye to malaria elimination and eradication. Nuno Sepulveda, Gillian Stresman, Michael T White, and Chris J Drakeley. Journal of Immunology Research, 2015.  
+   
+Antigens identified as three populations will be treated as dual populations (seronegative and seropositive) for all initial analysis.  
+  
+Notes regarding the method:    
+a. The probability classification function may fail to determine a cutoff for seronegativity or seropositivity.  This means that there is no point in the data for which there is a greater than 90% (that's the cutoff I'm choosing, based on Nuno and Gillian's paper) probability that a sample is in that population (negative, positive or both).   
+b. The FMM results are sometimes inconsistent and there are multiple solutions. I am getting around this problem by setting max iterations to 10K, running the FMM ten times, then selecting the best solution for each antigen and putting in those results as initial values (see FMM strategy below for further detail).  
+c. Potential Alternatives:       
+  1. Go back to making sure the negative population is well identified or the positive population well identified by FMM and then doing the mean +/- sd thing again.  
+  2. For the antigens for which the seroreactivity in the UK population should be and looks negative (such as malarial antigens), consider using the UK negative population rather than FMM.     
+  
+**First set working directory in the console:  
+setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/KenebaSPcutoffs")**
+  
+1. Set up things needed for the whole script, including defining probability classification functions - these work for k=2 or k=3 in FMM.
 ```{r setup}
 library(mixtools)
 library(gcookbook)
@@ -26,6 +38,7 @@ library(ggplot2)
 library(dplyr)
 library(reshape2)
 
+#import relevant data
 load("KenebaAnalysis_IgG_v1.RData")
 targetupdate <- read.csv("KenebaAntigenKeyv7.csv")
 
@@ -41,7 +54,7 @@ f<-function(x,prob,lambda,mu,sigma,k,k1){
   
   for(i in 1:k)p[i]<-lambda[i]*dnorm(x,mu[i],sigma[i])
   
-  prob-sum(p[1:k1])/sum(p)
+  prob-sum(p[1:k1])/sum(p)  
 }
 
 f2<-function(x,prob,lambda,mu,sigma,k,k1){
@@ -60,51 +73,36 @@ f2<-function(x,prob,lambda,mu,sigma,k,k1){
 
 ```
 
-1. Identify antigens with two populations.   
-IgG first - listed as "two" in antigen key v7.  
+2. Identify antigens with multiple populations.   
+IgG first - listed as "two" or "three" in antigen key v7.  
 ```{r}
 burritos2 <- burritos[,(ncol(target_meta2.df)+1):ncol(burritos)]
 rownames(burritos2) <- burritos$Name
 
 burritos3 <- merge(targetupdate, burritos2, by.y = "row.names", by.x = "Name")
 
-multants <- filter(burritos3, SP_group_IgG == "two")
+multants <- filter(burritos3, SP_group_IgG == "two" | SP_group_IgG == "three")
 rownames(multants) <- make.names(multants$Name)
 multantnames <- rownames(multants)
 ```
 
-2. Set up stuff which will be used for all antigens. Save a cutoff below which is negative,  a cutoff above which is positive, for both kmeans and fmm. Indeterminate samples will be in the middle of those two cutoffs. use greater than or equal and less than or equal.  
-Note: The probability classification function may fail for one or both models.  This may mean that there is no point in the data for which there is a greater than 90% (that's the cutoff I'm choosing, based on Nuno and Gillian's paper) probability that the data is in the positive of the two populations. 
+3. Set up data frames which will be used to store information for all antigens. Save a cutoff below which is negative,  a cutoff above which is positive. Indeterminate samples will be in the middle of those two cutoffs. Use greater than or equal and less than or equal to the cutoff. Also save the seroprevalence positive and negative and indeterminate for all antigens. 
+
 ```{r}
 multcutoffs <- as.data.frame(matrix(ncol = 6, nrow = length(multantnames))) 
-colnames(multcutoffs) <- c("Name", "kmeans.neg", "kmeans.pos", "fmm.neg", "fmm.pos", "BestModel")
+colnames(multcutoffs) <- c("Name", "cutoff.neg", "cutoff.pos", "prev.neg", "prev.pos", "prev.indet")
 multcutoffs$Name <- multantnames
-
-multprevalence <- as.data.frame(matrix(ncol = 7, nrow = length(multantnames))) 
-colnames(multprevalence) <- c("Name", "kmeans.neg", "kmeans.pos", "kmeans.indet", "fmm.neg", "fmm.pos", "fmm.indet")
-multprevalence$Name <- multantnames
 ```
 
-3. Go through the two or three population antigens one by one and identify what looks reasonable based on histograms previously generated, then do K-means and FMM. 
-  
-4.FMM:    
+4.FMM - Do the following for each antigen one by one:    
 -- Run fmm and probability classification function (and plot this) and store cutoffs. On this plot, the blue line is component 1 and the purple line is component 2 of the fmm. 
--- **FMM Strategy: Run the FMM ten times to check consistency. If inconsistent, go with model with higher Loglik or the one that looks more like positive and negative rather than the two country populations and put in the parameters for both mu and sigma from that model, this will hopefully cause the solution to be the same every time in the future. Also, if the multiple solutions for the FMM do not match what looks right based on the histograms of the overall data and country density plots, put in estimates for BOTH mu and sigma and see if this helps find another solution. **
--- Plot histograms showing all data, cutoffs (positive and negative) and normal distribution curves added.
-    
-5. K-means:    
--- Run k-means clustering and use mean and sd of the two or three populations for  
-probability classification function. plot this and store cutoffs.  
--- Plot histograms showing all data, cutoffs (positive and negative) and normal distribution curves added.
-
-Note: 
-If both FMM and K means are not working for a lot of antigens... what about eyeballing the cutoff between the two populations (visual k-means clustering haha) but then still using the probability classification function to determine seropositivity!! I think this could work because the main problem I run into is that the algorithms are not distinguishing between the populations well. 
-
-Or: go back to making sure the negative population is well identified or the positive population well identified and then doing the mean plus sd thing again.
-
-Or: For the antigens for which the seroreactivity in the UK population should be and looks negative, could consider using the UK negative population rather than FMM. 
-
-1 - X800E2A - good candidate for negative FMM population + 3SD, or UK population + 3SD, negative probability never above 0.9
+-- Open the overall histogram and density by country files and identify what looks reasonable while checking the FMM solutions.   
+-- **FMM Strategy: Run the FMM ten times with no initial values for mu or sigma to check consistency. If inconsistent, go with model with higher Loglik or the one that looks more like positive and negative rather than the two country populations and put in the parameters for both mu and sigma from that model, this will cause the solution to be the same every time in the future. If that does not cause consistency, also put in lambda from model results and that will do it. Also, if the multiple solutions for the FMM do not match what looks right based on the histograms of the overall data and country density plots, can try to put in initial values for BOTH mu and sigma (and maybe lambda) and see if this helps find an alternative solution. **   
+-- Check the probability classification plot and put in the end points for the uniroot function so that it covers the transition above 0.9 one time. Note down at the top of the code for that antigen if either positive or negative never reaches a probability of 0.9.  
+-- Plot histograms showing all data, cutoffs (positive and negative), and normal distribution curves for FMM components.  
+  
+   
+1 - X800E2A - good candidate for negative FMM population + 3SD, or UK population + 3SD, negative probability never above 0.9.  
 ```{r}
 i = 1
 #Select antigen
@@ -131,8 +129,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(-1,0),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -143,9 +141,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -167,7 +165,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.7))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
 }
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
@@ -202,8 +200,8 @@ cutoff<-uniroot(f,c(-2,1),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fi
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(-1,3),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -214,9 +212,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -238,7 +236,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.7))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
@@ -270,8 +268,8 @@ cutoff<-uniroot(f,c(-4,0),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fi
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(0,6),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -282,9 +280,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -306,7 +304,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.6))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
@@ -340,8 +338,8 @@ cutoff<-uniroot(f,c(-4,0),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fi
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(-1,6),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -352,9 +350,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -376,7 +374,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.6))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
@@ -409,8 +407,8 @@ cutoff<-uniroot(f,c(-1,4),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fi
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(3,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -421,9 +419,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -445,7 +443,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
@@ -477,8 +475,8 @@ cutoff<-uniroot(f,c(-2,4),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fi
 #cutoff above which is positive - manually set interval end points
 #cutoff2<-uniroot(f2,c(3,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-#multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+#multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 #pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -489,9 +487,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-#multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+#multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -513,7 +511,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
@@ -545,8 +543,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,3),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -557,9 +555,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -581,7 +579,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.6))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
@@ -613,8 +611,8 @@ cutoff<-uniroot(f,c(0,2),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(2,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -625,9 +623,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -649,7 +647,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.7))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
@@ -682,8 +680,8 @@ cutoff<-uniroot(f,c(0,2),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(2,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -694,9 +692,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -718,7 +716,7 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.7))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
@@ -751,8 +749,8 @@ cutoff<-uniroot(f,c(0,2),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(0.5,4),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -763,9 +761,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -787,14 +785,85 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-11 - DT.NIBSC
+11 - DT - with k = 2, negative population never reaches probability 0.9. Running as k=3 as well, and then negative population does reach probability of 0.9. Using k=3 model, but only the first two components to determine seropositivity.
 ```{r}
 i = 11
+#Select antigen
+antigen <- multantnames[i]
+antigen
+
+#subset data for this antigen
+singleant <- c(as.matrix(multants[i, (ncol(targetupdate)+1):ncol(multants)]))
+#singleant <- singleant[singleant >= 0]
+
+#put the data in numerical order - required to generate probability classification plot below
+antibody1 <- sort(singleant)
+
+#### Try FMM model first
+
+fit.ab2<-normalmixEM(antibody1, lambda = c(0.5, 0.5), k = 3,mu = c(0.0650418, 2.148011, 4.771847), sigma= c(0.3470425, 1.040579, 1.409197), fast=FALSE,maxit=10000,epsilon = 1e-16,maxrestarts=1000)
+
+#5 Plot Cut off Value
+summary(fit.ab2)
+
+#cutoff below which is negative - manually set interval end points
+cutoff<-uniroot(f,c(-0.1,-0),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+
+#cutoff above which is positive - manually set interval end points
+cutoff2<-uniroot(f2,c(0.5,4),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
+
+#percentage positive 
+pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
+
+#percentage negative
+neg <- sum(antibody1<cutoff)/length(antibody1) * 100
+
+#percentage indeterminate
+indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
+
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
+
+#Plot cutoffs if there are two
+{plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
+
+rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
+
+abline(h=0.90,lwd=1.5,lty=2)
+abline(v=cutoff,lwd=1)
+abline(v=cutoff2,lwd=1)
+
+lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
+lines(antibody1,fit.ab2$posterior[,3],lwd=2,col='red')
+legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))}
+
+#Plot histogram with cutoffs shown and normal distributions shown
+{hist(antibody1, prob = TRUE, breaks=50, main = paste(antigen, "FMM"), 
+  xlab="Normalized Log2(MFI Ratio)", cex.main=0.9, cex.lab=0.8, 
+  cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
+curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
+curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
+curve(dnorm(x, fit.ab2$mu[3], fit.ab2$sigma[3]), add=TRUE, col="blue", lwd=2)
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+
+remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
+```
+
+
+12 - DT.NIBSC
+```{r}
+i = 12
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -819,8 +888,8 @@ cutoff<-uniroot(f,c(0,3),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(2,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -831,9 +900,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -855,14 +924,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-12 - EBV.EBNA.1 - don't think FMM working that well, perhaps add to the positive one population list
+13 - EBV.EBNA.1 - don't think FMM working that well, perhaps add to the positive one population list
 ```{r}
-i = 12
+i = 13
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -887,8 +956,8 @@ cutoff<-uniroot(f,c(0,5),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(5,10),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -899,9 +968,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -923,14 +992,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,10), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-13 - EBV.VCA.P18
+14 - EBV.VCA.P18
 ```{r}
-i = 13
+i = 14
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -955,8 +1024,8 @@ cutoff<-uniroot(f,c(0,4),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(4,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -967,9 +1036,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -991,14 +1060,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,10), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-14 - EBV.Whole - negative probability never reaches 0.9, also this antigen did not really work and have better antigens above, will probably remove from analysis
+15 - EBV.Whole - negative probability never reaches 0.9, also this antigen did not really work and have better antigens above, will probably remove from analysis
 ```{r}
-i = 14
+i = 15
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1023,8 +1092,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(0,2),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1035,9 +1104,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1056,15 +1125,15 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
 #Plot histogram with cutoffs shown and normal distributions shown
 {hist(antibody1, prob = TRUE, breaks=50, main = paste(antigen, "FMM"), 
   xlab="Normalized Log2(MFI Ratio)", cex.main=0.9, cex.lab=0.8, 
-  cex.axis = 0.8, xlim=c(-2,10), ylim = c(0,2.4))
+  cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,2.4))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 ```
 
-15 - Etramp.4.Ag.2 - fmm did work well but may be better using PHE as negs for malarial antigens, same problem happening as above where looks like FMM picking out the two country populations rather than seropositive and seronegative
+16 - Etramp.4.Ag.2 - fmm did work well but may be better using PHE as negs for malarial antigens, same problem happening as above where looks like FMM picking out the two country populations rather than seropositive and seronegative
 ```{r}
-i = 15
+i = 16
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1089,8 +1158,8 @@ cutoff<-uniroot(f,c(-2,1),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fi
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1101,9 +1170,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1125,15 +1194,15 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-16 - EXP3 - negative never reaches probability 0.9; country distrubutions match FMM results; maybe use UK population as negatives.
+17 - EXP3 - negative never reaches probability 0.9; country distrubutions match FMM results; maybe use UK population as negatives.
 
 ```{r}
-i = 16
+i = 17
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1158,8 +1227,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(0,4),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1170,9 +1239,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1194,14 +1263,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.7))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-17 - HBV.sAg - negative population never reaches probability 0.9. Looks like a candidate for three populations. 
+18 - HBV.sAg - negative population never reaches probability 0.9. Tried with k=3 and had the same problem where either negative population or probability of being in second population never reached 0.9. sticking with k=2 for simplicity.
 ```{r}
-i = 17
+i = 18
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1215,7 +1284,7 @@ antibody1 <- sort(singleant)
 
 #### Try FMM model first
 
-fit.ab2<-normalmixEM(antibody1, lambda = c(0.5, 0.5), k = 2, fast=FALSE,maxit=10000,epsilon = 1e-16,maxrestarts=1000)
+fit.ab2<-normalmixEM(antibody1, k = 2,lambda = c(0.5,0.5), fast=FALSE,maxit=10000,epsilon = 1e-16,maxrestarts=1000)
 
 #5 Plot Cut off Value
 summary(fit.ab2)
@@ -1226,8 +1295,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1238,9 +1307,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1262,14 +1331,15 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)
+}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-18 - HSV1 - negative population never reaches 0.9 ; could possible be three populations. 
+19 - HSV1 - negative population never reaches 0.9 ; could possible be three populations. 
 ```{r}
-i = 18
+i = 19
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1294,8 +1364,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(0,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1306,9 +1376,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1330,14 +1400,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,1))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-19 - HSV2 - negative population never reaches probability 0.9
+20 - HSV2 - negative population never reaches probability 0.9
 ```{r}
-i = 19
+i = 20
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1363,8 +1433,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(0,2),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1375,9 +1445,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1399,15 +1469,15 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,1.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
 
-20 - Influenza.B - negative population never reaches probability of 0.9
+21 - Influenza.B - negative population never reaches probability of 0.9
 ```{r}
-i = 20
+i = 21
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1432,8 +1502,8 @@ cutoff<-uniroot(f,c(-1,3),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fi
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(2,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1444,9 +1514,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1468,15 +1538,15 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,9), ylim = c(0,0.7))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 
 ```
 
-21 - Meningococcal.Y - works well as two populations but looks like could also work well as three
+22 - Meningococcal.Y - works well as two populations but looks like could also work well as three
 ```{r}
-i = 21
+i = 22
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1501,8 +1571,8 @@ cutoff<-uniroot(f,c(0,2),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1513,9 +1583,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1537,14 +1607,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,9), ylim = c(0,0.7))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-22 - MSP1.19 - the plot looks like may be 3 populations but doesn't make sense based on the UK density plot. Once again, malarial antigen, may be better to use UK as negatives and do mean +/- 3SD.
+23 - MSP1.19 - the plot looks like may be 3 populations but doesn't make sense based on the UK density plot. Once again, malarial antigen, may be better to use UK as negatives and do mean +/- 3SD.
 ```{r}
-i = 22
+i = 23
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1570,8 +1640,8 @@ cutoff<-uniroot(f,c(0,4),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1582,9 +1652,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1606,14 +1676,153 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-23 - Mtb.Acr.HspX.
+24 - MSP2.CH150.9 - negative population never reaches probability of 0.9.
 ```{r}
-i = 23
+i=24
+#Select antigen
+antigen <- multantnames[i]
+antigen
+
+#subset data for this antigen
+singleant <- c(as.matrix(multants[i, (ncol(targetupdate)+1):ncol(multants)]))
+#singleant <- singleant[singleant >= 0]
+
+#put the data in numerical order - required to generate probability classification plot below
+antibody1 <- sort(singleant)
+
+#### Try FMM model first
+
+#FMM had several solutions and sometimes did not converge. To select a solution, had to put in lambda, mu, and sigma!!
+fit.ab2<-normalmixEM(antibody1, lambda =c(0.5, 0.5), k = 2, fast=FALSE,maxit=10000,epsilon = 1e-16,maxrestarts=1000)
+
+#5 Plot Cut off Value
+summary(fit.ab2)
+
+#cutoff below which is negative - manually set interval end points
+#cutoff<-uniroot(f,c(0,4),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+
+#cutoff above which is positive - manually set interval end points
+cutoff2<-uniroot(f2,c(0,2),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
+
+#percentage positive 
+pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
+
+#percentage negative
+#neg <- sum(antibody1<cutoff)/length(antibody1) * 100
+
+#percentage indeterminate
+#indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
+
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
+
+#Plot cutoffs if there are two
+{plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
+
+#rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
+
+abline(h=0.90,lwd=1.5,lty=2)
+#abline(v=cutoff,lwd=1)
+abline(v=cutoff2,lwd=1)
+
+lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
+legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))}
+
+#Plot histogram with cutoffs shown and normal distributions shown
+{hist(antibody1, prob = TRUE, breaks=50, main = paste(antigen, "FMM"), 
+  xlab="Normalized Log2(MFI Ratio)", cex.main=0.9, cex.lab=0.8, 
+  cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
+curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
+curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+
+remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
+```
+
+25 - MSP2.Dd2 - negative population never reaches probability 0.9.
+```{r}
+i=25
+#Select antigen
+antigen <- multantnames[i]
+antigen
+
+#subset data for this antigen
+singleant <- c(as.matrix(multants[i, (ncol(targetupdate)+1):ncol(multants)]))
+#singleant <- singleant[singleant >= 0]
+
+#put the data in numerical order - required to generate probability classification plot below
+antibody1 <- sort(singleant)
+
+#### Try FMM model first
+
+#FMM had several solutions and sometimes did not converge. To select a solution, had to put in lambda, mu, and sigma!!
+fit.ab2<-normalmixEM(antibody1, lambda =c(0.5, 0.5), k = 2, fast=FALSE,maxit=10000,epsilon = 1e-16,maxrestarts=1000)
+
+#5 Plot Cut off Value
+summary(fit.ab2)
+
+#cutoff below which is negative - manually set interval end points
+#cutoff<-uniroot(f,c(0,4),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+
+#cutoff above which is positive - manually set interval end points
+cutoff2<-uniroot(f2,c(-1,1),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
+
+#percentage positive 
+pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
+
+#percentage negative
+#neg <- sum(antibody1<cutoff)/length(antibody1) * 100
+
+#percentage indeterminate
+#indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
+
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
+
+#Plot cutoffs if there are two
+{plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
+
+#rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
+
+abline(h=0.90,lwd=1.5,lty=2)
+#abline(v=cutoff,lwd=1)
+#abline(v=cutoff2,lwd=1)
+
+lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
+legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))}
+
+#Plot histogram with cutoffs shown and normal distributions shown
+{hist(antibody1, prob = TRUE, breaks=50, main = paste(antigen, "FMM"), 
+  xlab="Normalized Log2(MFI Ratio)", cex.main=0.9, cex.lab=0.8, 
+  cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
+curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
+curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+
+remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
+```
+
+
+26 - Mtb.Acr.HspX.
+```{r}
+i = 26
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1639,8 +1848,8 @@ cutoff<-uniroot(f,c(0.1,1),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=f
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1651,9 +1860,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1675,13 +1884,13 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,1))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
-24 - Mtb.Ag85B
+27 - Mtb.Ag85B
 ```{r}
-i = 24
+i = 27
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1706,8 +1915,8 @@ cutoff<-uniroot(f,c(0,2),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1718,9 +1927,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1742,13 +1951,13 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,1))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
-25 - Mtb.CFP10.ESAT.6 - negative population never reaches probability of 0.9.
+28 - Mtb.CFP10.ESAT.6 - negative population never reaches probability of 0.9.
 ```{r}
-i = 25
+i = 28
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1773,8 +1982,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1785,9 +1994,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1809,14 +2018,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,10), ylim = c(0,0.7))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-26 - PHISTC.B - negative population never reaches probability of 0.9
+29 - PHISTC.B - negative population never reaches probability of 0.9
 ```{r}
-i = 26
+i = 29
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1841,8 +2050,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(0,4),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1853,9 +2062,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1877,14 +2086,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-27 - Pneumococcal.14 - positive population never reaches probability of 0.9. looks like one positive population from original histogram - need to read more about expected prevalence before any attempts to repeat this. Came up with same solution 11 times but taking almost 10,000 iterations every time which is very unusual.
+30 - Pneumococcal.14 - positive population never reaches probability of 0.9. looks like one positive population from original histogram - need to read more about expected prevalence before any attempts to repeat this. Came up with same solution 11 times but taking almost 10,000 iterations every time which is very unusual.
 ```{r}
-i = 27
+i = 30
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1909,8 +2118,8 @@ cutoff<-uniroot(f,c(2,5),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 #cutoff2<-uniroot(f2,c(1,8),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-#multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+#multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 #pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1921,9 +2130,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-#multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+#multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -1945,14 +2154,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-28 - Pneumococcal.18C
+31 - Pneumococcal.18C
 ```{r}
-i = 28
+i = 31
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -1978,8 +2187,8 @@ cutoff<-uniroot(f,c(0,2),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(2,6),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -1990,9 +2199,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2014,14 +2223,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-29 - Pneumococcal.19A
+32 - Pneumococcal.19A
 ```{r}
-i = 29
+i = 32
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -2047,8 +2256,8 @@ cutoff<-uniroot(f,c(0,3),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(3,6),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -2059,9 +2268,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2083,14 +2292,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-30 - Pneumococcal.33F
+33 - Pneumococcal.33F
 ```{r}
-i = 30
+i = 33
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -2115,8 +2324,8 @@ cutoff<-uniroot(f,c(0,3),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(3,6),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -2127,9 +2336,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2151,15 +2360,15 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
 
-31 - Poliovirus - negative population never reaches probability 0.9. Also, I tried to input values of mu ~ 1 and 2.2, with a range of sigma and lambda, but that forced the solution to the one I had previously selected of the 3 the FMM was giving without initial values specified.
+34 - Poliovirus - negative population never reaches probability 0.9. Also, I tried to input values of mu ~ 1 and 2.2, with a range of sigma and lambda, but that forced the solution to the one I had previously selected of the 3 the FMM was giving without initial values specified.
 ```{r}
-i = 31
+i = 34
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -2185,8 +2394,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,3),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -2197,9 +2406,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2221,14 +2430,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,1.2))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-32 - Rh2_2030 - negative population never reaches probability 0.9. It gets really close though, the maximum posterior probability is 0.8963356. :(
+35 - Rh2_2030 - negative population never reaches probability 0.9. It gets really close though, the maximum posterior probability is 0.8963356. :(
 ```{r}
-i = 32
+i = 35
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -2253,8 +2462,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(-1,6),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -2265,9 +2474,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2289,14 +2498,157 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.8))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-33 - Tg
+36 - Rotavirus, k = 3, negative population never reaches probability of 0.9. Tried as k=2 also and that is giving completely different results (means ~ 3 and 5, but there is a 0.9 probability for both negative and positive populations). A decision of which model to use may follow lit review of expected response to this antigen/pathogen. 
 ```{r}
-i = 33
+i = 36
+#Select antigen
+antigen <- multantnames[i]
+antigen
+
+#subset data for this antigen
+singleant <- c(as.matrix(multants[i, (ncol(targetupdate)+1):ncol(multants)]))
+#singleant <- singleant[singleant >= 0]
+
+#put the data in numerical order - required to generate probability classification plot below
+antibody1 <- sort(singleant)
+
+#### Try FMM model first
+
+fit.ab2<-normalmixEM(antibody1, lambda = c(0.043028, 0.413406, 0.543566),
+mu = c(0.935718, 3.074852, 4.946468), sigma = c(0.373065, 0.931418, 0.731272), k = 3, fast=FALSE,maxit=10000,epsilon = 1e-16,maxrestarts=1000)
+
+#5 Plot Cut off Value
+summary(fit.ab2)
+
+#cutoff below which is negative - manually set interval end points
+#cutoff<-uniroot(f,c(-0.1,-0),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+
+#cutoff above which is positive - manually set interval end points
+cutoff2<-uniroot(f2,c(1,2),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
+
+#percentage positive 
+pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
+
+#percentage negative
+#neg <- sum(antibody1<cutoff)/length(antibody1) * 100
+
+#percentage indeterminate
+#indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
+
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
+
+#Plot cutoffs if there are two
+{plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
+
+#rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
+
+abline(h=0.90,lwd=1.5,lty=2)
+#abline(v=cutoff,lwd=1)
+abline(v=cutoff2,lwd=1)
+
+lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
+lines(antibody1,fit.ab2$posterior[,3],lwd=2,col='red')
+legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))}
+
+#Plot histogram with cutoffs shown and normal distributions shown
+{hist(antibody1, prob = TRUE, breaks=50, main = paste(antigen, "FMM"), 
+  xlab="Normalized Log2(MFI Ratio)", cex.main=0.9, cex.lab=0.8, 
+  cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
+curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
+curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
+curve(dnorm(x, fit.ab2$mu[3], fit.ab2$sigma[3]), add=TRUE, col="blue", lwd=2)
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+
+remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
+```
+
+37 - Rub.GradeIV, k = 3
+```{r}
+i = 37
+#Select antigen
+antigen <- multantnames[i]
+antigen
+
+#subset data for this antigen
+singleant <- c(as.matrix(multants[i, (ncol(targetupdate)+1):ncol(multants)]))
+#singleant <- singleant[singleant >= 0]
+
+#put the data in numerical order - required to generate probability classification plot below
+antibody1 <- sort(singleant)
+
+#### Try FMM model first
+
+fit.ab2<-normalmixEM(antibody1, lambda= c(0.0580826, 0.408354, 0.533564),
+mu= c(0.0245695, 3.662323, 5.468398), sigma = c(0.2678195, 1.219799, 0.606957), k = 3, fast=FALSE,maxit=10000,epsilon = 1e-16,maxrestarts=1000)
+
+#5 Plot Cut off Value
+summary(fit.ab2)
+
+#cutoff below which is negative - manually set interval end points
+cutoff<-uniroot(f,c(0,1),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=1)$root
+
+#cutoff above which is positive - manually set interval end points
+cutoff2<-uniroot(f2,c(0,2),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
+
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
+
+#percentage positive 
+pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
+
+#percentage negative
+neg <- sum(antibody1<cutoff)/length(antibody1) * 100
+
+#percentage indeterminate
+indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
+
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
+
+#Plot cutoffs if there are two
+{plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
+
+rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
+
+abline(h=0.90,lwd=1.5,lty=2)
+abline(v=cutoff,lwd=1)
+abline(v=cutoff2,lwd=1)
+
+lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
+lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
+lines(antibody1,fit.ab2$posterior[,3],lwd=2,col='red')
+legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))}
+
+#Plot histogram with cutoffs shown and normal distributions shown
+{hist(antibody1, prob = TRUE, breaks=50, main = paste(antigen, "FMM"), 
+  xlab="Normalized Log2(MFI Ratio)", cex.main=0.9, cex.lab=0.8, 
+  cex.axis = 0.8, xlim=c(-4,10), ylim = c(0,0.5))
+curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
+curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
+curve(dnorm(x, fit.ab2$mu[3], fit.ab2$sigma[3]), add=TRUE, col="blue", lwd=2)
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+
+remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
+```
+
+
+38 - Tg
+```{r}
+i = 38
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -2321,8 +2673,8 @@ cutoff<-uniroot(f,c(0,1),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,6),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -2333,9 +2685,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2357,14 +2709,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,10), ylim = c(0,0.8))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-34 - Tg.GradeIII
+39 - Tg.GradeIII
 ```{r}
-i = 34
+i = 39
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -2389,8 +2741,8 @@ cutoff<-uniroot(f,c(0,1),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(1,6),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -2401,9 +2753,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2425,14 +2777,14 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,10), ylim = c(0,1))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
-35 - TT
+40 - TT
 ```{r}
-i = 35
+i = 40
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -2457,8 +2809,8 @@ cutoff<-uniroot(f,c(0,3),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(2,7),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -2469,9 +2821,9 @@ neg <- sum(antibody1<cutoff)/length(antibody1) * 100
 #percentage indeterminate
 indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-multprevalence[i,7] <- indet
+multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2493,15 +2845,15 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,10), ylim = c(0,0.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,4:5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
 
-36 - VZV.GradeIII - negative population never reaches probability of 0.9. Looks like could be a candidate for one population only (possible, depending on the background epi knowledge)
+41 - VZV.GradeIII - negative population never reaches probability of 0.9. Looks like could be a candidate for one population only (possible, depending on the background epi knowledge)
 ```{r}
-i = 36
+i = 41
 #Select antigen
 antigen <- multantnames[i]
 antigen
@@ -2526,8 +2878,8 @@ summary(fit.ab2)
 #cutoff above which is positive - manually set interval end points
 cutoff2<-uniroot(f2,c(0,2),prob=0.90, lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
 
-#multcutoffs[i,4] <- cutoff
-multcutoffs[i,5] <- cutoff2
+#multcutoffs[i,2] <- cutoff
+multcutoffs[i,3] <- cutoff2
 
 #percentage positive 
 pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
@@ -2538,9 +2890,9 @@ pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
 #percentage indeterminate
 #indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
 
-#multprevalence[i,5] <- neg
-multprevalence[i,6] <- pos
-#multprevalence[i,7] <- indet
+#multcutoffs[i,4] <- neg
+multcutoffs[i,5] <- pos
+#multcutoffs[i,6] <- indet
 
 #Plot cutoffs if there are two
 {plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "FMM"))
@@ -2562,114 +2914,22 @@ legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('b
   cex.axis = 0.8, xlim=c(-2,8), ylim = c(0,1.5))
 curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
 curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,5], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
+abline(v = multcutoffs[i,3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
 
 remove(antigen, antibody1, cutoff, cutoff2, neg, pos, indet, fit.ab2)
 ```
 
 
-6.For each antigen, select which model is better, FMM or K-means, and list that in the   "BestModel" column for that antigen in the cutoff data frame. 
-7. Save the cutoff data frame as an r object and export as a .csv file. 
-
+5. Save the cutoff/prevalence data frame as an r object and export as a .csv file. 
 ```{r}
-#Display all of the cutoffs
+#Display all of the cutoffs and prevalences
 multcutoffs
 
-#Display all the prevalences 
-multprevalence
-
 #save the cutoffs in an R object to be imported later 
-save(multcutoffs, file=paste0(study,"_twocutoffs"))
+save(multcutoffs, file=paste0(study,"_multcutoffs"))
+
+#save the cutoffs as .csv file too just in case
+write.csv(multcutoffs, file=paste0(study,"_multcutoffs.csv"))
+
+
 ```
-
-
-Currently unused script for K-means clustering:
-
-### Try K Means Clustering 
-
-#prepare matrix to store info about k means clusters
-kcutoffs <- matrix(nrow = length(multantnames), ncol = 8)
- rownames(kcutoffs) <- multantnames                  
- colnames(kcutoffs) <- c("mean_low", "mean_high", "count_low", "count_high", "min_low", "min_high", "max_low", "max_high")
-
-#run k means clustering
-kclust <- kmeans(antibody1, centers = 2, nstart=20)
-kclust
-
-#prepare the clustering data
-clustdata <- as.data.frame(cbind(antibody1, kclust$cluster))
-colnames(clustdata) <- c("Ab_Response", "Cluster")
-clustdata$Cluster <- factor(clustdata$Cluster, levels = c("1", "2"))
-  
-min_comp <- which(kclust$centers == min(kclust$centers))
-max_comp <- which(kclust$centers == max(kclust$centers))
-
-#calculate lambda (final mixing proportions), and sigma (sd) for each cluster
-mix <- kclust$size/sum(kclust$size)
-sdclust <- c(sd(clustdata[clustdata$Cluster == "1",1]), sd(clustdata[clustdata$Cluster == "2",1]))
-
-#probability classification function to determine cutoffs
-#cutoff below which is negative - manually set interval end points
-cutoff<-uniroot(f,c(-3,4),prob=0.90,lambda=mix,mu=kclust$centers,sigma=sdclust,k=2,k1=1)$root
-
-#cutoff above which is positive - manually set interval end points
-cutoff2<-uniroot(f2,c(4,9),prob=0.90,lambda=fit.ab2$lambda,mu=fit.ab2$mu,sigma=fit.ab2$sigma,k=2,k1=2)$root
-
-multcutoffs[i,2] <- cutoff
-multcutoffs[i,3] <- cutoff2
-
-#percentage positive 
-pos <- sum(antibody1>cutoff2)/length(antibody1) * 100
-
-#percentage negative
-neg <- sum(antibody1<cutoff)/length(antibody1) * 100
-
-#percentage indeterminate
-indet <- (1-sum(antibody1>cutoff2)/length(antibody1)-sum(antibody1<cutoff)/length(antibody1)) *100
-
-multprevalence[i,2] <- neg
-multprevalence[i,3] <- pos
-multprevalence[i,4] <- indet
-
-#calculate posterior probability for the k means clustering (this is done automatically in the FMM) - I have a great online tutorial for this, but from that I have learned that the k means clustering is like a step along the way in the mixture model, and therefore using k means and then the probability classification function is very similar to making my own mixture model without the iteration and convergence part of the process. Also, I think that due to the known different sources / latent variables, this whole process is not really right, not necessarily going to work. But perhaps what I should be doing is maximum likelihood estimation using the two latent classes (country) and then going from there. for now I am going to go forward trying the FMM with two or three populations and go from there. 
-
-posterior <- function( ){
-  
-  
-  
-}
-
-
-#Plot cutoffs
-{plot(antibody1,fit.ab2$posterior[,1],type='n',xlim=c(-4,10),lwd=2,ylim=c(0,1),col='green',las=1,xlab='Log2(MFI Ratio)',ylab='classification probability', main = paste(antigen, "K-means Clustering"))
-
-rect(cutoff,-0.04,cutoff2,1.04,col='light grey',lwd=1.5)
-lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='red')
-
-abline(h=0.90,lwd=1.5,lty=2)
-abline(v=cutoff,lwd=1)
-abline(v=cutoff2,lwd=1)
-
-lines(antibody1,fit.ab2$posterior[,1],lwd=2,col='blue')
-lines(antibody1,fit.ab2$posterior[,2],lwd=2,col='purple')
-legend(1125,0.8,c(expression(S^'-'),expression(S^'+')),lty=c(1,1),lwd=2,col=c('blue','purple'))}
-
-#Plot histogram with cutoffs shown and normal distributions shown
-{hist(antibody1, prob = TRUE, breaks=50, main = paste(antigen, "K-means Clustering"), xlab="Normalized Log2(MFI Ratio)", cex.main=0.9, cex.lab=0.8, 
-  cex.axis = 0.8, xlim=c(-4,9), ylim = c(0,0.5))
-curve(dnorm(x, fit.ab2$mu[1], fit.ab2$sigma[1]), add=TRUE, col="darkblue", lwd=2)
-curve(dnorm(x, fit.ab2$mu[2], fit.ab2$sigma[2]), add=TRUE, col="darkblue", lwd=2)
-abline(v = multcutoffs[i,2:3], col = "red", lty = 2, lwd = 0.7, xpd=FALSE)}
-
-kcutoffs[i, "min_low"] <- min(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
-kcutoffs[i, "max_low"] <- max(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
-kcutoffs[i, "min_high"] <- min(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
-kcutoffs[i, "max_high"] <- max(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
-
-kcutoffs[i, "mean_low"] <- mean(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
-kcutoffs[i, "mean_high"] <- mean(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
-
-kcutoffs[i, "count_low"] <- length(clustdata$Ab_Response[which(clustdata$Cluster == min_comp)])
-kcutoffs[i, "count_high"] <- length(clustdata$Ab_Response[which(clustdata$Cluster == max_comp)])
-
-

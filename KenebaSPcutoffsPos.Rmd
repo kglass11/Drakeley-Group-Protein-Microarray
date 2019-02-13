@@ -103,5 +103,8 @@ poscutoffs
 #save the cutoffs in an R object to be imported later 
 save(poscutoffs, file=paste0(study,"_poscutoffs"))
 
+#save to .csv file instead
+write.csv(poscutoffs, file=paste0(study,"_poscutoffs.csv"))
+
 ```
 
