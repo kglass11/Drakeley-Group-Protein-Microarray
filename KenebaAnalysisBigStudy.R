@@ -12,7 +12,7 @@ load("Keneba_IgG_v3_AfterProcessing.RData")
 #if(!require(devtools)) install.packages("devtools")
 #devtools::install_github("kassambara/ggpubr")
 
-install.packages("ggpubr")
+#install.packages("ggpubr")
 
 #load packages
 library(contrast)
@@ -212,13 +212,25 @@ if(iso == "IgM"){
     
     #This information is coming from the R notebook files. 
     #There are 3 different data frames to import, negative, positive, and multiple populations.
-    negcutoffs <- load("Keneba_IgG_v3_negcutoffs")
-    poscutoffs <- load("Keneba_IgG_v3_poscutoffs")
-    #the loading above is not working, need to go back to original files
-    #maybe just export .csv files :/
+    negcutoffs <- read.csv("Keneba_IgG_v3_negcutoffs.csv")
+    negcutoffs <- negcutoffs[,2:ncol(negcutoffs)]
+    
+    poscutoffs <- read.csv("Keneba_IgG_v3_poscutoffs.csv")
+    poscutoffs <- poscutoffs[,2:ncol(poscutoffs)]
     
     multcutoffs <- read.csv("Keneba_IgG_v3_multcutoffs.csv")
     multcutoffs <- multcutoffs[,2:ncol(multcutoffs)]
+    
+    #identify duplicates and decide which strategy is better for that antigen
+    negtwo <- c(as.character(negcutoffs$Name), as.character(multcutoffs$Name))
+    negdup <- negtwo[duplicated(negtwo)]
+    negdup
+    
+    postwo <- c(as.character(poscutoffs$Name), as.character(multcutoffs$Name))
+    posdup <- postwo[duplicated(postwo)]
+    posdup
+    
+    
     
 ####### ELISA data - Correlations vs RPPA and Sensitivity and Specificity Calculations
     
