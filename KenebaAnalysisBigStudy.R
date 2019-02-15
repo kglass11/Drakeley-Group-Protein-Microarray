@@ -222,6 +222,7 @@ if(iso == "IgM"){
     multcutoffs <- multcutoffs[,2:ncol(multcutoffs)]
     
     #identify duplicates and decide which strategy is better for that antigen
+    #decisions and explanations are in my written notebook.
     negtwo <- c(as.character(negcutoffs$Name), as.character(multcutoffs$Name))
     negdup <- negtwo[duplicated(negtwo)]
     negdup
@@ -229,6 +230,33 @@ if(iso == "IgM"){
     postwo <- c(as.character(poscutoffs$Name), as.character(multcutoffs$Name))
     posdup <- postwo[duplicated(postwo)]
     posdup
+    
+    #make a single data frame of antigen name and SP cutoff 
+    #for the negative or positive groups, selecting "plus3SD" and "minus3SD"
+    #for dual, selecting "cutoff.pos"
+    negcutoffs$Name <- as.character(negcutoffs$Name)
+    negfinal <- negcutoffs[!(negcutoffs$Name == "MSP2.Dd2"|negcutoffs$Name == "Mtb.Ag85B"),c(1,3)]
+    colnames(negfinal) <- c("Name", "cutoff", "method")
+    negfinal$method <- "Neg"
+    
+    poscutoffs$Name <- as.character(poscutoffs$Name)
+    posfinal <- poscutoffs[(poscutoffs$Name == "Influenza.A.H3N2"|poscutoffs$Name == "RSV.GG"),c(1,3)]
+    colnames(posfinal) <- c("Name", "cutoff", "method")
+    posfinal$method <- "Pos"
+    
+    multcutoffs$Name <- as.character(multcutoffs$Name)
+    twofinal <- multcutoffs[!(multcutoffs$Name == "MSP2.CH150.9"),c(1,3)]
+    colnames(twofinal) <- c("Name", "cutoff", "method")
+    twofinal$method <- "FMM"
+    
+    #make one data frame of the final cutoffs for each antigen - total = 105, this number matches the antigen key v7
+    SPcutfinal <- rbind(negfinal, posfinal, twofinal)
+    
+    #put in alphabetical order by antigen
+    SPcutfinal <- SPcutfinal[order(SPcutfinal$Name),]
+    
+    
+  
     
     
     
