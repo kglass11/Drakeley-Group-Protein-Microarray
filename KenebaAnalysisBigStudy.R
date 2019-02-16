@@ -107,6 +107,20 @@ if(iso == "IgM"){
   burritosT <- as.data.frame(t(burritos1))
   allburritos <- merge(sample_meta_f.df, burritosT, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
 
+  #also do a similar process for controls so that can get info about seropositivity of control samples 
+  contdata <- filter(alldata, sample_type == "control")
+  subcont <- contdata[,(ncol(sample_meta_f.df) +1):ncol(contdata)]
+  rownames(subcont) <- contdata$sample_id
+
+  tsubcont <- as.data.frame(t(subcont))
+  cont.target <- merge(target_meta2.df, tsubcont, by.x = "target_id_unique", by.y ="row.names")
+  
+  fajitas <- filter(cont.target, Category == "non_malarial" | Category == "malarial")
+
+  fajitas1 <- fajitas[,(ncol(target_meta2.df)+1):ncol(fajitas)]
+  row.names(fajitas1) <- make.names(fajitas$Name)
+  
+  
 ######Histograms of all the data for each antigen (includes negative values)  
   
 #plot histograms of all data for each antigen separately
@@ -114,6 +128,7 @@ if(iso == "IgM"){
   
   burritomelt <- melt(burritosT)
   allburritomelt <- melt(allburritos, measure.vars = antnames)
+  
   
   setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/Histograms")
   
@@ -236,18 +251,18 @@ if(iso == "IgM"){
     #for dual, selecting "cutoff.pos"
     negcutoffs$Name <- as.character(negcutoffs$Name)
     negfinal <- negcutoffs[!(negcutoffs$Name == "MSP2.Dd2"|negcutoffs$Name == "Mtb.Ag85B"),c(1,3)]
-    colnames(negfinal) <- c("Name", "cutoff", "method")
     negfinal$method <- "Neg"
+    colnames(negfinal) <- c("Name", "cutoff", "method")
     
     poscutoffs$Name <- as.character(poscutoffs$Name)
     posfinal <- poscutoffs[(poscutoffs$Name == "Influenza.A.H3N2"|poscutoffs$Name == "RSV.GG"),c(1,3)]
-    colnames(posfinal) <- c("Name", "cutoff", "method")
     posfinal$method <- "Pos"
+    colnames(posfinal) <- c("Name", "cutoff", "method")
     
     multcutoffs$Name <- as.character(multcutoffs$Name)
     twofinal <- multcutoffs[!(multcutoffs$Name == "MSP2.CH150.9"),c(1,3)]
-    colnames(twofinal) <- c("Name", "cutoff", "method")
     twofinal$method <- "FMM"
+    colnames(twofinal) <- c("Name", "cutoff", "method")
     
     #make one data frame of the final cutoffs for each antigen - total = 105, this number matches the antigen key v7
     SPcutfinal <- rbind(negfinal, posfinal, twofinal)
@@ -255,8 +270,82 @@ if(iso == "IgM"){
     #put in alphabetical order by antigen
     SPcutfinal <- SPcutfinal[order(SPcutfinal$Name),]
     
+####### Make and export tables of seroprevalence for each antigen separated by country and by year for The Gambia
     
+  #determine seropositivity status for each sample and each antigen 
   
+    #order burritos1 for test samples and fajitas1 for control samples
+    sortburritos <- burritos1[order(row.names(burritos1)),]
+    sortfajitas <- fajitas1[order(row.names(fajitas1)),]
+    
+    #confirm that all antigens are in the same order - all TRUE
+    SPcutfinal$Name == rownames(sortburritos)
+    SPcutfinal$Name == rownames(sortfajitas)
+    
+    #make seropositivity matrix from all data (test and controls)
+    #Apply the final cutoff to ALL antigens, ALL dilutions, for test and control samples
+    SP_test.df <- as.data.frame(t(apply(sortburritos, 2, function(x) ((x > c(SPcutfinal$cutoff))+0))))
+    SP_test2 <- tibble::rownames_to_column(SP_test.df, "sample_id_unique")
+      
+    SP_cont.df <- as.data.frame(t(apply(sortfajitas, 2, function(x) ((x > c(SPcutfinal$cutoff))+0))))
+    SP_cont2 <- tibble::rownames_to_column(SP_cont.df, "sample_id")
+    
+    #melt SP data frames
+    SPtestmelt <- melt(SP_test2, value.name = "seropositive")
+    SPcontmelt <- melt(SP_cont2, value.name = "seropositive")
+    
+    #check number of rows for SPtestmelt same as allburritomelt - TRUE
+    nrow(SPtestmelt) == nrow(allburritomelt)
+    
+    #merge with allburritomelt to get the SP status for each sample and antigen together with everything else
+    burritomeltSP <- merge(allburritomelt, SPtestmelt, by = c("variable", "sample_id_unique"), sort = FALSE)
+    
+    
+   
+    
+    
+    
+    
+ #copied script from sanger post FMM file:   
+    ##### isolate seropositive data!! :) 
+    
+    ###Seropositivity Thresholds!!!###
+    
+    #DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
+    #Then can subset antigens, samples, etc from the seropositivity matrix and the final data frame.
+    
+    #Do seropositivity calculations on NMallsampdata, which has excluded samples removed, but still includes controls.
+    
+    #need to remove the antigens we aren't using again, from all samp data
+    bitta <- as.data.frame(tNMallsampdata[,!colnames(tNMallsampdata) %in% rmant])
+    
+    #confirm that all antigens are in the same order - all TRUE
+    rownames(finalcut) == colnames(bitta)
+    
+    #Apply the final cutoff to ALL antigens, ALL dilutions, for test and control samples
+    SP_all.df <- t(apply(bitta, 1, function(x) ((x > c(finalcut))+0)))
+    
+    #Make a new data frame where seropositive values will be the data and otherwise it will be NA
+    SP_all_data.df <- data.frame(matrix(NA, nrow = nrow(bitta), ncol = ncol(bitta)))
+    rownames(SP_all_data.df) <- rownames(bitta)
+    colnames(SP_all_data.df) <- colnames(bitta)
+    
+    for(b in 1:ncol(bitta)){
+      for(a in 1:nrow(bitta)){
+        if(SP_all.df[[a,b]]==1){
+          SP_all_data.df[[a,b]] <- bitta[[a,b]] 
+        }
+      }
+    }
+    remove(a,b)
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
