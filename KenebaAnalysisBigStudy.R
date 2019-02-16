@@ -300,10 +300,45 @@ if(iso == "IgM"){
     #merge with allburritomelt to get the SP status for each sample and antigen together with everything else
     burritomeltSP <- merge(allburritomelt, SPtestmelt, by = c("variable", "sample_id_unique"), sort = FALSE)
     
+  #calculate prevalence for each ag as mean of SP data 0s and 1s
     
-   
+    seroprevalence <- as.data.frame(matrix(nrow = nrow(SPcutfinal), ncol = 4))
+    colnames(seroprevalence) <- c("Name", "Keneba.2012", "Keneba.2016", "England")
+  
+    #Filter data by country and year
+    Keneba.2012 <- filter(burritomeltSP, year == "2012", Country == "The Gambia")
+    Keneba.2016 <- filter(burritomeltSP, year == "2016", Country == "The Gambia")
+    PHE <- filter(burritomeltSP, Country == "England")
+  
+    #go through each antigen and calculate the mean of column "seropositive"
+    #Keneba.2012
+    for(i in 1:nrow(SPcutfinal)){
+      antigen = SPcutfinal$Name[i]
+      antdata <- filter(Keneba.2012, variable == antigen)
+      seroprevalence$Name[i] <- antigen
+      seroprevalence$Keneba.2012[i] <- round(mean(antdata$seropositive, na.rm = TRUE)*100, digits = 2)
+    }
     
+    #Keneba.2016
+    for(i in 1:nrow(SPcutfinal)){
+      antigen = SPcutfinal$Name[i]
+      antdata <- filter(Keneba.2016, variable == antigen)
+      seroprevalence$Name[i] <- antigen
+      seroprevalence$Keneba.2016[i] <- round(mean(antdata$seropositive, na.rm = TRUE)*100, digits = 2)
+    }
     
+    #England
+    for(i in 1:nrow(SPcutfinal)){
+      antigen = SPcutfinal$Name[i]
+      antdata <- filter(PHE, variable == antigen)
+      seroprevalence$Name[i] <- antigen
+      seroprevalence$England[i] <- round(mean(antdata$seropositive, na.rm = TRUE)*100, digits = 2)
+    }
+    
+    write.csv(seroprevalence, file = paste0(study, "overall.seroprevalence.csv"))
+    
+    #Get a Keneba overall? How to do this because there are paired inviduals? 
+    #Calculate age-adjusted prevalence for Keneba?
     
     
  #copied script from sanger post FMM file:   
