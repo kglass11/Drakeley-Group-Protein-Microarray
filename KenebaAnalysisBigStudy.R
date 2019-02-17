@@ -37,6 +37,23 @@ library(ggpubr)
 ############DATA ANALYSIS############
 #####################################
 
+#need to update this section for keneba study - use same age bins as Martin's paper?
+#add age bins to sample_meta_f.df 
+for(i in 1:nrow(sample_meta_f.df)){
+  if (is.na(sample_meta_f.df$"Age in years"[i])) {i = i +1}
+  else if (sample_meta_f.df$"Age in years"[i] < 5) {sample_meta_f.df$AgeBin[i] <- "< 5"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 5 & sample_meta_f.df$"Age in years"[i] < 15) {sample_meta_f.df$AgeBin[i] <- "5-14"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 15 & sample_meta_f.df$"Age in years"[i] < 25) {sample_meta_f.df$AgeBin[i] <- "15-24"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 25 & sample_meta_f.df$"Age in years"[i] < 35) {sample_meta_f.df$AgeBin[i] <- "25-34"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 35 & sample_meta_f.df$"Age in years"[i] < 50) {sample_meta_f.df$AgeBin[i] <- "35-49"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 50 & sample_meta_f.df$"Age in years"[i] < 70) {sample_meta_f.df$AgeBin[i] <- "50-69"}
+  else if (sample_meta_f.df$"Age in years"[i] >= 70 & sample_meta_f.df$"Age in years"[i] < 100) {sample_meta_f.df$AgeBin[i] <- "70-100"}
+}
+
+#explicitly set factor levels for age bins
+sample_meta_f.df$AgeBin <- factor(sample_meta_f.df$AgeBin, levels = c("< 5", "5-14","15-24","25-34", "35-49", "50-69", "70-100"))
+
+
 ####### duplicated samples QC
   #there was a replicated sample ID measured 9 times to get the interarray repeatability data 
 
@@ -300,16 +317,29 @@ if(iso == "IgM"){
     #merge with allburritomelt to get the SP status for each sample and antigen together with everything else
     burritomeltSP <- merge(allburritomelt, SPtestmelt, by = c("variable", "sample_id_unique"), sort = FALSE)
     
+    #dup_samples is a data frame from processing that subsetted the samples.df data frame by duplicated samples
+    #check whether or not the repeated sample was repeated by year - it was only 2016 so remove it from dup_samples
+    dup_samples[dup_samples$sample_id == "NKC821Y",]
+    dup_year <- dup_samples[!(dup_samples$sample_id == "NKC821Y"),]
+    dup.id <- dup_year$sample_id
+    
   #calculate prevalence for each ag as mean of SP data 0s and 1s
     
-    seroprevalence <- as.data.frame(matrix(nrow = nrow(SPcutfinal), ncol = 4))
-    colnames(seroprevalence) <- c("Name", "Keneba.2012", "Keneba.2016", "England")
+    seroprevalence <- as.data.frame(matrix(nrow = nrow(SPcutfinal), ncol = 6))
+    colnames(seroprevalence) <- c("Name", "Keneba.2012", "Keneba.2012.paired", "Keneba.2016","Keneba.2016.paired", "England")
   
     #Filter data by country and year
     Keneba.2012 <- filter(burritomeltSP, year == "2012", Country == "The Gambia")
     Keneba.2016 <- filter(burritomeltSP, year == "2016", Country == "The Gambia")
     PHE <- filter(burritomeltSP, Country == "England")
   
+    #filter all paired samples
+    Keneba.paired <- filter(burritomeltSP, burritomeltSP$sample_id %in% dup.id)
+    
+    #filter paired by year
+    Keneba.2012.paired <- filter(Keneba.paired, year == "2012", Country == "The Gambia")
+    Keneba.2016.paired <- filter(Keneba.paired, year == "2016", Country == "The Gambia")
+    
     #go through each antigen and calculate the mean of column "seropositive"
     #Keneba.2012
     for(i in 1:nrow(SPcutfinal)){
@@ -335,55 +365,132 @@ if(iso == "IgM"){
       seroprevalence$England[i] <- round(mean(antdata$seropositive, na.rm = TRUE)*100, digits = 2)
     }
     
+    #Keneba 2012 paired
+    for(i in 1:nrow(SPcutfinal)){
+      antigen = SPcutfinal$Name[i]
+      antdata <- filter(Keneba.2012.paired, variable == antigen)
+      seroprevalence$Name[i] <- antigen
+      seroprevalence$Keneba.2012.paired[i] <- round(mean(antdata$seropositive, na.rm = TRUE)*100, digits = 2)
+    }
+    
+    #Keneba 2016 paired 
+    for(i in 1:nrow(SPcutfinal)){
+      antigen = SPcutfinal$Name[i]
+      antdata <- filter(Keneba.2016.paired, variable == antigen)
+      seroprevalence$Name[i] <- antigen
+      seroprevalence$Keneba.2016.paired[i] <- round(mean(antdata$seropositive, na.rm = TRUE)*100, digits = 2)
+    }
+
     write.csv(seroprevalence, file = paste0(study, "overall.seroprevalence.csv"))
     
     #Get a Keneba overall? How to do this because there are paired inviduals? 
     #Calculate age-adjusted prevalence for Keneba?
+    #or are we ok with just the paired samples?
     
     
- #copied script from sanger post FMM file:   
-    ##### isolate seropositive data!! :) 
+####### Plots of selected epi data vs antibody response - Keneba by year
     
-    ###Seropositivity Thresholds!!!###
+    #Prep Keneba Data
+    Kenebamelt <- filter(burritomeltSP, Country == "The Gambia")
+    Kenebamelt$year <- as.factor(as.character(Kenebamelt$year))
     
-    #DO NOT exclude any samples or control samples until AFTER seropositivity calculations!! 
-    #Then can subset antigens, samples, etc from the seropositivity matrix and the final data frame.
+    #Plots for each antigen separately of age vs. antibody response colored by year
+    #show SP cutoff on plot 
     
-    #Do seropositivity calculations on NMallsampdata, which has excluded samples removed, but still includes controls.
+    setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/IgG Keneba Age v Ab Response")
     
-    #need to remove the antigens we aren't using again, from all samp data
-    bitta <- as.data.frame(tNMallsampdata[,!colnames(tNMallsampdata) %in% rmant])
-    
-    #confirm that all antigens are in the same order - all TRUE
-    rownames(finalcut) == colnames(bitta)
-    
-    #Apply the final cutoff to ALL antigens, ALL dilutions, for test and control samples
-    SP_all.df <- t(apply(bitta, 1, function(x) ((x > c(finalcut))+0)))
-    
-    #Make a new data frame where seropositive values will be the data and otherwise it will be NA
-    SP_all_data.df <- data.frame(matrix(NA, nrow = nrow(bitta), ncol = ncol(bitta)))
-    rownames(SP_all_data.df) <- rownames(bitta)
-    colnames(SP_all_data.df) <- colnames(bitta)
-    
-    for(b in 1:ncol(bitta)){
-      for(a in 1:nrow(bitta)){
-        if(SP_all.df[[a,b]]==1){
-          SP_all_data.df[[a,b]] <- bitta[[a,b]] 
-        }
-      }
+    for(i in 1:length(SPcutfinal$Name)){
+      
+      antigen = SPcutfinal$Name[i]
+      
+      #isolate data for the antigen
+      ant1 <- filter(Kenebamelt, variable == antigen)
+      
+      #isolate cutoff for the antigen
+      cut1 <- SPcutfinal$cutoff[i]
+      
+      #age in years (no bins) scatter plot
+      png(filename = paste0(study, "_", antigen,"_Ab_vs.age.tif"), width = 3.5, height = 3, units = "in", res = 1200)
+      
+      print(ggplot(ant1, aes(x = Age , y = value, color = year)) + geom_point(shape = 17, size = 0.75) +
+              theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + 
+              theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+              theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+              theme(legend.title = element_text(size = 12))+ 
+              #xlim(0,80) + ylim(-2,10) +
+              geom_hline(yintercept=cut1, color = "black", size=0.2))
+      
+      graphics.off()
+      
     }
-    remove(a,b)
+    
+    #By gender and year boxplots for all antigens
+    
+    setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/IgG Keneba Gender Boxplots")
+    
+    for(i in 1:length(SPcutfinal$Name)){
+      
+      antigen = SPcutfinal$Name[i]
+      
+      #isolate data for the antigen
+      ant1 <- filter(Kenebamelt, variable == antigen)
+      
+      #isolate cutoff for the antigen
+      cut1 <- SPcutfinal$cutoff[i]
+      
+      ant1gender <- filter(ant1, Sex == "M" | Sex == "F")
+    
+      png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Gender.tif"), width = 2.7, height = 3, units = "in", res = 1200)
+    
+      print(ggplot(ant1gender, aes(x = year, y = value, fill = Sex)) + geom_boxplot(outlier.size = 0.4, show.legend=T) +
+            theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) + 
+            theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+            theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+            theme(legend.title = element_text(size = 12)) + 
+            #ylim(0,8) +
+            geom_hline(yintercept=cut1, color = "black", size=0.2))
+    
+      graphics.off()
+    }
+    
+    #by gender beeswarm and violin plot - this doesn't work by year it looks stupid
+    # png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Gender_V_bee.tif"), width = 3, height = 4, units = "in", res = 1200)
+    # 
+    # print(ggplot(ant1gender, aes(x = Sex, y = value, color = year)) + geom_violin(scale = "width", color = "black") +
+    #         theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 1, size = 0.5, show.legend = T) +
+    #         theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+    #         theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+    #         theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+    #         geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+    # 
+    # graphics.off()
+    
+    
+    
+      
+      #these plots were in the same for loop in the sanger data
+      #age bins bee swarm and violin plot -- change the plot below! 
+      ant1bin <- filter(ant1, !AgeBin == "NA")
+      
+      png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.ageBINS_V_bee.tif"), width = 7, height = 4, units = "in", res = 1200)
+      
+      print(ggplot(ant1bin, aes(x = AgeBin, y = value, color = AgeBin)) + geom_violin(scale = "width", color = "black") +
+              theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 0.75, size = 0.5, show.legend = F) +
+              theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+              theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+              theme(legend.title = element_text(size = 12)) + ylim(0,8) +
+              geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+      
+      graphics.off()
+      
+      
+      
+####### Paired Samples Keneba Data!! :)       
     
     
     
     
-    
-    
-    
-    
-    
-    
-    
+
 ####### ELISA data - Correlations vs RPPA and Sensitivity and Specificity Calculations
     
     #read in data from .csv files prepared from the excel files Martin sent.
