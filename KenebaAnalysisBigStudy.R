@@ -37,20 +37,24 @@ library(ggpubr)
 ############DATA ANALYSIS############
 #####################################
 
-#need to update this section for keneba study - use same age bins as Martin's paper?
-#add age bins to sample_meta_f.df 
+
+#add age bins to sample_meta_f.df - use same age bins as Martin's paper (Blood 2014)
+#right now this is giving NA values "40-54" - need to figure this out
 for(i in 1:nrow(sample_meta_f.df)){
-  if (is.na(sample_meta_f.df$"Age in years"[i])) {i = i +1}
-  else if (sample_meta_f.df$"Age in years"[i] < 5) {sample_meta_f.df$AgeBin[i] <- "< 5"}
-  else if (sample_meta_f.df$"Age in years"[i] >= 5 & sample_meta_f.df$"Age in years"[i] < 15) {sample_meta_f.df$AgeBin[i] <- "5-14"}
-  else if (sample_meta_f.df$"Age in years"[i] >= 15 & sample_meta_f.df$"Age in years"[i] < 25) {sample_meta_f.df$AgeBin[i] <- "15-24"}
-  else if (sample_meta_f.df$"Age in years"[i] >= 25 & sample_meta_f.df$"Age in years"[i] < 35) {sample_meta_f.df$AgeBin[i] <- "25-34"}
-  else if (sample_meta_f.df$"Age in years"[i] >= 35 & sample_meta_f.df$"Age in years"[i] < 50) {sample_meta_f.df$AgeBin[i] <- "35-49"}
-  else if (sample_meta_f.df$"Age in years"[i] >= 50 & sample_meta_f.df$"Age in years"[i] < 70) {sample_meta_f.df$AgeBin[i] <- "50-69"}
-  else if (sample_meta_f.df$"Age in years"[i] >= 70 & sample_meta_f.df$"Age in years"[i] < 100) {sample_meta_f.df$AgeBin[i] <- "70-100"}
+  if (is.na(sample_meta_f.df$Age[i])) {i = i +1}
+  else if (sample_meta_f.df$Age[i] < 3) {sample_meta_f.df$AgeBin[i] <- "1-2"}
+  else if (sample_meta_f.df$Age[i] >= 3 & sample_meta_f.df$Age[i] < 6) {sample_meta_f.df$AgeBin[i] <- "3-5"}
+  else if (sample_meta_f.df$Age[i] >= 6 & sample_meta_f.df$Age[i] < 10) {sample_meta_f.df$AgeBin[i] <- "6-9"}
+  else if (sample_meta_f.df$Age[i] >= 10 & sample_meta_f.df$Age[i] < 13) {sample_meta_f.df$AgeBin[i] <- "10-12"}
+  else if (sample_meta_f.df$Age[i] >= 13 & sample_meta_f.df$Age[i] < 16) {sample_meta_f.df$AgeBin[i] <- "13-15"}
+  else if (sample_meta_f.df$Age[i] >= 16 & sample_meta_f.df$Age[i] < 20) {sample_meta_f.df$AgeBin[i] <- "16-19"}
+  else if (sample_meta_f.df$Age[i] >= 20 & sample_meta_f.df$Age[i] < 26) {sample_meta_f.df$AgeBin[i] <- "20-25"}
+  else if (sample_meta_f.df$Age[i] >= 26 & sample_meta_f.df$Age[i] < 40) {sample_meta_f.df$AgeBin[i] <- "26-39"}
+  else if (sample_meta_f.df$Age[i] >= 40 & sample_meta_f.df$Age[i] < 55) {sample_meta_f.df$AgeBin[i] <- "40-54"}
+  else if (sample_meta_f.df$Age[i] >= 55 & sample_meta_f.df$Age[i] < 75) {sample_meta_f.df$AgeBin[i] <- "55-75"}
 }
 
-#explicitly set factor levels for age bins
+#explicitly set factor levels for age bins - still need to update this for keneba study
 sample_meta_f.df$AgeBin <- factor(sample_meta_f.df$AgeBin, levels = c("< 5", "5-14","15-24","25-34", "35-49", "50-69", "70-100"))
 
 
