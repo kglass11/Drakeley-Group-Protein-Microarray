@@ -41,7 +41,7 @@ library(ggpubr)
 #add age bins to sample_meta_f.df - use same age bins as Martin's paper (Blood 2014)
 #right now this is giving NA values "40-54" - need to figure this out
 for(i in 1:nrow(sample_meta_f.df)){
-  if (is.na(sample_meta_f.df$Age[i])) {i = i +1}
+  if (is.na(sample_meta_f.df$Age[i])) {sample_meta_f.df$AgeBin[i] <- NA}
   else if (sample_meta_f.df$Age[i] < 3) {sample_meta_f.df$AgeBin[i] <- "1-2"}
   else if (sample_meta_f.df$Age[i] >= 3 & sample_meta_f.df$Age[i] < 6) {sample_meta_f.df$AgeBin[i] <- "3-5"}
   else if (sample_meta_f.df$Age[i] >= 6 & sample_meta_f.df$Age[i] < 10) {sample_meta_f.df$AgeBin[i] <- "6-9"}
@@ -55,7 +55,7 @@ for(i in 1:nrow(sample_meta_f.df)){
 }
 
 #explicitly set factor levels for age bins - still need to update this for keneba study
-sample_meta_f.df$AgeBin <- factor(sample_meta_f.df$AgeBin, levels = c("< 5", "5-14","15-24","25-34", "35-49", "50-69", "70-100"))
+sample_meta_f.df$AgeBin <- factor(sample_meta_f.df$AgeBin, levels = c("1-2", "3-5","6-9","10-12","13-15","16-19", "20-25","26-39","40-54","55-75"))
 
 
 ####### duplicated samples QC
