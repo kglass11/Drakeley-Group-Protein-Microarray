@@ -575,10 +575,6 @@ if(iso == "IgM"){
     
     setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
     
-    
-    
-    
-    
 
 ####### ELISA data - Correlations vs RPPA and Sensitivity and Specificity Calculations
     
@@ -898,51 +894,4 @@ if(iso == "IgM"){
   save.image(file = "KenebaAnalysis_IgG_v2.RData")
     
     
-    
-    
-    
-    
-    
-    
   
-#part of Lou macaque script below 
-for(i in 1:length(antnames)){
-  
-  antigen = antnames[i]
-  
-  ant1 <- filter(subtacosm, variable == antigen)
-  
-  png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.PC.tif"), width = 3.5, height = 3, units = "in", res = 1200)
-  
-  print(ggplot(ant1, aes(x = parasitecount, y = value, color = day)) + geom_point() +
-          theme_bw() + labs(x = "Parasite Count at Day 0", y = "Log2(MFI Ratio)", title = antigen) + 
-          theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
-          theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
-          theme(legend.title = element_text(size = 12))+ xlim(0,7000) + ylim(0,7))
-  
-  graphics.off()
-  
-}
-
-#part of sanger script below:
-#plot histogram 
-png(filename = paste0(study,"_Histogram", antigen, "v1.tif"), width = 4, height = 4, units = "in", res = 600)
-par(mfrow=c(1,1))
-
-hist(antibody1,breaks = 40, xlab='Log2(MFI Ratio)',main='')
-title(antigen,adj=0.5)
-abline(v=fit.ab2$mu, col = "purple", lwd = 1)
-abline(v=cutoffSD, col = "blue", lwd = 1.5)
-legend("topleft",paste0("cutoff(2SD): ",round(cutoffSD,3)),lty=1,col="blue",cex=0.5,bty="n",y.intersp=1.1,x.intersp=0.2,seg.len=0.5,text.col="blue")
-
-dev.off()
-
-#plot the two clusters density plot
-png(filename = paste0(study,"_Kmeans", antigen, "v1.tif"), width = 4, height = 3, units = "in", res = 600)
-
-print(ggplot(clustdata, aes(Ab_Response, ..count.., color = Cluster)) + geom_density(adjust = 3/4) +
-        theme_bw() + xlab("Log2(MFI Ratio)") + ggtitle(paste(antigen, round(cut, digits = 3))) +
-        theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()) +
-        geom_vline(xintercept = cut))
-
-graphics.off()
