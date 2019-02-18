@@ -39,7 +39,6 @@ library(ggpubr)
 
 
 #add age bins to sample_meta_f.df - use same age bins as Martin's paper (Blood 2014)
-#right now this is giving NA values "40-54" - need to figure this out
 for(i in 1:nrow(sample_meta_f.df)){
   if (is.na(sample_meta_f.df$Age[i])) {sample_meta_f.df$AgeBin[i] <- NA}
   else if (sample_meta_f.df$Age[i] < 3) {sample_meta_f.df$AgeBin[i] <- "1-2"}
@@ -54,7 +53,7 @@ for(i in 1:nrow(sample_meta_f.df)){
   else if (sample_meta_f.df$Age[i] >= 55 & sample_meta_f.df$Age[i] < 75) {sample_meta_f.df$AgeBin[i] <- "55-75"}
 }
 
-#explicitly set factor levels for age bins - still need to update this for keneba study
+#explicitly set factor levels for age bins
 sample_meta_f.df$AgeBin <- factor(sample_meta_f.df$AgeBin, levels = c("1-2", "3-5","6-9","10-12","13-15","16-19", "20-25","26-39","40-54","55-75"))
 
 
@@ -470,26 +469,112 @@ if(iso == "IgM"){
     # graphics.off()
     
     
+    #Antibody response vs Age Category colored by year(2012 or 2016) - the age categories are taken from Martin's paper
     
-      
-      #these plots were in the same for loop in the sanger data
-      #age bins bee swarm and violin plot -- change the plot below! 
+    setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/IgG Keneba Age Bin Plots")
+    
+    for(i in 1:length(SPcutfinal$Name)){
+    antigen = SPcutfinal$Name[i]
+    
+    #isolate data for the antigen
+    ant1 <- filter(Kenebamelt, variable == antigen)
+    
+    #isolate cutoff for the antigen
+    cut1 <- SPcutfinal$cutoff[i]
+
       ant1bin <- filter(ant1, !AgeBin == "NA")
       
-      png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.ageBINS_V_bee.tif"), width = 7, height = 4, units = "in", res = 1200)
+      png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.ageBINS_V_bee.tif"), width = 7.5, height = 4, units = "in", res = 1200)
       
-      print(ggplot(ant1bin, aes(x = AgeBin, y = value, color = AgeBin)) + geom_violin(scale = "width", color = "black") +
-              theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 0.75, size = 0.5, show.legend = F) +
+      print(ggplot(ant1bin, aes(x = AgeBin, y = value, color = year)) + geom_violin(scale = "width", color = "black") +
+              theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 0.6, size = 0.5) +
               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
               theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
-              theme(legend.title = element_text(size = 12)) + ylim(0,8) +
-              geom_hline(yintercept=cut1, linetype="dashed", color = "black", size=0.2))
+              theme(legend.title = element_text(size = 12), legend.position="right") + 
+              #ylim(0,8) +
+              geom_hline(yintercept=cut1, color = "black", size=0.2))
       
       graphics.off()
       
+    }
       
+    setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
       
 ####### Paired Samples Keneba Data!! :)       
+    
+    #We will be doing stats on the paired samples data rather than all the data
+    #The relevant starting data frames are 
+    #Keneba.paired
+    #Keneba.2012.paired 
+    #Keneba.2016.paired
+    
+    #choose new age categories for this data and make them refer to 2012 age only 
+    #so that the paired samples are always in the same age category
+    
+    #order both 2012 and 2016 data frames by sample_id and make sure they match
+    Keneba.2012.paired <- Keneba.2012.paired[order(Keneba.2012.paired$sample_id),]
+    Keneba.2016.paired <- Keneba.2016.paired[order(Keneba.2016.paired$sample_id),]
+    
+    all(Keneba.2012.paired$sample_id == Keneba.2016.paired$sample_id, na.rm = FALSE)
+    #TRUE
+    
+    #find max age - 49.66
+    max(Keneba.2012.paired$Age, na.rm = TRUE)
+    
+    #new column AgeBin2012
+    for(i in 1:nrow(Keneba.2012.paired)){
+      if (is.na(Keneba.2012.paired$Age[i])) {Keneba.2012.paired$AgeBin2012[i] <- NA}
+      else if (Keneba.2012.paired$Age[i] < 6) {Keneba.2012.paired$AgeBin2012[i] <- "1-5"}
+      else if (Keneba.2012.paired$Age[i] >= 6 & Keneba.2012.paired$Age[i] < 13) {Keneba.2012.paired$AgeBin2012[i] <- "6-12"}
+      else if (Keneba.2012.paired$Age[i] >= 13 & Keneba.2012.paired$Age[i] < 16) {Keneba.2012.paired$AgeBin2012[i] <- "13-15"}
+      else if (Keneba.2012.paired$Age[i] >= 16 & Keneba.2012.paired$Age[i] < 21) {Keneba.2012.paired$AgeBin2012[i] <- "16-20"}
+      else if (Keneba.2012.paired$Age[i] >= 21 & Keneba.2012.paired$Age[i] < 36) {Keneba.2012.paired$AgeBin2012[i] <- "21-35"}
+      else if (Keneba.2012.paired$Age[i] >= 36 & Keneba.2012.paired$Age[i] < 51) {Keneba.2012.paired$AgeBin2012[i] <- "36-50"}
+    }
+    
+    #explicitly set factor levels for age bins
+    Keneba.2012.paired$AgeBin2012 <- factor(Keneba.2012.paired$AgeBin2012, levels = c( "1-5", "6-12","13-15","16-20","21-35","36-50"))
+    
+    #add same age bins to 2016 data
+    Keneba.2016.paired$AgeBin2012 <- Keneba.2012.paired$AgeBin2012
+    
+    #bind these data frames back together 
+    paired.v2 <- rbind(Keneba.2012.paired,Keneba.2016.paired)
+    
+    #make year a factor instead of numeric
+    paired.v2$year <- as.factor(as.character(paired.v2$year))
+    
+    #Make Boxplots of 2012 vs 2016 paired data by age bin 2012
+    setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/IgG Keneba Paired Data/IgG Age Bin Plots")
+    
+    for(i in 1:length(SPcutfinal$Name)){
+      antigen = SPcutfinal$Name[i]
+      
+      #isolate data for the antigen
+      ant1 <- filter(paired.v2, variable == antigen)
+      
+      #isolate cutoff for the antigen
+      cut1 <- SPcutfinal$cutoff[i]
+      
+      ant1bin <- filter(ant1, !AgeBin2012 == "NA")
+      
+      png(filename = paste0(study, "_", antigen,"_Paired_Ab_vs.ageBINS_box.tif"), width = 7.5, height = 4, units = "in", res = 1200)
+      
+      print(ggplot(ant1bin, aes(x = AgeBin2012, y = value, fill = year)) + geom_boxplot(color = "black", outlier.size = 0.4) +
+              theme_bw() + labs(x = "Age in 2012", y = "Log2(MFI Ratio)", title = antigen) + 
+              #geom_beeswarm(cex = 0.6, size = 0.5) +
+              theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+              theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+              theme(legend.title = element_text(size = 12), legend.position="right") + 
+              #ylim(0,8) +
+              geom_hline(yintercept=cut1, color = "black", size=0.2))
+      
+      graphics.off()
+      
+    }
+    
+    setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
+    
     
     
     
