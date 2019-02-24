@@ -30,6 +30,9 @@ library(corrplot)
 library(gridExtra)
 library(ggbeeswarm)
 library(ggpubr)
+library(mclust)
+library(dbscan)
+library(pheatmap)
 
 
 
@@ -389,6 +392,138 @@ if(iso == "IgM"){
     #Get a Keneba overall? How to do this because there are paired inviduals? 
     #Calculate age-adjusted prevalence for Keneba?
     #or are we ok with just the paired samples?
+    
+####### Clustering analysis of ALL data for selected antigens 
+    
+    #list antigens we are not including in cluster analysis
+    #"DENV1.NS1","DENV2.NS1","DENV3.NS1", "DENV4.NS1" --> hold off on removing dengue for now
+    rmant <- c("BP.FHA","CMV.Whole","CT.PGP3.D",
+               "DT.NIBSC","Etramp.5.Ag.2","Etramp.5.Ag1.GST.var.1","Etramp.5.Ag1.GST.var.2","Etramp.5.Ag1.GST.var.3",
+               "Etramp.5.Ag1.His.var.1","Etramp.5.Ag1.His.var.2","Etramp.5.Ag1.His.var.3",
+               "EXOB","EXP3","JEV.NS1","MSP11.H103","MSP2.CH150.9","Mtb.TB10.4","Mumps",
+               "PHISTC.A","PHISTC.B","Pneumococcal.14","RSV.FG","RSV.GG","SBP1","Tg.GradeIII",
+               "Var2CSA","VAR2CSA.DBL5","X800E2A","X800E2C","X800E2D","X800PRISM")
+    
+    #prepare the data frame with all of the data - burritosT has the 105 antigens 
+    #as columns and all the test samples as rows
+    ittacluster <- burritosT[,!colnames(burritosT) %in% rmant]
+      
+  
+    
+    #scale the data because principle component not on same scale 
+    #this definitely changed the cluster analysis for Sanger
+    #ittacluster <- as.data.frame(scale(ittacluster1))
+    
+  #### Hierarchical clustering ####
+    #need to supply a distance matrix, which is the distance of every point to every other point
+    d <- dist(ittacluster)
+    
+    #usually need to try different algorithms, ward.D2 pre-selected dunno why though
+    fitH <- hclust(d, "ward.D2")
+    plot(fitH)
+    rect.hclust(fitH, k = 3, border = "red")
+    
+    hclusters <- cutree(fitH, k = 3)
+    hclusters
+    
+  #### model-based clustering ####  
+    #this package looks at many models and uses maximizing BIC to select model type and number of clusters
+    #requires NA values to be removed...not proceeding with this at this time because
+    #the remaining number of complete cases is 414/1540.
+    ittamclust <- na.omit(ittacluster)
+    
+    fitM <- Mclust(ittamclust)
+    fitM
+    plot(fitM)
+    #select plots in the console - see BIC to see how the model was chosen
+    
+  #### density based clustering ####
+     
+    #work out input for eps parameter with kNNdist - look for knee / elbow in data
+    #look for more directions on choosing these parameters in dbscan info
+    kNNdistplot(ittacluster, k=3)
+    abline(h= 0.7, col = "red", lty = 2)
+    #data cannot contain NAs...so can't use this right now! 
+    
+    fitD <- dbscan(ittacluster, eps = 0.7 , minPts = 5)
+    fitD
+    #noise points here are the points which do not fit in either cluster
+    plot(iris, col = fitD$cluster)
+    
+    
+    #need to see if the clusters mean anything --> do they group with country or age etc
+    
+    ittaclusterH <- as.data.frame(cbind(hclusters, ittacluster))
+    ittaclusterH$hclusters <- as.factor(ittaclusterH$hclusters)
+    
+    #heatmap - didn't work as is, need to get the dendrogram object out
+    #this heatmap function is clustering very differently than my hclust fit above
+    #heatmap.2(as.matrix(ittacluster), scale = "none")
+    
+    
+    #plot with stat ellipse which shows 95% confidence interval - this is an example of plotting a scatter plot of two antigens
+    ggplot(ittaclusterH, aes(x=Leishmania.rK39, y = CMV.pp150, color = hclusters, fill = hclusters)) + 
+      stat_ellipse(geom = "polygon", col = "black", alpha = 0.5) +
+      geom_point(shape = 21, color = "black")
+    
+    #do other clustering methods, then add all the clusters to ittaclusterH
+    
+    #then merge with metadata to see if clusters relate to anything
+    clustermeta <- merge(sample_meta_f.df, ittaclusterH, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
+    
+    #export clustermeta to make a heatmap in excel
+    write.csv(clustermeta, file = "Keneba_IgG_hclustresults.csv")
+    
+    #how do clusters split by country 
+    cluster1 <- filter(clustermeta, hclusters == "1")
+    cluster2 <- filter(clustermeta, hclusters == "2")
+    cluster3 <- filter(clustermeta, hclusters == "3")
+    
+    #calculate the percentage of each country in each cluster
+    length(which(cluster1$Country == "England"))/length(cluster1$Country)*100 #0
+    length(which(cluster1$Country == "The Gambia"))/length(cluster1$Country)*100 #100%
+    
+    length(which(cluster2$Country == "England"))/length(cluster2$Country)*100 #53.8674
+    length(which(cluster2$Country == "The Gambia"))/length(cluster2$Country)*100 #46.1326
+    
+    length(which(cluster3$Country == "England"))/length(cluster3$Country)*100 #2.269044
+    length(which(cluster3$Country == "The Gambia"))/length(cluster3$Country)*100 #97.73096
+    
+  #### Try hclust within pheatmap - make sure to set the method to "ward.D2"
+    
+    #data supplied is the output of the dist function.
+    
+    pheatmap(d, colors = colors, border_color = NA,
+             scale = "none", cluster_rows = T, cluster_cols = T, 
+             clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F,
+             show_colnames = T, na.col = "black", filename = "KenebaIgGpheatmap1.pdf")
+    
+    pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
+             clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
+             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmap2.pdf")
+    
+    #add annotations on the side for the age category and the country
+    #need to get the order of the samples from the pheatmap hclust to get the 
+    #matching country and age info
+    
+    heatmapinfo <- pheatmap(ittacluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
+    
+    #this gives a list of lists, can extract the labels from list tree_row to generate annotations data frame
+    annotation_labels <- as.data.frame(as.matrix(heatmapinfo$tree_row$labels[heatmapinfo$tree_row$order]))
+    colnames(annotation_labels) <- "sample_id_unique"
+    
+    annotation_info <- merge(annotation_labels, sample_meta_f.df, sort = FALSE, by = "sample_id_unique")
+    
+    annotation_info_sub <- annotation_info[,c(10,22)]
+    rownames(annotation_info_sub) <- annotation_info$sample_id_unique
+    
+    pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
+             clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
+             show_colnames = T, annotation_row = annotation_info_sub,
+             na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapAnnotated.pdf")
+     #try the annotations with actual age, not the age bin because there are too many bins?   
     
     
 ####### Plots of selected epi data vs antibody response - Keneba by year
