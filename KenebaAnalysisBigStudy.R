@@ -33,6 +33,7 @@ library(ggpubr)
 library(mclust)
 library(dbscan)
 library(pheatmap)
+library(RColorBrewer)
 
 
 
@@ -404,11 +405,18 @@ if(iso == "IgM"){
                "PHISTC.A","PHISTC.B","Pneumococcal.14","RSV.FG","RSV.GG","SBP1","Tg.GradeIII",
                "Var2CSA","VAR2CSA.DBL5","X800E2A","X800E2C","X800E2D","X800PRISM")
     
+    #remove dengue completely
+    rmant2 <- c("BP.FHA","CMV.Whole","CT.PGP3.D","DENV1.NS1","DENV2.NS1","DENV3.NS1", "DENV4.NS1",
+                         "DT.NIBSC","Etramp.5.Ag.2","Etramp.5.Ag1.GST.var.1","Etramp.5.Ag1.GST.var.2","Etramp.5.Ag1.GST.var.3",
+                         "Etramp.5.Ag1.His.var.1","Etramp.5.Ag1.His.var.2","Etramp.5.Ag1.His.var.3",
+                         "EXOB","EXP3","JEV.NS1","MSP11.H103","MSP2.CH150.9","Mtb.TB10.4","Mumps",
+                         "PHISTC.A","PHISTC.B","Pneumococcal.14","RSV.FG","RSV.GG","SBP1","Tg.GradeIII",
+                         "Var2CSA","VAR2CSA.DBL5","X800E2A","X800E2C","X800E2D","X800PRISM")
+    
     #prepare the data frame with all of the data - burritosT has the 105 antigens 
     #as columns and all the test samples as rows
     ittacluster <- burritosT[,!colnames(burritosT) %in% rmant]
-      
-  
+    nodenguecluster <- burritosT[,!colnames(burritosT) %in% rmant2]
     
     #scale the data because principle component not on same scale 
     #this definitely changed the cluster analysis for Sanger
@@ -490,14 +498,8 @@ if(iso == "IgM"){
     length(which(cluster3$Country == "The Gambia"))/length(cluster3$Country)*100 #97.73096
     
   #### Try hclust within pheatmap - make sure to set the method to "ward.D2"
-    
-    #data supplied is the output of the dist function.
-    
-    pheatmap(d, colors = colors, border_color = NA,
-             scale = "none", cluster_rows = T, cluster_cols = T, 
-             clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F,
-             show_colnames = T, na.col = "black", filename = "KenebaIgGpheatmap1.pdf")
-    
+  
+  #first with DENV1-4 included  
     pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
              cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
@@ -506,6 +508,12 @@ if(iso == "IgM"){
     #add annotations on the side for the age category and the country
     #need to get the order of the samples from the pheatmap hclust to get the 
     #matching country and age info
+    annotation_colors = list(
+      Country = c(England = "lightblue", "The Gambia" = "pink"),
+      AgeBin = c("1-2" =  "#9E0142", "3-5" = "#D53E4F","6-9" = "#F46D43",
+      "10-12" = "#FDAE61", "13-15" =  "#FEE08B", "16-19" = "#E6F598",
+      "20-25" = "#ABDDA4", "26-39" = "#66C2A5","40-54" =  "#3288BD","55-75" ="#5E4FA2"))
+         
     
     heatmapinfo <- pheatmap(ittacluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
     
@@ -514,6 +522,7 @@ if(iso == "IgM"){
     colnames(annotation_labels) <- "sample_id_unique"
     
     annotation_info <- merge(annotation_labels, sample_meta_f.df, sort = FALSE, by = "sample_id_unique")
+    annotation_info$Country <- as.factor(annotation_info$Country)
     
     annotation_info_sub <- annotation_info[,c(10,22)]
     rownames(annotation_info_sub) <- annotation_info$sample_id_unique
@@ -521,10 +530,39 @@ if(iso == "IgM"){
     pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
              cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
-             show_colnames = T, annotation_row = annotation_info_sub,
-             na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapAnnotated.pdf")
-     #try the annotations with actual age, not the age bin because there are too many bins?   
+             show_colnames = T, annotation_row = annotation_info_sub, annotation_colors = annotation_colors,
+             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapAnnotated.pdf")
+     
+  #then repeat without dengue at all  
+    pheatmap(nodenguecluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
+             clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
+             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapNOdenv.pdf")
     
+    #add annotations on the side for the age category and the country
+    #need to get the order of the samples from the pheatmap hclust to get the 
+    #matching country and age info
+    
+    heatmapinfo <- pheatmap(nodenguecluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
+    
+    #this gives a list of lists, can extract the labels from list tree_row to generate annotations data frame
+    annotation_labels <- as.data.frame(as.matrix(heatmapinfo$tree_row$labels[heatmapinfo$tree_row$order]))
+    colnames(annotation_labels) <- "sample_id_unique"
+    
+    annotation_info <- merge(annotation_labels, sample_meta_f.df, sort = FALSE, by = "sample_id_unique")
+    annotation_info$Country <- as.factor(annotation_info$Country)
+    
+    annotation_info_sub <- annotation_info[,c(10,22)]
+    rownames(annotation_info_sub) <- annotation_info$sample_id_unique
+    
+    pheatmap(nodenguecluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
+             clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
+             show_colnames = T, annotation_row = annotation_info_sub,annotation_colors = annotation_colors,
+             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapNOdenv_Annotated.pdf")
+    
+    
+
     
 ####### Plots of selected epi data vs antibody response - Keneba by year
     
