@@ -1,18 +1,11 @@
 ### Keneba Big Study Analysis 
 #Katie Glass
-#updated: Jan 15 2019
+#updated: Feb 2019
 
 setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
 
 #load IgG or IgM 
-load("Keneba_IgG_v3_AfterProcessing.RData")
-
-#install latest version of ggpubr from github - this did not work
-#gave an error "lazy-load database '/Users/Katie/Library/R/3.5/library/ggpubr/R/ggpubr.rdb' is corrupt"
-#if(!require(devtools)) install.packages("devtools")
-#devtools::install_github("kassambara/ggpubr")
-
-#install.packages("ggpubr")
+load("Keneba_IgM_v3_AfterProcessing.RData")
 
 #load packages
 library(contrast)
@@ -248,6 +241,7 @@ if(iso == "IgM"){
   ###one with luminex Pf antigens only?
     
 ####### Dengue PCA - dimensions are dengue types 1 - 4 
+    #only doing for IgG so far
     
     #isolate dengue data
     denguedata <- burritosT[,grep("DEN", colnames(burritosT))]
@@ -478,9 +472,9 @@ if(iso == "IgM"){
     #usually need to try different algorithms, ward.D2 pre-selected dunno why though
     fitH <- hclust(d, "ward.D2")
     plot(fitH)
-    rect.hclust(fitH, k = 3, border = "red")
+    rect.hclust(fitH, k = 2, border = "red")
     
-    hclusters <- cutree(fitH, k = 3)
+    hclusters <- cutree(fitH, k = 2)
     hclusters
     
   #### model-based clustering ####  
@@ -512,14 +506,10 @@ if(iso == "IgM"){
     
     ittaclusterH <- as.data.frame(cbind(hclusters, ittacluster))
     ittaclusterH$hclusters <- as.factor(ittaclusterH$hclusters)
-    
-    #heatmap - didn't work as is, need to get the dendrogram object out
-    #this heatmap function is clustering very differently than my hclust fit above
-    #heatmap.2(as.matrix(ittacluster), scale = "none")
-    
+  
     
     #plot with stat ellipse which shows 95% confidence interval - this is an example of plotting a scatter plot of two antigens
-    ggplot(ittaclusterH, aes(x=Leishmania.rK39, y = CMV.pp150, color = hclusters, fill = hclusters)) + 
+    ggplot(ittaclusterH, aes(x=AMA1, y = CMV.pp150, color = hclusters, fill = hclusters)) + 
       stat_ellipse(geom = "polygon", col = "black", alpha = 0.5) +
       geom_point(shape = 21, color = "black")
     
@@ -529,30 +519,31 @@ if(iso == "IgM"){
     clustermeta <- merge(sample_meta_f.df, ittaclusterH, by.x = "sample_id_unique", by.y = "row.names", sort = FALSE)
     
     #export clustermeta to make a heatmap in excel
-    write.csv(clustermeta, file = "Keneba_IgG_hclustresults.csv")
+    write.csv(clustermeta, file = paste0(study, "_hclustresults.csv"))
     
     #how do clusters split by country 
     cluster1 <- filter(clustermeta, hclusters == "1")
     cluster2 <- filter(clustermeta, hclusters == "2")
     cluster3 <- filter(clustermeta, hclusters == "3")
     
-    #calculate the percentage of each country in each cluster
-    length(which(cluster1$Country == "England"))/length(cluster1$Country)*100 #0
-    length(which(cluster1$Country == "The Gambia"))/length(cluster1$Country)*100 #100%
+    #calculate the percentage of each country in each cluster - these results are for without dengue (for IgG)
+    #but if I run it again it will be results for with DENV1-4 separately
+    length(which(cluster1$Country == "England"))/length(cluster1$Country)*100 #0 IgG, 8.152174 for IgM
+    length(which(cluster1$Country == "The Gambia"))/length(cluster1$Country)*100 #100% IgG, 91.84783 IgM
     
-    length(which(cluster2$Country == "England"))/length(cluster2$Country)*100 #53.8674
-    length(which(cluster2$Country == "The Gambia"))/length(cluster2$Country)*100 #46.1326
+    length(which(cluster2$Country == "England"))/length(cluster2$Country)*100 #53.8674, 43.23308 IgM
+    length(which(cluster2$Country == "The Gambia"))/length(cluster2$Country)*100 #46.1326, 56.76692 IgM
     
-    length(which(cluster3$Country == "England"))/length(cluster3$Country)*100 #2.269044
-    length(which(cluster3$Country == "The Gambia"))/length(cluster3$Country)*100 #97.73096
+    length(which(cluster3$Country == "England"))/length(cluster3$Country)*100 #2.269044, NA IgM
+    length(which(cluster3$Country == "The Gambia"))/length(cluster3$Country)*100 #97.73096, NA IgM
     
   #### Try hclust within pheatmap - make sure to set the method to "ward.D2"
   
-  #first with DENV1-4 included  
+  #first with DENV1-4 included  - manually set cutree_rows = 2 for IgM and cutree_rows = 3 for IgG.
     pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
-             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
-             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmap2.pdf")
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 2,show_rownames = F, 
+             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmap2.pdf"))
     
     #add annotations on the side for the age category and the country
     #need to get the order of the samples from the pheatmap hclust to get the 
@@ -563,8 +554,9 @@ if(iso == "IgM"){
       "10-12" = "#FDAE61", "13-15" =  "#FEE08B", "16-19" = "#E6F598",
       "20-25" = "#ABDDA4", "26-39" = "#66C2A5","40-54" =  "#3288BD","55-75" ="#5E4FA2"))
          
-    
-    heatmapinfo <- pheatmap(ittacluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
+    #change cutree here too depending on iso
+    heatmapinfo <- pheatmap(ittacluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", 
+    clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 2 )
     
     #this gives a list of lists, can extract the labels from list tree_row to generate annotations data frame
     annotation_labels <- as.data.frame(as.matrix(heatmapinfo$tree_row$labels[heatmapinfo$tree_row$order]))
@@ -578,21 +570,22 @@ if(iso == "IgM"){
     
     pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
-             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 2,show_rownames = F, 
              show_colnames = T, annotation_row = annotation_info_sub, annotation_colors = annotation_colors,
-             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapAnnotated.pdf")
+             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapAnnotated.pdf"))
      
   #then repeat without dengue at all  
     pheatmap(nodenguecluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
              cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
-             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapNOdenv.pdf")
+             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapNOdenv.pdf"))
     
     #add annotations on the side for the age category and the country
     #need to get the order of the samples from the pheatmap hclust to get the 
     #matching country and age info
     
-    heatmapinfo <- pheatmap(nodenguecluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
+    heatmapinfo <- pheatmap(nodenguecluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", 
+                  clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
     
     #this gives a list of lists, can extract the labels from list tree_row to generate annotations data frame
     annotation_labels <- as.data.frame(as.matrix(heatmapinfo$tree_row$labels[heatmapinfo$tree_row$order]))
@@ -608,20 +601,21 @@ if(iso == "IgM"){
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
              cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
              show_colnames = T, annotation_row = annotation_info_sub,annotation_colors = annotation_colors,
-             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapNOdenv_Annotated.pdf")
+             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapNOdenv_Annotated.pdf"))
     
     #Repeat with results from dengue PCA added (denguePCAcluster)  - concluded that this looks terrible
     #the altered scale of dengue PC1 ruins the whole heatmap
       pheatmap(denguePCAcluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
              cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
-             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapDENVPC1.pdf")
+             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapDENVPC1.pdf"))
     
       #add annotations on the side for the age category and the country
       #need to get the order of the samples from the pheatmap hclust to get the 
       #matching country and age info
     
-      heatmapinfo <- pheatmap(denguePCAcluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
+      heatmapinfo <- pheatmap(denguePCAcluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", 
+      clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
     
       #this gives a list of lists, can extract the labels from list tree_row to generate annotations data frame
       annotation_labels <- as.data.frame(as.matrix(heatmapinfo$tree_row$labels[heatmapinfo$tree_row$order]))
@@ -637,13 +631,13 @@ if(iso == "IgM"){
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
              cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
              show_colnames = T, annotation_row = annotation_info_sub,annotation_colors = annotation_colors,
-             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapDENVPC1_Annotated.pdf")
+             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapDENVPC1_Annotated.pdf"))
     
     #Repeat with SCALING because dengue PCA added (denguePCAcluster) 
       pheatmap(denguePCAcluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
                clustering_distance_cols = "euclidean", scale = "row", cluster_rows = T, 
                cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
-               show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapDENVPC1_scale.pdf")
+               show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapDENVPC1_scale.pdf"))
       
       #add annotations on the side for the age category and the country
       #need to get the order of the samples from the pheatmap hclust to get the 
@@ -665,7 +659,7 @@ if(iso == "IgM"){
                clustering_distance_cols = "euclidean", scale = "row", cluster_rows = T, 
                cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
                show_colnames = T, annotation_row = annotation_info_sub,annotation_colors = annotation_colors,
-               na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapDENVPC1_scale_Annotated.pdf")
+               na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapDENVPC1_scale_Annotated.pdf"))
       
 ####### Plots of selected epi data vs antibody response - Keneba by year
     
