@@ -247,6 +247,50 @@ if(iso == "IgM"){
   
   ###one with luminex Pf antigens only?
     
+####### Dengue PCA - dimensions are dengue types 1 - 4 
+    
+    #isolate dengue data
+    denguedata <- burritosT[,grep("DEN", colnames(burritosT))]
+    
+    #scaling is really important when variables are measured on different scales
+    #try with and without scaling for dengue 
+    denguePr <- prcomp(na.omit(denguedata), scale = TRUE)
+    denguePr
+    
+    #usually get one fewer components than variables entered, but here got 4 in 4 out
+    summary(denguePr)
+    
+    #repeat without scaling - without scaling is yielding higher proportion of variance in PC1
+    #going forward without scaling. PC1 cumulative proportion = 0.9218
+    denguePr2 <- prcomp(na.omit(denguedata), scale = FALSE)
+    denguePr2
+    summary(denguePr2)
+    
+    #scree plot (sp?) shows variance(square of standard deviation) for each component
+    plot(denguePr, type ="l")
+    plot(denguePr2, type = "l")
+    
+    #biplot, which includes eigenvectors for each variable
+    biplot(denguePr, scale = 0)
+    biplot(denguePr2, scale = 0)
+    
+    #extract PCA output (item x in the list)
+    str(denguePr2)
+    
+    #only get first two components - 1524 observations were complete (survived na.omit)
+    denguedata2 <- cbind(na.omit(denguedata), denguePr2$x[,1:2])
+    
+    denguemeta <- merge(denguedata2, sample_meta_f.df, by.x = "row.names", by.y = "sample_id_unique", all.x = TRUE)
+    
+    #this histogram looks really weird and not like how it looked before 
+    #:( not sure what's up with this
+    hist(denguedata2$PC1)
+    
+    #make a data frame of just the sample_ids and PC1
+    denguePC1 <- as.data.frame(denguedata2$PC1)
+    rownames(denguePC1) <- rownames(denguedata2)
+    colnames(denguePC1) <- c("DENV.NS1")
+    
 ####### Read in and finalize seropositivity cutoffs for all antigens 
     
     #This information is coming from the R notebook files. 
@@ -418,6 +462,11 @@ if(iso == "IgM"){
     ittacluster <- burritosT[,!colnames(burritosT) %in% rmant]
     nodenguecluster <- burritosT[,!colnames(burritosT) %in% rmant2]
     
+    
+    #prepare data for dengue PCA replacement for dengue
+    denguePCAcluster <- merge(denguePC1, nodenguecluster, by = "row.names", all.y = TRUE)
+    denguePCAcluster <- tibble::column_to_rownames(denguePCAcluster, var = "Row.names")
+    
     #scale the data because principle component not on same scale 
     #this definitely changed the cluster analysis for Sanger
     #ittacluster <- as.data.frame(scale(ittacluster1))
@@ -561,8 +610,34 @@ if(iso == "IgM"){
              show_colnames = T, annotation_row = annotation_info_sub,annotation_colors = annotation_colors,
              na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapNOdenv_Annotated.pdf")
     
+    #Repeat with results from dengue PCA added (denguePCAcluster)  
+      pheatmap(denguePCAcluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
+             clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
+             show_colnames = T, na.col = "black", fontsize_col = 8,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapNOdenv.pdf")
     
-
+      #add annotations on the side for the age category and the country
+      #need to get the order of the samples from the pheatmap hclust to get the 
+      #matching country and age info
+    
+      heatmapinfo <- pheatmap(denguePCAcluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = 3 )
+    
+      #this gives a list of lists, can extract the labels from list tree_row to generate annotations data frame
+      annotation_labels <- as.data.frame(as.matrix(heatmapinfo$tree_row$labels[heatmapinfo$tree_row$order]))
+      colnames(annotation_labels) <- "sample_id_unique"
+    
+      annotation_info <- merge(annotation_labels, sample_meta_f.df, sort = FALSE, by = "sample_id_unique")
+      annotation_info$Country <- as.factor(annotation_info$Country)
+    
+      annotation_info_sub <- annotation_info[,c(10,22)]
+      rownames(annotation_info_sub) <- annotation_info$sample_id_unique
+    
+      pheatmap(denguePCAcluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
+             clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = 3,show_rownames = F, 
+             show_colnames = T, annotation_row = annotation_info_sub,annotation_colors = annotation_colors,
+             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = "KenebaIgGpheatmapNOdenv_Annotated.pdf")
+    
     
 ####### Plots of selected epi data vs antibody response - Keneba by year
     
