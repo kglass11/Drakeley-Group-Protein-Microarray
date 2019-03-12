@@ -5,7 +5,7 @@
 setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
 
 #load IgG or IgM 
-load("Keneba_IgM_v3_AfterProcessing.RData")
+load("Keneba_IgG_v3_AfterProcessing.RData")
 
 #load packages
 library(contrast)
@@ -556,7 +556,6 @@ if(iso == "IgM"){
       "10-12" = "#FDAE61", "13-15" =  "#FEE08B", "16-19" = "#E6F598",
       "20-25" = "#ABDDA4", "26-39" = "#66C2A5","40-54" =  "#3288BD","55-75" ="#5E4FA2"))
          
-    #change cutree here too depending on iso
     heatmapinfo <- pheatmap(ittacluster, silent = TRUE,scale = "none",clustering_method = "ward.D2", 
     clustering_distance_cols = "euclidean", clustering_distance_rows = "euclidean",cutree_rows = ncut )
     
@@ -579,12 +578,20 @@ if(iso == "IgM"){
     annotation_info_sub <- annotation_info[,c(10,22)]
     rownames(annotation_info_sub) <- annotation_info$sample_id_unique
     
+    #save as PDF
     pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
              cluster_cols = T, clustering_method = "ward.D2", cutree_rows = ncut,show_rownames = F, 
              show_colnames = T, annotation_row = annotation_info_sub, annotation_colors = annotation_colors,
              na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapAnnotated.pdf"))
      
+    #save as .tiff for poster - this looks so much better! 
+    pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
+             clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
+             cluster_cols = T, clustering_method = "ward.D2", cutree_rows = ncut,show_rownames = F, 
+             show_colnames = T, annotation_row = annotation_info_sub, annotation_colors = annotation_colors,
+             na.col = "black", fontsize_col = 7 ,angle_col = 45,width = 12,filename = paste0("Keneba_",iso, "_pheatmapAnnotated.tiff"))
+    
   #then repeat without dengue at all  
     pheatmap(nodenguecluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
              clustering_distance_cols = "euclidean", scale = "none", cluster_rows = T, 
@@ -1172,9 +1179,9 @@ if(iso == "IgM"){
     
     
 ####### Save the output of the analysis so far
-  save.image(file = "KenebaAnalysis_IgM_v2.RData")
+  #save.image(file = "KenebaAnalysis_IgM_v2.RData")
   #save.image(file = "KenebaAnalysis_IgG_v1.RData")
-  #save.image(file = "KenebaAnalysis_IgG_v2.RData")
+  save.image(file = "KenebaAnalysis_IgG_v3.RData")
     
     
   
