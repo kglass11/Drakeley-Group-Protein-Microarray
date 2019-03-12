@@ -5,7 +5,7 @@
 setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
 
 #load IgG or IgM 
-load("Keneba_IgG_v3_AfterProcessing.RData")
+load("Keneba_IgM_v3_AfterProcessing.RData")
 
 #load packages
 library(contrast)
@@ -286,6 +286,8 @@ if(iso == "IgM"){
     colnames(denguePC1) <- c("DENV.NS1")
     
 ####### Read in and finalize seropositivity cutoffs for all antigens 
+
+    #This needs to be updated for IgM - not done yet!! 
     
     #This information is coming from the R notebook files. 
     #There are 3 different data frames to import, negative, positive, and multiple populations.
@@ -478,23 +480,23 @@ if(iso == "IgM"){
     #the remaining number of complete cases is 414/1540.
     ittamclust <- na.omit(ittacluster)
     
-    fitM <- Mclust(ittamclust)
-    fitM
-    plot(fitM)
+    #fitM <- Mclust(ittamclust)
+    #fitM
+    #plot(fitM)
     #select plots in the console - see BIC to see how the model was chosen
     
   #### density based clustering ####
      
     #work out input for eps parameter with kNNdist - look for knee / elbow in data
     #look for more directions on choosing these parameters in dbscan info
-    kNNdistplot(ittacluster, k=3)
-    abline(h= 0.7, col = "red", lty = 2)
+    #kNNdistplot(ittacluster, k=3)
+    #abline(h= 0.7, col = "red", lty = 2)
     #data cannot contain NAs...so can't use this right now! 
     
-    fitD <- dbscan(ittacluster, eps = 0.7 , minPts = 5)
-    fitD
+    #fitD <- dbscan(ittacluster, eps = 0.7 , minPts = 5)
+   #fitD
     #noise points here are the points which do not fit in either cluster
-    plot(iris, col = fitD$cluster)
+    #plot(iris, col = fitD$cluster)
     
     
     #need to see if the clusters mean anything --> do they group with country or age etc
@@ -502,7 +504,6 @@ if(iso == "IgM"){
     ittaclusterH <- as.data.frame(cbind(hclusters, ittacluster))
     ittaclusterH$hclusters <- as.factor(ittaclusterH$hclusters)
   
-    
     #plot with stat ellipse which shows 95% confidence interval - this is an example of plotting a scatter plot of two antigens
     ggplot(ittaclusterH, aes(x=AMA1, y = CMV.pp150, color = hclusters, fill = hclusters)) + 
       stat_ellipse(geom = "polygon", col = "black", alpha = 0.5) +
@@ -1169,9 +1170,9 @@ if(iso == "IgM"){
     
     
 ####### Save the output of the analysis so far
-  #save.image(file = "KenebaAnalysis_IgM_v1.RData")
+  save.image(file = "KenebaAnalysis_IgM_v2.RData")
   #save.image(file = "KenebaAnalysis_IgG_v1.RData")
-  save.image(file = "KenebaAnalysis_IgG_v2.RData")
+  #save.image(file = "KenebaAnalysis_IgG_v2.RData")
     
     
   
