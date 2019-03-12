@@ -535,9 +535,11 @@ if(iso == "IgM"){
     
   #### Try hclust within pheatmap - make sure to set the method to "ward.D2"
     
+    #***** Update ***** Running IgG data with 2 clusters instead of 3 now!! 
+    
     #set cutree based on isotype (this is to define the number of clusters)
     if(iso =="IgM"){ncut <- 2}
-    if(iso =="IgG"){ncut <- 3}
+    if(iso =="IgG"){ncut <- 2}
   
   #first with DENV1-4 included
     pheatmap(ittacluster, colors = colors, border_color = NA, clustering_distance_rows = "euclidean", 
