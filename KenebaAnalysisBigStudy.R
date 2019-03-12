@@ -848,16 +848,21 @@ if(iso == "IgM"){
       
       ant1bin <- filter(ant1, !AgeBin2012 == "NA")
       
-      png(filename = paste0(study, "_", antigen,"_Paired_Ab_vs.ageBINS_box.tif"), width = 7.5, height = 4, units = "in", res = 1200)
+      png(filename = paste0(study, "_", antigen,"_Paired_Ab_vs.ageBINS_box.tif"), width = 5.4, height = 3.5, units = "in", res = 1200)
       
       print(ggplot(ant1bin, aes(x = AgeBin2012, y = value, fill = year)) + geom_boxplot(color = "black", outlier.size = 0.4) +
               theme_bw() + labs(x = "Age in 2012", y = "Log2(MFI Ratio)", title = antigen) + 
               #geom_beeswarm(cex = 0.6, size = 0.5) +
+              scale_fill_manual(values=alpha(c("blue", "red2"), 0.6)) +
               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
               theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
               theme(legend.title = element_text(size = 12), legend.position="right") + 
               #ylim(0,8) +
-              geom_hline(yintercept=cut1, color = "black", size=0.2))
+              labs(fill='Year') +
+              theme(plot.title = element_text(color = "black", face = "bold"),
+              axis.title.x = element_text(color = "black", face = "bold"),
+              axis.title.y = element_text(color = "black", face = "bold"))+
+              geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
       
       graphics.off()
       
