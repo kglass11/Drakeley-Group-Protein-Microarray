@@ -1174,15 +1174,80 @@ if(iso == "IgM"){
 ####### ELISA data sensitivity and specificity calculations
     
     #set up data frame for sensitivity and specificity calculations
-    sens.spec <- as.data.frame(matrix(nrow = 5, ncol = 8))
+    sens.spec <- as.data.frame(matrix(nrow = 4, ncol = 8))
     colnames(sens.spec) <- c("Antigen", "True_Positives", "True_Negatives", "False_Positives", "False_Negatives", "Sensitivity", "Specificity", "Agreement")
     
-    #make a data frame of seropositivity (1) and seronegativity (0) for all antigens
-    #What do to about the indeterminate values?? I think just don't count them...
-    #set indeterminates to NA
-  
+    #isolate data to use in the ELISA analysis
+    ELISAant <- cbind(elisaALL$CMV.GradeIII, elisaALL$CMV.pp150, elisaALL$EBV.EBNA.1, elisaALL$TT)
+    colnames(ELISAant) <- c("CMV.GradeIII","CMV.pp150", "EBV.EBNA.1", "TT")
     
+    #isolate SP cutoffs for those antigens
+    SPcuts <- multcutoffs[(multcutoffs$Name %in% c("CMV.GradeIII","CMV.pp150", "EBV.EBNA.1", "TT")),3]
     
+    #isolate SN cutoffs for those antigens
+    SNcuts <- multcutoffs[(multcutoffs$Name %in% c("CMV.GradeIII","CMV.pp150", "EBV.EBNA.1", "TT")),2]
+    
+    #make SP binary data frame, set indeterminates to NA
+    SPbinary <- as.data.frame(matrix(ncol=ncol(ELISAant), nrow = nrow(ELISAant)))
+    colnames(SPbinary) <- colnames(ELISAant)
+    
+    for(i in 1:ncol(ELISAant)){
+      for(j in 1:nrow(ELISAant)){
+        if(is.na(ELISAant[j,i])){
+          SPbinary[j,i] <- NA
+        }else if(ELISAant[j,i] >= SPcuts[i]){
+          SPbinary[j,i] <- 1
+          }else if(ELISAant[j,i] <= SNcuts[i]){
+            SPbinary[j,i] <- 0
+          }else if(ELISAant[j,i] > SNcuts[i] & ELISAant[j,i] < SPcuts[i]){
+            SPbinary[j,i] <- NA
+          }
+      }
+    }
+    
+    #add the columns for the data from Martin
+    SPbinary <- cbind(SPbinary, elisaALL$EBNA.Result,elisaALL$TT.Result)
+    SPbinary$CMV.Result <- (!(is.na(elisaALL$HCMV.IgG.Titre)))+0
+    
+    #fill out sensitivity and specificity data frame
+    sens.spec$Antigen <- c("CMV.GradeIII","CMV.pp150", "EBV.EBNA.1", "TT")
+    
+    #CMV.GradeIII - there are no negatives by ELISA in the data given
+    sens.spec$True_Positives[1] <- length((which(SPbinary$CMV.GradeIII == SPbinary$CMV.Result)))
+    sens.spec$True_Negatives[1] <- 0
+    sens.spec$False_Positives[1] <- 0
+    sens.spec$False_Negatives[1] <- length(which(!(SPbinary$CMV.GradeIII == SPbinary$CMV.Result)))
+    
+    #CMV.pp150 - there are no negatives by ELISA in the data given
+    sens.spec$True_Positives[2] <- length((which(SPbinary$CMV.pp150 == SPbinary$CMV.Result)))
+    sens.spec$True_Negatives[2] <- 0
+    sens.spec$False_Positives[2] <- 0
+    sens.spec$False_Negatives[2] <- length(which(!(SPbinary$CMV.pp150 == SPbinary$CMV.Result)))
+    
+    #EBV.EBNA.1
+    sens.spec$True_Positives[3] <- length(which(SPbinary$EBV.EBNA.1 == (SPbinary$`elisaALL$EBNA.Result` == 1)))
+    sens.spec$True_Negatives[3] <- length(which(SPbinary$EBV.EBNA.1 == (SPbinary$`elisaALL$EBNA.Result` == 0)))
+    sens.spec$False_Positives[3] <- length(which((SPbinary$EBV.EBNA.1 == 1) & (SPbinary$`elisaALL$EBNA.Result` == 0)))
+    sens.spec$False_Negatives[3] <- length(which((SPbinary$EBV.EBNA.1 == 0) & (SPbinary$`elisaALL$EBNA.Result` == 1)))
+    
+    #TT
+    sens.spec$True_Positives[4] <- length(which(SPbinary$TT == (SPbinary$`elisaALL$TT.Result` == 1)))
+    sens.spec$True_Negatives[4] <- length(which(SPbinary$TT == (SPbinary$`elisaALL$TT.Result` == 0)))
+    sens.spec$False_Positives[4] <- length(which((SPbinary$TT == 1) & (SPbinary$`elisaALL$TT.Result` == 0)))
+    sens.spec$False_Negatives[4] <- length(which((SPbinary$TT == 0) & (SPbinary$`elisaALL$TT.Result` == 1)))
+    
+    #calculate the other quantities
+    #sensitivity = true positives / (true positives + false negatives)
+    #specificity = true negatives / (true negatives + false positives)
+    #percent agreement = % (true positives + true negatives) / total sample number (that aren't NA)
+    
+    for(i in 1:nrow(sens.spec)){
+      sens.spec$Sensitivity[i] <- sens.spec$True_Positives[i]/(sens.spec$True_Positives[i] + sens.spec$False_Negatives[i])
+      sens.spec$Specificity[i] <- sens.spec$True_Negatives[i]/(sens.spec$True_Negatives[i] + sens.spec$False_Positives[i])
+      sens.spec$Agreement[i] <- (sens.spec$True_Positives[i] + sens.spec$True_Negatives[i])/(sum(sens.spec[i,2:5]))*100
+    }
+      
+      
 ####### Save the output of the analysis so far
   #save.image(file = "KenebaAnalysis_IgM_v2.RData")
   #save.image(file = "KenebaAnalysis_IgG_v1.RData")
