@@ -1134,12 +1134,15 @@ for(i in 1:length(Ig)){
     
     stdmelt <- melt(norm_avg, varnames = c("Std", "Sample"))
     
-    png(filename = paste0(study, "_stds_norm_avg_", type, ".tif"), width = 7, height = 5, units = "in", res = 1200)
+    png(filename = paste0(study, "_stds_norm_avg_", type, ".tif"), width = 3.5, height = 2.5, units = "in", res = 1200)
     
-    print(ggplot(stdmelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 2, shape = 18) + theme_bw() +
-            labs(x = "Sample", y = "Normalized Log2(MFI)", title = paste("Mean Normalized", type)) + ylim(-1,10) + 
-            theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 3)) +
+    print(ggplot(stdmelt, aes(x = Sample, y=value, color = Std)) + geom_point(size = 0.75, shape = 18) + theme_bw() +
+            labs(x = "Sample", y = "Log2(MFI Ratio)", title = paste(type)) + ylim(-1,10) + 
+            theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
             theme(legend.position="bottom") +
+            theme(plot.title = element_text(color = "black", face = "bold"),
+                  axis.title.x = element_text(color = "black", face = "bold"),
+                  axis.title.y = element_text(color = "black", face = "bold"))+
             theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank()))
     
     graphics.off()
