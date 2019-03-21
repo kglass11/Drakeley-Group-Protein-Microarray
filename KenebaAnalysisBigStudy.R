@@ -140,6 +140,17 @@ if(iso == "IgM"){
   fajitas1 <- fajitas[,(ncol(target_meta2.df)+1):ncol(fajitas)]
   row.names(fajitas1) <- make.names(fajitas$Name)
   
+######calculations for sample population table
+  
+  length(which(sample_meta_f.df$Country=="The Gambia" & sample_meta_f.df$year=="2012" & sample_meta_f.df$Sex == "F" ))
+  length(which(sample_meta_f.df$Country=="The Gambia" & sample_meta_f.df$year=="2012" & sample_meta_f.df$Sex == "M" ))
+  
+  length(which(sample_meta_f.df$Country=="The Gambia" & sample_meta_f.df$year=="2016" & sample_meta_f.df$Sex == "F" ))
+  length(which(sample_meta_f.df$Country=="The Gambia" & sample_meta_f.df$year=="2016" & sample_meta_f.df$Sex == "M" ))
+  
+  length(which(sample_meta_f.df$Country=="The Gambia" & sample_meta_f.df$year=="2012" & sample_meta_f.df$AgeBin == "55-75" ))
+  length(which(sample_meta_f.df$Country=="The Gambia" & sample_meta_f.df$year=="2016" & sample_meta_f.df$AgeBin == "55-75"))
+  
   
 ######Histograms of all the data for each antigen (includes negative values)  
   
