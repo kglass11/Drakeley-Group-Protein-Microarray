@@ -31,7 +31,7 @@ load(file="Sanger.2.Update.RData")
 
 ###### Isolate data for malarial antigens and test samples only (no controls) or test samples and controls
 ###negative values are included here
-###this first section is repeated from FMM script (Sanger Analysis Non-Malarial Antigens)
+###this first section is repeated/edited from non-malarial analysis (Post FMM Sanger NM analysis.R)
 
 #Remove control protein targets
 #Remove samples that should be excluded and isolate test samples - leaves 1325 samples
