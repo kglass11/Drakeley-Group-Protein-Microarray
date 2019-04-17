@@ -5,10 +5,10 @@
 setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
 
 #load IgG or IgM 
-#load("Keneba_IgG_v3_AfterProcessing.RData")
+load("Keneba_IgM_v3_AfterProcessing.RData")
 
 #or load IgG or IgM analysis
-load("KenebaAnalysis_IgG_v3.RData")
+#load("KenebaAnalysis_IgG_v3.RData")
 
 #load packages
 library(contrast)
@@ -1293,9 +1293,9 @@ if(iso == "IgM"){
       
       
 ####### Save the output of the analysis so far
-  #save.image(file = "KenebaAnalysis_IgM_v2.RData")
+  save.image(file = "KenebaAnalysis_IgM_v2.RData")
   #save.image(file = "KenebaAnalysis_IgG_v1.RData")
-  save.image(file = "KenebaAnalysis_IgG_v3.RData")
+  #save.image(file = "KenebaAnalysis_IgG_v3.RData")
     
     
   
