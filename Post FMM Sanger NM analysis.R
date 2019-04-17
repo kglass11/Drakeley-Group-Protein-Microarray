@@ -29,6 +29,7 @@ library(ggbeeswarm)
 
 load(file="Sanger.2.Update.RData")
 load(file = "sangerNMcutoffsfinal.RData")
+#note - the sangerNMcutoffsfinal.RData is not there, cannot open...find this later.
 
 ###### Isolate data for non-malarial antigens and test samples only (no controls) or test samples and controls
     ###negative values are included here
