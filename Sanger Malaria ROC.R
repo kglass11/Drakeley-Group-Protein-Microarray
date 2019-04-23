@@ -82,11 +82,26 @@ tNMallsampdata <- t(NMallsampdata)
 mal.all <- tNMallsampdata
 colnames(mal.all) <- make.names(colnames(mal.all))
 
-### Logistic regression - single antigen - use Etramp5 antigen 1 (Etramp 5 Ag 1 -> Etramp.5.Ag.1)
-
 #generate a plot to look for missing data quickly - this sorts columns by most missing data
 #as expected we don't have missing data because this study was done with reps = 1
 missmap(as.data.frame(mal.all), col=c("blue", "red"), legend=FALSE)
+
+#need to merge this data back with the sample metadata 
+mal.meta <- merge(sample_meta_f.df, mal.all, by.x = "sample_id_unique", by.y = "row.names")
+
+### Logistic regression - single antigen - use Etramp5 antigen 1 (Etramp 5 Ag 1 -> Etramp.5.Ag.1)
+#the outcome that we are attempting to predict is the column "pcr"
+
+levels(as.factor(mal.meta$pcr))
+# "falciparum" "negative" -> the two responses  
+
+#outcome variable must be a factor
+mal.meta$pcr <- as.factor(mal.meta$pcr)
+
+### Logistic regression - single antigen - use Etramp5 antigen 1 (Etramp 5 Ag 1 -> Etramp.5.Ag.1)
+etramp51.fit <- glm(pcr ~ Etramp.5.Ag.1 , data = mal.meta, family = binomial)
+
+summary(etramp51.fit)
 
 
 
