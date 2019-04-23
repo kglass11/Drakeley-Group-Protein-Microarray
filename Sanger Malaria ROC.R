@@ -27,6 +27,9 @@ library(reshape2)
 library(corrplot)
 library(ggbeeswarm)
 
+library(Amelia)
+library(mlbench)
+
 load(file="Sanger.2.Update.RData")
 
 ###### Isolate data for malarial antigens and test samples only (no controls) or test samples and controls
@@ -74,3 +77,21 @@ rownames(NMallsampdata) <- NMallsampmeta$Name
 tNMdata <- t(NMdata)
 
 tNMallsampdata <- t(NMallsampdata)
+
+#change the names of the antigens so they are better for everything
+mal.all <- tNMallsampdata
+colnames(mal.all) <- make.names(colnames(mal.all))
+
+### Logistic regression - single antigen - use Etramp5 antigen 1 (Etramp 5 Ag 1 -> Etramp.5.Ag.1)
+
+#generate a plot to look for missing data quickly - this sorts columns by most missing data
+#as expected we don't have missing data because this study was done with reps = 1
+missmap(as.data.frame(mal.all), col=c("blue", "red"), legend=FALSE)
+
+
+
+
+
+
+
+
