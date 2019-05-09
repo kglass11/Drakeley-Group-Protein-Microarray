@@ -103,7 +103,10 @@ mal.meta$pcr <- as.factor(mal.meta$pcr)
 ### Logistic regression - single antigen - use Etramp5 antigen 1 (Etramp 5 Ag 1 -> Etramp.5.Ag.1)
 etramp51.fit <- glm(pcr ~ Etramp.5.Ag.1 , data = mal.meta, family = binomial)
 
+two <- glm(pcr ~ Etramp.5.Ag.1 + HSP40.Ag.1, data = mal.meta, family = binomial)
+
 summary(etramp51.fit)
+summary(two)
 #the logistic regression is significant, 
 #but is this because there are very few positives??
 
@@ -113,6 +116,7 @@ summary(etramp51.fit)
 #for a number of groups of antigens or scenarios?
 
 glm.probs <- predict(etramp51.fit,type = "response")
+glm.two <- predict(two,type = "response")
 
 #confusion matrix - don't know if this is working, don't think it is, 
 #I think it's just telling me the number of true and false in the data, not the predictions
@@ -121,6 +125,12 @@ table(na.omit(mal.meta$pcr), glm.probs > 0.5)
 ROCRpred <- prediction(glm.probs, na.omit(mal.meta$pcr))
 ROCRperf <- performance(ROCRpred, 'tpr','fpr')
 plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2,1.7))
+
+ROCRpred2 <- prediction(glm.two, na.omit(mal.meta$pcr))
+ROCRperf2 <- performance(ROCRpred2, 'tpr','fpr')
+plot(ROCRperf2, colorize = TRUE, text.adj = c(-0.2,1.7))
+
+
 
 
 
