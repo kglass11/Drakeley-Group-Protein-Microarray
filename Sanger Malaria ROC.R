@@ -32,6 +32,8 @@ library(mlbench)
 library(caTools)
 library(ROCR)
 
+source('~/Desktop/IV Project/CrossVal_Lindsey/ROC_crossval_functions_KG.R')
+
 load(file="Sanger.2.Update.RData")
 
 ###### Isolate data for malarial antigens and test samples only (no controls) or test samples and controls
@@ -110,7 +112,20 @@ summary(two)
 #the logistic regression is significant, 
 #but is this because there are very few positives??
 
-## use cross validation!!! 
+### use cross validation!!! 
+
+#adding in cross validation from Lindsey's script she sent me
+formula_mfi <- as.formula("pcr ~ Etramp.5.Ag.1 + HSP40.Ag.1")
+
+m_t30_mfi <- model.crossval(mal.meta, mod.fit="logistic", mod.formula=formula_mfi, perc=.3, outcome.name="pcr", plot=F)
+#this is causing an error, even after changing to sample_id from subject_id
+
+roc_t30  <- list(m_t30_mfi)
+median_roc_t30 <- list()
+
+med <- which(roc_t30[[1]]$auc.vector==median(roc_t30[[1]]$auc.vector[-1]))[1]
+median_roc_t30 <- c(roc_t30[[1]]$performance.list[[med]]@x.values,roc_t30[[1]]$performance.list[[med]]@y.values)
+
 
 ## How to quickly do the logistic regression and cross validation 
 #for a number of groups of antigens or scenarios?
@@ -131,7 +146,7 @@ ROCRperf2 <- performance(ROCRpred2, 'tpr','fpr')
 plot(ROCRperf2, colorize = TRUE, text.adj = c(-0.2,1.7))
 
 
-
+#need to plot multiple ROC curves on one plot.
 
 
 
