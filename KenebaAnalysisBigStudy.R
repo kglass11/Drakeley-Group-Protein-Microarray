@@ -256,6 +256,7 @@ if(iso == "IgM"){
     
 ####### Dengue PCA - dimensions are dengue types 1 - 4 
     #only doing for IgG so far
+    #skip for IgM
     
     #isolate dengue data
     denguedata <- burritosT[,grep("DEN", colnames(burritosT))]
@@ -302,7 +303,7 @@ if(iso == "IgM"){
 ####### Read in and finalize seropositivity cutoffs for all antigens 
 
     #This needs to be updated for IgM - not done yet!! 
-    
+    if(iso == "IgG"){
     #This information is coming from the R notebook files. 
     #There are 3 different data frames to import, negative, positive, and multiple populations.
     negcutoffs <- read.csv("Keneba_IgG_v3_negcutoffs.csv")
@@ -313,6 +314,15 @@ if(iso == "IgM"){
     
     multcutoffs <- read.csv("Keneba_IgG_v3_multcutoffs.csv")
     multcutoffs <- multcutoffs[,2:ncol(multcutoffs)]
+    }
+    
+    if(iso == "IgM"){
+      negcutoffs <- read.csv("Keneba_IgM_v3_negcutoffs.csv")
+      negcutoffs <- negcutoffs[,2:ncol(negcutoffs)]
+      
+      multcutoffs <- read.csv("Keneba_IgM_v3_multcutoffs.csv")
+      multcutoffs <- multcutoffs[,2:ncol(multcutoffs)]
+    }
     
     #identify duplicates and decide which strategy is better for that antigen
     #decisions and explanations are in my written notebook.
@@ -327,6 +337,8 @@ if(iso == "IgM"){
     #make a single data frame of antigen name and SP cutoff 
     #for the negative or positive groups, selecting "plus3SD" and "minus3SD"
     #for dual, selecting "cutoff.pos"
+
+    if(iso == "IgG"){
     negcutoffs$Name <- as.character(negcutoffs$Name)
     negfinal <- negcutoffs[!(negcutoffs$Name == "MSP2.Dd2"|negcutoffs$Name == "Mtb.Ag85B"),c(1,3)]
     negfinal$method <- "Neg"
@@ -344,6 +356,22 @@ if(iso == "IgM"){
     
     #make one data frame of the final cutoffs for each antigen - total = 105, this number matches the antigen key v7
     SPcutfinal <- rbind(negfinal, posfinal, twofinal)
+    }
+    
+    if(iso == "IgM"){
+      negcutoffs$Name <- as.character(negcutoffs$Name)
+      negfinal <- negcutoffs[,c(1,3)]
+      negfinal$method <- "Neg"
+      colnames(negfinal) <- c("Name", "cutoff", "method")
+      
+      multcutoffs$Name <- as.character(multcutoffs$Name)
+      twofinal <- multcutoffs[,c(1,3)]
+      twofinal$method <- "FMM"
+      colnames(twofinal) <- c("Name", "cutoff", "method")
+      
+      #make one data frame of the final cutoffs for each antigen - total = 105, this number matches the antigen key v7
+      SPcutfinal <- rbind(negfinal, twofinal)
+    }
     
     #put in alphabetical order by antigen
     SPcutfinal <- SPcutfinal[order(SPcutfinal$Name),]
