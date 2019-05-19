@@ -413,7 +413,6 @@ if(iso == "IgM"){
     dup.id <- dup_year$sample_id
     
   #calculate prevalence for each ag as mean of SP data 0s and 1s
-    
     seroprevalence <- as.data.frame(matrix(nrow = nrow(SPcutfinal), ncol = 6))
     colnames(seroprevalence) <- c("Name", "Keneba.2012", "Keneba.2012.paired", "Keneba.2016","Keneba.2016.paired", "England")
   
@@ -475,6 +474,8 @@ if(iso == "IgM"){
     #Get a Keneba overall? How to do this because there are paired inviduals? 
     #Calculate age-adjusted prevalence for Keneba?
     #or are we ok with just the paired samples?
+    
+    ## Calculate Prevalence by Age Category!!! Add here
     
 ####### Clustering analysis of ALL data for selected antigens 
     
@@ -748,7 +749,7 @@ if(iso == "IgM"){
       png(filename = paste0(study, "_", antigen,"_Ab_vs.age.tif"), width = 3.5, height = 3, units = "in", res = 1200)
       
       print(ggplot(ant1, aes(x = Age , y = value, color = year)) + geom_point(shape = 17, size = 0.75) +
-              theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + 
+              theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = paste(antigen, iso)) + 
               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
               theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
               theme(legend.title = element_text(size = 12))+ 
@@ -778,7 +779,7 @@ if(iso == "IgM"){
       png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.Gender.tif"), width = 2.7, height = 3, units = "in", res = 1200)
     
       print(ggplot(ant1gender, aes(x = year, y = value, fill = Sex)) + geom_boxplot(outlier.size = 0.4, show.legend=T) +
-            theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) + 
+            theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = paste(antigen, iso)) + 
             theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
             theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
             theme(legend.title = element_text(size = 12)) + 
