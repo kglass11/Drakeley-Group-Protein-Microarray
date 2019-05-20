@@ -820,7 +820,7 @@ if(iso == "IgM"){
       png(filename = paste0(study, "_", antigen,"_SP_Ab_vs.ageBINS_V_bee.tif"), width = 7.5, height = 4, units = "in", res = 1200)
       
       print(ggplot(ant1bin, aes(x = AgeBin, y = value, color = year)) + geom_violin(scale = "width", color = "black") +
-              theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = antigen) + geom_beeswarm(cex = 0.6, size = 0.5) +
+              theme_bw() + labs(x = "Age", y = "Log2(MFI Ratio)", title = paste(antigen, iso)) + geom_beeswarm(cex = 0.6, size = 0.5) +
               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
               theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
               theme(legend.title = element_text(size = 12), legend.position="right") + 
@@ -878,7 +878,13 @@ if(iso == "IgM"){
     paired.v2$year <- as.factor(as.character(paired.v2$year))
     
     #Make Boxplots of 2012 vs 2016 paired data by age bin 2012
+    if(iso=="IgG"){
     setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/IgG Keneba Paired Data/IgG Age Bin Plots")
+    }
+    
+    if(iso == "IgM"){
+      setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis/IgM Keneba Paired Data/IgM Age Bin Plots") 
+    }
     
     for(i in 1:length(SPcutfinal$Name)){
       antigen = SPcutfinal$Name[i]
@@ -914,7 +920,7 @@ if(iso == "IgM"){
     setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
     
 
-####### ELISA data - Correlations vs RPPA and Sensitivity and Specificity Calculations
+####### IgG only - ELISA data - Correlations vs RPPA and Sensitivity and Specificity Calculations
     
     #read in data from .csv files prepared from the excel files Martin sent.
     Martin2012data <- read.csv(file = "2012elisaNKcelldataMartin.csv")
