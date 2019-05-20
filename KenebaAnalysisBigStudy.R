@@ -1328,7 +1328,7 @@ if(iso == "IgM"){
       
       
 ####### Save the output of the analysis so far
-  save.image(file = "KenebaAnalysis_IgM_v2.RData")
+  save.image(file = "KenebaAnalysis_IgM_v3.RData")
   #save.image(file = "KenebaAnalysis_IgG_v1.RData")
   #save.image(file = "KenebaAnalysis_IgG_v3.RData")
     
