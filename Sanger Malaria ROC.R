@@ -31,6 +31,8 @@ library(Amelia)
 library(mlbench)
 library(caTools)
 library(ROCR)
+library(tidyverse)
+library(caret)
 
 source('~/Desktop/IV Project/CrossVal_Lindsey/ROC_crossval_functions_KG.R')
 
@@ -114,11 +116,40 @@ summary(two)
 
 ### use cross validation!!! 
 
+##1. Caret package for repeated k fold cross validation
+#Possible values for method for train function found below:
+#"Logreg" could be logistic regression --> not exactly
+#"glm" is regular logistic regression
+names(getModelInfo())
+
+# Cannot have missing values in your data! 
+#there are methods to impute missing values if desired, 
+#I am removing them though
+sum(is.na(mal.meta$pcr)) # --> 52
+sum(is.na(mal.meta$Etramp.5.Ag.1)) # --> 0
+
+mal.for.model <- mal.meta[!(is.na(mal.meta$pcr)),]
+
+sum(is.na(mal.for.model$pcr)) # --> 0
+
+#repeated k fold cross validation - 5 repeated 5x
+# Define training control
+set.seed(123)
+train.control <- trainControl(method = "repeatedcv", 
+                              number = 5, repeats = 5)
+# Train the model
+model <- train(pcr ~ Etramp.5.Ag.1 , data = mal.for.model, method="glm",
+               trControl = train.control)
+# Summarize the results
+print(model)
+
+##2. Lindsey's bootstrapping method:
 #adding in cross validation from Lindsey's script she sent me
 formula_mfi <- as.formula("pcr ~ Etramp.5.Ag.1 + HSP40.Ag.1")
 
 m_t30_mfi <- model.crossval(mal.meta, mod.fit="logistic", mod.formula=formula_mfi, perc=.3, outcome.name="pcr", plot=F)
 #this is causing an error, even after changing to sample_id from subject_id
+#maybe the outcome variable has to be 0 or 1, not words
 
 roc_t30  <- list(m_t30_mfi)
 median_roc_t30 <- list()
@@ -130,7 +161,11 @@ median_roc_t30 <- c(roc_t30[[1]]$performance.list[[med]]@x.values,roc_t30[[1]]$p
 ## How to quickly do the logistic regression and cross validation 
 #for a number of groups of antigens or scenarios?
 
-glm.probs <- predict(etramp51.fit,type = "response")
+#get data needed as input for ROC:
+#this is switching to a caret specific function, needs diff input
+glm.probs <- predict(model,type = "raw")
+
+#previous step before caret:
 glm.two <- predict(two,type = "response")
 
 #confusion matrix - don't know if this is working, don't think it is, 
