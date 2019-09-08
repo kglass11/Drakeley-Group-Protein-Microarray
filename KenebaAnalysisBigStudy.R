@@ -5,10 +5,10 @@
 setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
 
 #load IgG or IgM 
-load("Keneba_IgM_v3_AfterProcessing.RData")
+#load("Keneba_IgG_v3_AfterProcessing.RData")
 
 #or load IgG or IgM analysis
-#load("KenebaAnalysis_IgG_v3.RData")
+load("KenebaAnalysis_IgG_v3.RData")
 
 #load packages
 library(contrast)
@@ -916,6 +916,47 @@ if(iso == "IgM"){
       graphics.off()
       
     }
+    
+###make IgG antigen Plots for Martin's Grant 
+    
+    antigenlist <- c("AMA1","MSP1.19","Etramp.5.Ag.1","HSP40.Ag.1")
+    plotlist <- list()
+    
+    for(i in 1:length(antigenlist)){
+      antigen = antigenlist[i]
+      
+      #isolate data for the antigen
+      ant1 <- filter(paired.v2, variable == antigen)
+      
+      #isolate cutoff for the antigen
+      cut1 <- SPcutfinal$cutoff[SPcutfinal$Name==antigen]
+      
+      ant1bin <- filter(ant1, !AgeBin2012 == "NA")
+      
+      png(filename = paste0(study, "_", antigen,"_Paired_Beeswarm.tif"), width = 2.5, height = 2.5, units = "in", res = 1200)
+      
+      plotlist[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = year)) + geom_beeswarm(cex = 1, size = 0.5) +
+              theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) +
+              theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+              theme(axis.text = element_text(size = 12, color = "black")) +
+              #theme(legend.title = element_text(size = 12), legend.position="right") + 
+              #ylim(0,8) +
+              #labs(color='Year') +
+              theme(legend.position = "none") +
+              theme(plot.title = element_text(color = "black", face = "bold"),
+                    axis.title.x = element_text(color = "black", face = "bold"),
+                    axis.title.y = element_text(color = "black", face = "bold"))+
+              geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
+      
+      graphics.off()
+      
+    }
+    
+    png(filename = paste0(study, "_Pf_short_long_paired_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
+    
+    print(grid.arrange(plotlist[[1]], plotlist[[2]], plotlist[[3]], plotlist[[4]], ncol = 2, nrow = 2))
+    
+    graphics.off()
     
     setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
     
