@@ -919,8 +919,14 @@ if(iso == "IgM"){
     
 ###make IgG antigen Plots for Martin's Grant 
     
-    antigenlist <- c("AMA1","MSP1.19","Etramp.5.Ag.1","HSP40.Ag.1")
+    #make a new variable for children vs adults - cutoff is 15
+    paired.v2$adults <- "16-50"
+    paired.v2$adults[paired.v2$AgeBin2012 == "1-5" | paired.v2$AgeBin2012 == "6-12"| paired.v2$AgeBin2012 == "13-15"] <- "1-15"
+   
+    #started with MSP1-19 but the data looked weird so trying GLURP.R2
+    antigenlist <- c("AMA1","GLURP.R2","Etramp.5.Ag.1","HSP40.Ag.1")
     plotlist <- list()
+    axissynced <- list()
     
     for(i in 1:length(antigenlist)){
       antigen = antigenlist[i]
@@ -950,13 +956,35 @@ if(iso == "IgM"){
       
       graphics.off()
       
+      axissynced[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = year)) + geom_beeswarm(cex = 1, size = 0.5) +
+                               theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) +
+                               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+                               theme(axis.text = element_text(size = 12, color = "black")) +
+                               scale_y_continuous(breaks=seq(-4,8,2), limits=c(-4,8)) +
+                               theme(legend.position = "none") +
+                               theme(plot.title = element_text(color = "black", face = "bold"),
+                                     axis.title.x = element_text(color = "black", face = "bold"),
+                                     axis.title.y = element_text(color = "black", face = "bold"))+
+                               geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
+      
+      graphics.off()
+      
     }
     
-    png(filename = paste0(study, "_Pf_short_long_paired_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
-    
+    png(filename = paste0(study, "_Pf_short_long_paired_beeswarm_v2.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
     print(grid.arrange(plotlist[[1]], plotlist[[2]], plotlist[[3]], plotlist[[4]], ncol = 2, nrow = 2))
-    
     graphics.off()
+    
+    png(filename = paste0(study, "AxisSynced_Pf_short_long_paired_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
+    print(grid.arrange(axissynced[[1]], axissynced[[2]], axissynced[[3]], axissynced[[4]], ncol = 2, nrow = 2))
+    graphics.off()
+    
+    
+    
+    
+    
+    
+    
     
     setwd("/Users/Katie/Desktop/R files from work/Keneba main results/Keneba Analysis")
     
