@@ -928,6 +928,7 @@ if(iso == "IgM"){
     plotlist <- list()
     axissynced <- list()
     agelist <- list()
+    lineplot <- list()
     
     for(i in 1:length(antigenlist)){
       antigen = antigenlist[i]
@@ -939,8 +940,6 @@ if(iso == "IgM"){
       cut1 <- SPcutfinal$cutoff[SPcutfinal$Name==antigen]
       
       ant1bin <- filter(ant1, !AgeBin2012 == "NA")
-      
-      png(filename = paste0(study, "_", antigen,"_Paired_Beeswarm.tif"), width = 2.5, height = 2.5, units = "in", res = 1200)
       
       plotlist[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = year)) + geom_beeswarm(cex = 1, size = 0.5) +
               theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) +
@@ -978,6 +977,18 @@ if(iso == "IgM"){
                                        axis.title.y = element_text(color = "black", face = "bold"))+
                                  geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
       
+      lineplot[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = year, group = sample_id)) + geom_beeswarm(cex = 1, size = 0.5) +
+                               geom_line(color = "black", size = 0.2)+
+                               theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) +
+                               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+                               theme(axis.text = element_text(size = 12, color = "black")) +
+                               scale_y_continuous(breaks=seq(-4,8,2), limits=c(-4,8)) +
+                               theme(legend.position = "none") +
+                               theme(plot.title = element_text(color = "black", face = "bold"),
+                                     axis.title.x = element_text(color = "black", face = "bold"),
+                                     axis.title.y = element_text(color = "black", face = "bold"))+
+                               geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
+      
       
     }
     
@@ -991,6 +1002,10 @@ if(iso == "IgM"){
     
     png(filename = paste0(study, "AxisSynced_Pf_Age_paired_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
     print(grid.arrange(agelist[[1]], agelist[[2]], agelist[[3]], agelist[[4]], ncol = 2, nrow = 2))
+    graphics.off()
+    
+    png(filename = paste0(study, "_Pf_Line_paired_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
+    print(grid.arrange(lineplot[[1]], lineplot[[2]], lineplot[[3]], lineplot[[4]], ncol = 2, nrow = 2))
     graphics.off()
     
     
