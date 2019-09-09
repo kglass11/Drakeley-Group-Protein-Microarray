@@ -917,7 +917,10 @@ if(iso == "IgM"){
       
     }
     
-###make IgG antigen Plots for Martin's Grant 
+###make IgG antigen Plots for Martin's Grant
+    
+    #another idea - calculate the ratio of 2012 to 2016 signal for each sample 
+    #and plot a histogram of that for each antigen
     
     #make a new variable for children vs adults - cutoff is 15
     paired.v2$adults <- "16-50"
@@ -929,6 +932,7 @@ if(iso == "IgM"){
     axissynced <- list()
     agelist <- list()
     lineplot <- list()
+    lineplotage <- list()
     
     for(i in 1:length(antigenlist)){
       antigen = antigenlist[i]
@@ -988,6 +992,21 @@ if(iso == "IgM"){
                                      axis.title.x = element_text(color = "black", face = "bold"),
                                      axis.title.y = element_text(color = "black", face = "bold"))+
                                geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
+      
+      #lineplotage is totally not working
+      lineplotage[[i]] <- print(ggplot(ant1bin, aes(x = AgeBin2012, y = value, color = year, group = sample_id)) + 
+              geom_beeswarm(cex = 1, size = 0.5, dodge.width=1) +
+              geom_line(color = "black", size = 0.2)+
+              theme_bw() + labs(x = "Age in 2012", y = "Log2(MFI Ratio)", title = antigen) + 
+              theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+              theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+              theme(legend.title = element_text(size = 12), legend.position="right") + 
+              scale_y_continuous(breaks=seq(-4,8,2), limits=c(-4,8)) +
+              labs(color='Year') +
+              theme(plot.title = element_text(color = "black", face = "bold"),
+                    axis.title.x = element_text(color = "black", face = "bold"),
+                    axis.title.y = element_text(color = "black", face = "bold"))+
+              geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
       
       
     }
