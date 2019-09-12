@@ -999,9 +999,9 @@ if(iso == "IgM"){
                                geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
       
       #lineplotage is totally not working
-      lineplotage[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = adults,group = interaction(adults, sample_id))) + 
+      lineplotage[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = adults) + 
               geom_beeswarm(cex = 1, size = 0.5, dodge.width=1) +
-              geom_line(color = "black", size = 0.2)+
+              geom_line(aes(group = age_id),color = "black", size = 0.2)+
               theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) + 
               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
               theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
@@ -1454,7 +1454,7 @@ if(iso == "IgM"){
       
       
 ####### Save the output of the analysis so far
-  save.image(file = "KenebaAnalysis_IgM_v3.RData")
+  #save.image(file = "KenebaAnalysis_IgM_v3.RData")
   #save.image(file = "KenebaAnalysis_IgG_v1.RData")
   #save.image(file = "KenebaAnalysis_IgG_v3.RData")
     
