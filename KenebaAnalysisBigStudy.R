@@ -925,7 +925,12 @@ if(iso == "IgM"){
     #make a new variable for children vs adults - cutoff is 15
     paired.v2$adults <- "16-50"
     paired.v2$adults[paired.v2$AgeBin2012 == "1-5" | paired.v2$AgeBin2012 == "6-12"| paired.v2$AgeBin2012 == "13-15"] <- "1-15"
+   #make the adults variable a factor
+    paired.v2$adults <- as.factor(paired.v2$adults)
    
+    #make a new grouping variable concatenating adults and sample_id 
+    paired.v2$age_id <- paste(paired.v2$adults, paired.v2$sample_id, sep="_")
+    
     #started with MSP1-19 but the data looked weird so trying GLURP.R2
     antigenlist <- c("AMA1","GLURP.R2","Etramp.5.Ag.1","HSP40.Ag.1")
     plotlist <- list()
@@ -994,15 +999,15 @@ if(iso == "IgM"){
                                geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
       
       #lineplotage is totally not working
-      lineplotage[[i]] <- print(ggplot(ant1bin, aes(x = AgeBin2012, y = value, color = year, group = sample_id)) + 
+      lineplotage[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = adults,group = interaction(adults, sample_id))) + 
               geom_beeswarm(cex = 1, size = 0.5, dodge.width=1) +
               geom_line(color = "black", size = 0.2)+
-              theme_bw() + labs(x = "Age in 2012", y = "Log2(MFI Ratio)", title = antigen) + 
+              theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) + 
               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
               theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
               theme(legend.title = element_text(size = 12), legend.position="right") + 
               scale_y_continuous(breaks=seq(-4,8,2), limits=c(-4,8)) +
-              labs(color='Year') +
+              labs(color='Age in 2012') +
               theme(plot.title = element_text(color = "black", face = "bold"),
                     axis.title.x = element_text(color = "black", face = "bold"),
                     axis.title.y = element_text(color = "black", face = "bold"))+
@@ -1025,6 +1030,10 @@ if(iso == "IgM"){
     
     png(filename = paste0(study, "_Pf_Line_paired_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
     print(grid.arrange(lineplot[[1]], lineplot[[2]], lineplot[[3]], lineplot[[4]], ncol = 2, nrow = 2))
+    graphics.off()
+    
+    png(filename = paste0(study, "_Pf_Line_paired_AGE_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
+    print(grid.arrange(lineplotage[[1]], lineplotage[[2]], lineplotage[[3]], lineplotage[[4]], ncol = 2, nrow = 2))
     graphics.off()
     
     
