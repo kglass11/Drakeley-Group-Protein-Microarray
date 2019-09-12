@@ -923,12 +923,13 @@ if(iso == "IgM"){
     #and plot a histogram of that for each antigen
     
     #make a new variable for children vs adults - cutoff is 15
-    paired.v2$adults <- "16-50"
-    paired.v2$adults[paired.v2$AgeBin2012 == "1-5" | paired.v2$AgeBin2012 == "6-12"| paired.v2$AgeBin2012 == "13-15"] <- "1-15"
+    paired.v2$adults <- "Age 16-50 years"
+    paired.v2$adults[paired.v2$AgeBin2012 == "1-5" | paired.v2$AgeBin2012 == "6-12"| paired.v2$AgeBin2012 == "13-15"] <- "Age 1-15 years"
    #make the adults variable a factor
     paired.v2$adults <- as.factor(paired.v2$adults)
    
     #make a new grouping variable concatenating adults and sample_id 
+    #this unfortunately did not work
     paired.v2$age_id <- paste(paired.v2$adults, paired.v2$sample_id, sep="_")
     
     #started with MSP1-19 but the data looked weird so trying GLURP.R2
@@ -998,20 +999,22 @@ if(iso == "IgM"){
                                      axis.title.y = element_text(color = "black", face = "bold"))+
                                geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
       
-      #lineplotage is totally not working
-      lineplotage[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = adults) + 
-              geom_beeswarm(cex = 1, size = 0.5, dodge.width=1) +
-              geom_line(aes(group = age_id),color = "black", size = 0.2)+
+      #lineplotage - will have to do this with facet_wrapping
+      lineplotage[[i]] <- print(ggplot(ant1bin, aes(x = year, y = value, color = year)) + 
+              geom_beeswarm(cex = 1.5, size = 0.5, dodge.width=1) +
+              geom_line(aes(group = sample_id), color = "black", size = 0.2)+
               theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) + 
               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
               theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
-              theme(legend.title = element_text(size = 12), legend.position="right") + 
+              theme(legend.position="none") + 
               scale_y_continuous(breaks=seq(-4,8,2), limits=c(-4,8)) +
-              labs(color='Age in 2012') +
               theme(plot.title = element_text(color = "black", face = "bold"),
                     axis.title.x = element_text(color = "black", face = "bold"),
                     axis.title.y = element_text(color = "black", face = "bold"))+
-              geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed"))
+              geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed") +
+              facet_wrap(~adults) +
+              theme(strip.text.x = element_text(size = 10, color = "black"))+
+              theme(strip.background = element_rect(color="black", fill="white", size = 1.12)))
       
       
     }
