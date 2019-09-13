@@ -1039,9 +1039,84 @@ if(iso == "IgM"){
     print(grid.arrange(lineplotage[[1]], lineplotage[[2]], lineplotage[[3]], lineplotage[[4]], ncol = 2, nrow = 2))
     graphics.off()
     
+    ### Also for Martin's grant - 
+    #look only at samples that are positive in at least one year
+    #run stats comparing years (year) and age groups (adults)
     
+    #initialize lists for more plots
+    lineage2 <- list()
+    lineage3 <- list()
     
+    for(i in 1:length(antigenlist)){
+      antigen = antigenlist[i]
+      
+      #isolate data for the antigen
+      ant1 <- filter(paired.v2, variable == antigen)
+      
+      #isolate cutoff for the antigen
+      cut1 <- SPcutfinal$cutoff[SPcutfinal$Name==antigen]
+      
+      ant1bin <- filter(ant1, !AgeBin2012 == "NA")
+      
+      #Select samples positive in either year or both
+      pos.samples <- ant1bin$sample_id[ant1bin$seropositive == 1]
+      pos.id <- unique(pos.samples) 
+      #one sample_id is NA, so that is why there are 2 fewer samples than expected
+      antpos <- filter(ant1bin, sample_id %in% pos.id)
+      
+      #Select samples positive in Both years ONLY!
+      pos2.samples <- ant1bin$sample_id[ant1bin$seropositive == 1]
+      pos2.id <- pos2.samples[duplicated(pos2.samples)]
+      #one sample_id is NA, so that is why there are 2 fewer samples than expected
+      ant2pos <- filter(ant1bin, sample_id %in% pos2.id)
+      
+      #stats - what is the question?
+      
+      
+      
+      
+      
+      lineage2[[i]] <- print(ggplot(antpos, aes(x = year, y = value, color = year)) + 
+                                  geom_beeswarm(cex = 1.5, size = 0.5, dodge.width=1) +
+                                  geom_line(aes(group = sample_id), color = "black", size = 0.2)+
+                                  theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) + 
+                                  theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+                                  theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+                                  theme(legend.position="none") + 
+                                  scale_y_continuous(breaks=seq(-4,8,2), limits=c(-4,8)) +
+                                  theme(plot.title = element_text(color = "black", face = "bold"),
+                                        axis.title.x = element_text(color = "black", face = "bold"),
+                                        axis.title.y = element_text(color = "black", face = "bold"))+
+                                  geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed") +
+                                  facet_wrap(~adults) +
+                                  theme(strip.text.x = element_text(size = 10, color = "black"))+
+                                  theme(strip.background = element_rect(color="black", fill="white", size = 1.12)))
+      
+      lineage3[[i]] <- print(ggplot(ant2pos, aes(x = year, y = value, color = year)) + 
+                               geom_beeswarm(cex = 1.5, size = 0.5, dodge.width=1) +
+                               geom_line(aes(group = sample_id), color = "black", size = 0.2)+
+                               theme_bw() + labs(x = "Year", y = "Log2(MFI Ratio)", title = antigen) + 
+                               theme(panel.border = element_blank(), axis.line = element_line(), panel.grid = element_blank())+
+                               theme(axis.text = element_text(size = 12, color = "black"), legend.text = element_text(size = 12, color = "black")) +
+                               theme(legend.position="none") + 
+                               scale_y_continuous(breaks=seq(-4,8,2), limits=c(-4,8)) +
+                               theme(plot.title = element_text(color = "black", face = "bold"),
+                                     axis.title.x = element_text(color = "black", face = "bold"),
+                                     axis.title.y = element_text(color = "black", face = "bold"))+
+                               geom_hline(yintercept=cut1, color = "black", size=0.2, linetype = "dashed") +
+                               facet_wrap(~adults) +
+                               theme(strip.text.x = element_text(size = 10, color = "black"))+
+                               theme(strip.background = element_rect(color="black", fill="white", size = 1.12)))
+      
+    }
     
+    png(filename = paste0(study, "_Pf_Line_paired_AGE_Positives_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
+    print(grid.arrange(lineage2[[1]], lineage2[[2]], lineage2[[3]], lineage2[[4]], ncol = 2, nrow = 2))
+    graphics.off()
+    
+    png(filename = paste0(study, "_Pf_Line_paired_AGE_2YearPositives_beeswarm.tif"), width = 7.5, height = 5.5, units = "in", res = 1200)
+    print(grid.arrange(lineage3[[1]], lineage3[[2]], lineage3[[3]], lineage3[[4]], ncol = 2, nrow = 2))
+    graphics.off()
     
     
     
