@@ -31,6 +31,8 @@ library(dbscan)
 library(pheatmap)
 library(RColorBrewer)
 
+library(lme4)
+
 
 
 #####################################
@@ -1070,8 +1072,36 @@ if(iso == "IgM"){
       #one sample_id is NA, so that is why there are 2 fewer samples than expected
       ant2pos <- filter(ant1bin, sample_id %in% pos2.id)
       
-      #stats - what is the question?
+      #stats - logistic regression - seropositive vs age group (adults) and year
+      model <- glmer(seropositive ~ adults + year + (1|sample_id), 
+                  data=antpos, 
+                  family = binomial)
       
+      model <- glmer(seropositive ~ year + (1|sample_id), 
+                     data=antpos, 
+                     family = binomial)
+      
+      #these 2 above are resulting in singular boundary, this is bad
+      #see ?isSingular for an explanation
+      #look at all the data instead
+      #data doesn't have to be normally distributed for logistic regression to work
+      model <- glmer(seropositive ~ year + (1|sample_id), 
+                     data=ant1bin, 
+                     family = binomial)
+      
+      summary(model)
+      
+      library(car)
+      Anova(model, type="II", test="Chisq")
+      
+      library(rcompanion)
+      nagelkerke(model)
+      
+      anova(model, 
+            update(model, ~ (1 | sample_id)), 
+            test="Chisq")
+        
+        plot(fitted(model))
       
       
       
