@@ -1073,37 +1073,35 @@ if(iso == "IgM"){
       ant2pos <- filter(ant1bin, sample_id %in% pos2.id)
       
       #stats - logistic regression - year vs age group (adults) and seropositivity status
-      model <- glmer(year ~ adults + value + (1|sample_id), 
-                  data=antpos, 
-                  family = binomial)
+      # model <- glmer(year ~ adults + value + (1|sample_id), 
+      #             data=antpos, 
+      #             family = binomial)
+      # 
+      # model <- glmer(year ~ seropositive + (1|sample_id), 
+      #                data=antpos, 
+      #                family = binomial)
+      # 
+      # #these 2 above are resulting in singular boundary, this is bad
+      # #see ?isSingular for an explanation
+      # #look at all the data instead
+      # #data doesn't have to be normally distributed for logistic regression to work
+      # model <- glmer(year ~ adults + value + (1|sample_id), 
+      #                data=ant1bin, 
+      #                family = binomial)
+      # 
+      # summary(model)
+      # 
+      # library(car)
+      # Anova(model, type="II", test="Chisq")
+      # 
+      # anova(model, 
+      #       update(model, ~ (1 | sample_id)), 
+      #       test="Chisq")
+      # 
+      #nothing was significantly different, p values approaching 1
+      #in every model tested.
       
-      model <- glmer(year ~ seropositive + (1|sample_id), 
-                     data=antpos, 
-                     family = binomial)
-      
-      #these 2 above are resulting in singular boundary, this is bad
-      #see ?isSingular for an explanation
-      #look at all the data instead
-      #data doesn't have to be normally distributed for logistic regression to work
-      model <- glmer(year ~ adults + value + (1|sample_id), 
-                     data=ant1bin, 
-                     family = binomial)
-      
-      summary(model)
-      
-      library(car)
-      Anova(model, type="II", test="Chisq")
-      
-      library(rcompanion)
-      nagelkerke(model)
-      
-      anova(model, 
-            update(model, ~ (1 | sample_id)), 
-            test="Chisq")
-        
-        plot(fitted(model))
-      
-      
+      #any point in stats comparing the means?
       
       
       lineage2[[i]] <- print(ggplot(antpos, aes(x = year, y = value, color = year)) + 
