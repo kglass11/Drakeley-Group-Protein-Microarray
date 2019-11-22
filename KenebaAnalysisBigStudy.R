@@ -1557,7 +1557,34 @@ if(iso == "IgM"){
       sens.spec$Specificity[i] <- sens.spec$True_Negatives[i]/(sens.spec$True_Negatives[i] + sens.spec$False_Positives[i])
       sens.spec$Agreement[i] <- (sens.spec$True_Positives[i] + sens.spec$True_Negatives[i])/(sum(sens.spec[i,2:5]))*100
     }
-      
+
+########Martin needs IgG merozoite surface antigen data for these people only
+    
+NKcellsamples <- read.csv("Donor numbers for NK paper GAMBIA_adult and child.csv")
+NKcellsamples$year <- 2012
+#Age category Key: Child ≤ 14 = 1; Adult > 14 = 2
+
+#the sample IDS are not written in the same format
+#try to fix it and see if there are duplicate numbers once remove the letters
+idmod <- as.data.frame(sample_meta_f.df$sample_id)
+colnames(idmod) <- "sample_id"
+
+#this isn't working:
+idmod$NK_number_2012 <- gsub("[^0-9]", "",  idmod$`sample_meta_f.df$sample_id`)
+
+#merge this data frame with the results from those antigens
+#results for all antigens in wide format is in allburritos (without seropositivity)
+#result for all antigens in long format, including seropositivity, 
+#is in burritomeltSP
+write.csv(burritomeltSP, file = "KGlass_KenebaStudy_ALLdataSP.csv")
+write.csv(SPcutfinal, file = "KGlass_KenebaStudy_SPcutoffs.csv")
+write.csv(target_meta2.df, file = "KGlass_KenebaStudy_TargetMetadata_Replicates.csv")  
+
+#SPcutfinal is a data frame of the antigen name and cutoff only
+#however, also want to give Martin the results of seropositivity for the antigens...
+
+
+
       
 ####### Save the output of the analysis so far
   #save.image(file = "KenebaAnalysis_IgM_v3.RData")
